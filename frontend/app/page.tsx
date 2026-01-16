@@ -1,64 +1,72 @@
-import Image from "next/image";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Users, GraduationCap } from "lucide-react";
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 px-4 dark:from-gray-950 dark:to-gray-900">
+      <main className="flex max-w-2xl flex-col items-center text-center">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-5xl">
+            Mentorship Platform
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="mt-4 text-lg text-gray-600 dark:text-gray-400">
+            Connect with mentors to accelerate your growth, or share your expertise
+            to help others succeed.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <div className="mb-12 rounded-lg border bg-white/50 p-6 dark:bg-gray-800/50">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Choose Your Role
+          </h2>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+            Select how you want to use the platform. You can be both a mentor and a
+            mentee.
+          </p>
         </div>
+
+        <div className="grid w-full gap-6 sm:grid-cols-2">
+          <Link
+            href="/mentor"
+            className="group flex flex-col items-center rounded-xl border bg-white p-8 shadow-sm transition-all hover:border-gray-400 hover:shadow-md dark:bg-gray-800 dark:hover:border-gray-600"
+          >
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+              <Users className="h-8 w-8" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+              I&apos;m a Mentor
+            </h3>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+              Share your expertise, guide mentees, and make an impact.
+            </p>
+            <Button className="mt-4" variant="outline">
+              Enter Mentor Dashboard
+            </Button>
+          </Link>
+
+          <Link
+            href="/mentee"
+            className="group flex flex-col items-center rounded-xl border bg-white p-8 shadow-sm transition-all hover:border-gray-400 hover:shadow-md dark:bg-gray-800 dark:hover:border-gray-600"
+          >
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400">
+              <GraduationCap className="h-8 w-8" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+              I&apos;m a Mentee
+            </h3>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+              Find mentors, learn new skills, and grow your career.
+            </p>
+            <Button className="mt-4" variant="outline">
+              Enter Mentee Dashboard
+            </Button>
+          </Link>
+        </div>
+
+        <p className="mt-8 text-sm text-gray-500 dark:text-gray-500">
+          Note: Mentor access requires verification. Users can access both views.
+        </p>
       </main>
     </div>
   );
