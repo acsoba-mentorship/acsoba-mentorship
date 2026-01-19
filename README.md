@@ -1,5 +1,5 @@
 # acsoba-mentorship
-
+```mermaid
 erDiagram
     Users ||--o{ MentorshipRequests : "initiates"
     Users ||--o{ MentorshipRequests : "receives"
@@ -82,3 +82,4 @@ erDiagram
         boolean is_resolved
         timestamp created_at
     }
+```
