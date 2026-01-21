@@ -1,24 +1,13 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { getMentorshipRequestsForMentee, currentUser } from "@/lib/dummy-data";
-import { Clock, CheckCircle, XCircle, Send } from "lucide-react";
+import { formatDate } from "@/lib/utils";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { Send } from "lucide-react";
 
 export default function MenteeRequestsPage() {
   const requests = getMentorshipRequestsForMentee(currentUser.id);
-
-  const statusIcons = {
-    pending: <Clock className="h-4 w-4 text-yellow-500" />,
-    accepted: <CheckCircle className="h-4 w-4 text-green-500" />,
-    rejected: <XCircle className="h-4 w-4 text-red-500" />,
-  };
-
-  const statusColors = {
-    pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
-    accepted: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-    rejected: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
-  };
 
   return (
     <div className="space-y-8">
@@ -41,12 +30,7 @@ export default function MenteeRequestsPage() {
                     </CardTitle>
                     <CardDescription>{request.mentor.title}</CardDescription>
                   </div>
-                  <Badge className={statusColors[request.status]}>
-                    <span className="flex items-center gap-1">
-                      {statusIcons[request.status]}
-                      {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
-                    </span>
-                  </Badge>
+                  <StatusBadge status={request.status} type="request" />
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -55,13 +39,7 @@ export default function MenteeRequestsPage() {
                   <p className="mt-1 text-sm">{request.message}</p>
                 </div>
                 <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <span>
-                    Sent {new Date(request.createdAt).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </span>
+                  <span>Sent {formatDate(request.createdAt)}</span>
                   {request.status === "pending" && (
                     <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
                       Cancel Request

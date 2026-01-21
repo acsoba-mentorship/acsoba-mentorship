@@ -14,9 +14,14 @@ import {
 import { capitalize } from "@/lib/utils";
 
 // Custom labels for routes that need special formatting
-const routeMap: Record<string, string> = {
+const routeLabels: Record<string, string> = {
   "/mentor": "Home",
 };
+
+// Routes that should not be shown in breadcrumb (non-navigable parent routes)
+const hiddenRoutes = new Set([
+  "/mentor/mentees", // Only individual mentee profiles are accessible
+]);
 
 export function MentorBreadcrumb() {
   const pathname = usePathname();
@@ -35,13 +40,25 @@ export function MentorBreadcrumb() {
     currentPath += `/${segments[i]}`;
     const isLast = i === segments.length - 1;
     
-    // Use routeMap label if available, otherwise capitalize the segment
-    const label = routeMap[currentPath] || capitalize(segments[i]);
+    // Skip hidden routes (non-navigable parent routes)
+    if (hiddenRoutes.has(currentPath)) {
+      continue;
+    }
+    
+    // Use routeLabels if available, otherwise capitalize the segment
+    const label = routeLabels[currentPath] || capitalize(segments[i]);
     
     breadcrumbItems.push({
       href: currentPath,
       label,
       isLast,
+    });
+  }
+
+  // Recalculate isLast after filtering
+  if (breadcrumbItems.length > 0) {
+    breadcrumbItems.forEach((item, index) => {
+      item.isLast = index === breadcrumbItems.length - 1;
     });
   }
 

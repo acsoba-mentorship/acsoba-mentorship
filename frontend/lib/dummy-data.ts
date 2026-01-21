@@ -496,6 +496,22 @@ export function getMentorshipsForMentee(
     }));
 }
 
+// Get pending request from a specific mentee to a specific mentor
+export function getPendingRequestFromMentee(
+  menteeId: string,
+  mentorId: string
+): MentorshipRequestWithUsers | undefined {
+  const request = mentorshipRequests.find(
+    (req) => req.menteeId === menteeId && req.mentorId === mentorId && req.status === "pending"
+  );
+  if (!request) return undefined;
+  return {
+    ...request,
+    mentor: users.find((u) => u.id === request.mentorId)!,
+    mentee: users.find((u) => u.id === request.menteeId)!,
+  };
+}
+
 // Filter mentors based on selected filters
 export function filterMentors(
   mentors: MentorWithUser[],

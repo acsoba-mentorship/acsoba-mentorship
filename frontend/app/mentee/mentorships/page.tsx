@@ -4,16 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getMentorshipsForMentee, currentUser } from "@/lib/dummy-data";
+import { formatDateTime } from "@/lib/utils";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Users, Calendar, Target, MessageSquare } from "lucide-react";
 
 export default function MenteeMentorshipsPage() {
   const mentorships = getMentorshipsForMentee(currentUser.id);
-
-  const statusColors = {
-    active: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-    paused: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
-    completed: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400",
-  };
 
   return (
     <div className="space-y-8">
@@ -44,9 +40,7 @@ export default function MenteeMentorshipsPage() {
                         <CardDescription>{mentorship.mentor.title}</CardDescription>
                       </div>
                     </div>
-                    <Badge className={statusColors[mentorship.status]}>
-                      {mentorship.status.charAt(0).toUpperCase() + mentorship.status.slice(1)}
-                    </Badge>
+                    <StatusBadge status={mentorship.status} type="mentorship" />
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -66,13 +60,7 @@ export default function MenteeMentorshipsPage() {
                         <div>
                           <p className="text-sm font-medium">Next Meeting</p>
                           <p className="text-sm text-muted-foreground">
-                            {new Date(mentorship.nextMeetingDate).toLocaleDateString("en-US", {
-                              weekday: "short",
-                              month: "short",
-                              day: "numeric",
-                              hour: "numeric",
-                              minute: "2-digit",
-                            })}
+                            {formatDateTime(mentorship.nextMeetingDate)}
                           </p>
                         </div>
                       </div>

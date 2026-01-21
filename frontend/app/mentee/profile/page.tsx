@@ -1,11 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { ProfileHeader } from "@/components/profile/profile-header";
-import { PersonalSection } from "@/components/profile/personal-section";
-import { ExperienceSection } from "@/components/profile/experience-section";
-import { EducationSection } from "@/components/profile/education-section";
-import { SkillsSection } from "@/components/profile/skills-section";
+import { MenteeProfileView } from "@/components/profile/mentee-profile-view";
 import { currentUser, getMenteeWithUser } from "@/lib/dummy-data";
 
 export default function MenteeProfilePage() {
@@ -25,6 +21,11 @@ export default function MenteeProfilePage() {
     );
   }
 
+  const handleEditSection = (section: "personal" | "experience" | "education" | "skills") => {
+    // Future: Open edit modal for the specific section
+    console.log(`Edit ${section} section`);
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -34,42 +35,10 @@ export default function MenteeProfilePage() {
         </p>
       </div>
 
-      <ProfileHeader
-        user={menteeProfile.user}
-        bio={menteeProfile.bio}
-      />
-
-      <PersonalSection
-        phone={menteeProfile.user.phone}
-        preferredMeetingFrequency={menteeProfile.preferredMeetingFrequency}
-        onEdit={() => {
-          // Future: Open edit modal
-        }}
-      />
-
-      <ExperienceSection
-        experience={menteeProfile.experience}
-        onEdit={() => {
-          // Future: Open edit modal
-        }}
-      />
-
-      <EducationSection
-        education={menteeProfile.education}
-        currentLearning={menteeProfile.currentLearning}
-        onEdit={() => {
-          // Future: Open edit modal
-        }}
-      />
-
-      <SkillsSection
-        title="Interests & Goals"
-        interests={menteeProfile.interests}
-        goals={menteeProfile.goals}
-        skillLevel={menteeProfile.skillLevel}
-        onEdit={() => {
-          // Future: Open edit modal
-        }}
+      <MenteeProfileView
+        profile={menteeProfile}
+        editable
+        onEditSection={handleEditSection}
       />
     </div>
   );
