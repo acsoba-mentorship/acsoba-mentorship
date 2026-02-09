@@ -12,6 +12,12 @@ import { getActiveRoles } from "@/lib/domain/user";
 interface ProfileViewProps {
   user: UserWithProfiles;
   /**
+   * Whether the viewer is the same as the profile owner.
+   * Controls whether edit controls are shown.
+   * Defaults to false (read-only).
+   */
+  isOwnProfile?: boolean;
+  /**
    * Optionally force an initial active role tab when the user has multiple roles.
    * If not provided, the first available role is used.
    */
@@ -20,6 +26,7 @@ interface ProfileViewProps {
 
 export function ProfileView({
   user,
+  isOwnProfile = false,
   initialRole,
 }: ProfileViewProps) {
   const roles = getActiveRoles(user);
@@ -34,7 +41,7 @@ export function ProfileView({
   const showMentor = activeRole === "mentor" || (!activeRole && hasMentor && !hasMentee);
 
   const renderRoleSwitcher = () => {
-    if (!hasMentor) {
+    if (!hasMentor || !hasMentee) {
       return null;
     }
 
@@ -110,7 +117,7 @@ export function ProfileView({
 
     return (
       <div className="space-y-6">
-        <MenteeProfileView user={user} editable />
+        <MenteeProfileView user={user} editable={isOwnProfile} />
       </div>
     );
   };
@@ -120,7 +127,7 @@ export function ProfileView({
 
     return (
       <div className="space-y-6">
-        <MentorProfileView user={user} editable />
+        <MentorProfileView user={user} editable={isOwnProfile} />
       </div>
     );
   };

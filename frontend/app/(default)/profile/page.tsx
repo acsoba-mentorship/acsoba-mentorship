@@ -13,6 +13,9 @@ function ProfileContent() {
 
   const userWithProfiles = getUserWithProfiles(userIdParam ?? currentUser.id);
 
+  // Only allow editing when viewing your own profile.
+  const isOwnProfile = !userIdParam || userIdParam === currentUser.id;
+
   const initialRole: UserRole =
     roleParam && (roleParam === "mentee" || roleParam === "mentor") ? roleParam : "mentee";
 
@@ -24,6 +27,7 @@ function ProfileContent() {
     <div className="space-y-6">
       <ProfileView
         user={userWithProfiles}
+        isOwnProfile={isOwnProfile}
         initialRole={initialRole}
       />
     </div>

@@ -75,7 +75,6 @@ export function MentorProfileView({
 
       <ExperienceSection
         experience={profile.experience}
-        yearsOfExperience={profile.yearsOfExperience}
         onEdit={editable ? () => handleEdit("experience") : undefined}
       />
 
