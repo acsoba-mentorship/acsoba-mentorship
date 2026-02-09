@@ -19,7 +19,7 @@ export default function MentorDashboard() {
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
           <Button asChild>
-            <Link href="/mentor/profile">Edit Profile</Link>
+            <Link href="/profile?role=mentor">Manage Mentor Profile</Link>
           </Button>
           <Button asChild variant="outline">
             <Link href="/mentor/requests">View Requests</Link>

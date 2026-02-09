@@ -15,7 +15,7 @@ import { capitalize } from "@/lib/utils";
 
 // Custom labels for routes that need special formatting
 const routeLabels: Record<string, string> = {
-  "/mentor": "Home",
+  "/mentor": "Dashboard",
 };
 
 // Routes that should not be shown in breadcrumb (non-navigable parent routes)
@@ -26,7 +26,7 @@ const hiddenRoutes = new Set([
 export function MentorBreadcrumb() {
   const pathname = usePathname();
 
-  // If we're on the home page, don't render breadcrumb
+  // If we're on the main dashboard page, don't render breadcrumb
   if (pathname === "/mentor") {
     return null;
   }

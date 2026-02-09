@@ -18,11 +18,6 @@ const mentorNavItems = [
     icon: LayoutDashboard,
   },
   {
-    href: "/profile?role=mentor",
-    label: "Profile",
-    icon: User,
-  },
-  {
     href: "/mentor/mentorships",
     label: "Mentorships",
     icon: Users,
@@ -41,8 +36,7 @@ export function MentorNav() {
     <nav className="flex h-full w-64 flex-col border-r bg-gray-50/50 dark:bg-gray-900/50">
       <div className="flex items-center justify-between border-b p-4">
         <Link href="/" className="flex items-center gap-2 font-semibold">
-          <Home className="h-5 w-5" />
-          <span>Mentorship</span>
+          <span>Mentor Dashboard</span>
         </Link>
       </div>
 
@@ -72,9 +66,9 @@ export function MentorNav() {
 
       <div className="border-t p-4">
         <Button variant="ghost" className="w-full justify-start" asChild>
-          <Link href="/">
-            <Home className="mr-2 h-4 w-4" />
-            Back to Home
+          <Link href="/profile?role=mentor">
+            <User className="mr-2 h-4 w-4" />
+            Profile
           </Link>
         </Button>
       </div>
