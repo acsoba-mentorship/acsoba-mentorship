@@ -4,11 +4,10 @@ import {
   MenteeProfile,
   MentorshipRequest,
   Mentorship,
-  MentorWithUser,
-  MenteeWithUser,
   MentorshipRequestWithUsers,
   MentorshipWithUsers,
   FilterOption,
+  UserWithProfiles,
 } from "./types";
 
 // Users
@@ -422,30 +421,21 @@ export const availabilityOptions: FilterOption[] = [
   { id: "avail-flexible", label: "Flexible", value: "Flexible" },
 ];
 
+export function getUserWithProfiles(userId: string): UserWithProfiles | undefined {
+  const user = users.find((u) => u.id === userId);
+  if (!user) return undefined;
+
+  const menteeProfile = menteeProfiles.find((p) => p.userId === userId) ?? undefined;
+  const mentorProfile = mentorProfiles.find((p) => p.userId === userId) ?? undefined;
+
+  return { ...user, menteeProfile, mentorProfile };
+}
+
 // Helper functions to get enriched data
-export function getMentorsWithUsers(): MentorWithUser[] {
-  return mentorProfiles.map((profile) => ({
-    ...profile,
-    user: users.find((u) => u.id === profile.userId)!,
-  }));
-}
-
-export function getMentorWithUser(userId: string): MentorWithUser | undefined {
-  const profile = mentorProfiles.find((p) => p.userId === userId);
-  if (!profile) return undefined;
-  return {
-    ...profile,
-    user: users.find((u) => u.id === profile.userId)!,
-  };
-}
-
-export function getMenteeWithUser(userId: string): MenteeWithUser | undefined {
-  const profile = menteeProfiles.find((p) => p.userId === userId);
-  if (!profile) return undefined;
-  return {
-    ...profile,
-    user: users.find((u) => u.id === profile.userId)!,
-  };
+export function getMentorUsersWithProfiles(): UserWithProfiles[] {
+  return users
+    .map((user) => getUserWithProfiles(user.id))
+    .filter((u): u is UserWithProfiles => !!u && !!u.mentorProfile);
 }
 
 export function getMentorshipRequestsForMentor(
@@ -513,26 +503,28 @@ export function getPendingRequestFromMentee(
 }
 
 // Filter mentors based on selected filters
-export function filterMentors(
-  mentors: MentorWithUser[],
+export function filterMentorUsers(
+  mentors: UserWithProfiles[],
   filters: {
     expertise: string[];
     experienceLevel: string[];
     availability: string[];
   }
-): MentorWithUser[] {
+  ): UserWithProfiles[] {
   return mentors.filter((mentor) => {
+    const profile = mentor.mentorProfile;
+    if (!profile) return false;
     // Filter by expertise
     if (filters.expertise.length > 0) {
       const hasMatchingExpertise = filters.expertise.some((exp) =>
-        mentor.expertise.includes(exp)
+        profile.expertise.includes(exp)
       );
       if (!hasMatchingExpertise) return false;
     }
 
     // Filter by experience level
     if (filters.experienceLevel.length > 0) {
-      const years = mentor.yearsOfExperience;
+      const years = profile.yearsOfExperience;
       const matchesLevel = filters.experienceLevel.some((level) => {
         switch (level) {
           case "junior":
@@ -552,8 +544,8 @@ export function filterMentors(
 
     // Filter by availability
     if (filters.availability.length > 0) {
-      const matchesAvailability = filters.availability.some(
-        (avail) => mentor.availability.toLowerCase().includes(avail.toLowerCase())
+      const matchesAvailability = filters.availability.some((avail) =>
+        profile.availability.toLowerCase().includes(avail.toLowerCase())
       );
       if (!matchesAvailability) return false;
     }

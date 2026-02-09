@@ -107,7 +107,7 @@ export default function MenteeMentorshipsPage() {
               Find a mentor and start your learning journey
             </p>
             <Button asChild className="mt-4">
-              <Link href="/mentee/search">Find Mentors</Link>
+              <Link href="/search">Find Mentors</Link>
             </Button>
           </CardContent>
         </Card>

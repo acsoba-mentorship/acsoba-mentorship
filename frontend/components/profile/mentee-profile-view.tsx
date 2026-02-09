@@ -5,10 +5,10 @@ import { PersonalSection } from "./personal-section";
 import { ExperienceSection } from "./experience-section";
 import { EducationSection } from "./education-section";
 import { SkillsSection } from "./skills-section";
-import { MenteeWithUser } from "@/lib/types";
+import type { UserWithProfiles } from "@/lib/types";
 
 interface MenteeProfileViewProps {
-  profile: MenteeWithUser;
+  user: UserWithProfiles;
   /**
    * When true, shows edit buttons on each section.
    * Default is false (read-only view).
@@ -30,10 +30,14 @@ interface MenteeProfileViewProps {
  * and they will automatically appear in both views.
  */
 export function MenteeProfileView({
-  profile,
+  user,
   editable = false,
   onEditSection,
 }: MenteeProfileViewProps) {
+  const profile = user.menteeProfile;
+  if (!profile) {
+    return null;
+  }
   const handleEdit = (section: "personal" | "experience" | "education" | "skills") => {
     if (editable && onEditSection) {
       onEditSection(section);
@@ -42,10 +46,10 @@ export function MenteeProfileView({
 
   return (
     <div className="space-y-6">
-      <ProfileHeader user={profile.user} bio={profile.bio} />
+      <ProfileHeader user={user} bio={profile.bio} />
 
       <PersonalSection
-        phone={profile.user.phone}
+        phone={user.phone}
         preferredMeetingFrequency={profile.preferredMeetingFrequency}
         onEdit={editable ? () => handleEdit("personal") : undefined}
       />

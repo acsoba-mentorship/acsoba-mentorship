@@ -12,11 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  getMentorshipRequestsForMentor,
-  getMenteeWithUser,
-  currentUser,
-} from "@/lib/dummy-data";
+import { getMentorshipRequestsForMentor, getUserWithProfiles, currentUser } from "@/lib/dummy-data";
 import { formatDate } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
@@ -36,7 +32,7 @@ export default function MentorRequestsPage() {
     request: (typeof allRequests)[0],
     showActions: boolean = false
   ) => {
-    const menteeProfile = getMenteeWithUser(request.menteeId);
+    const menteeUser = getUserWithProfiles(request.menteeId);
     const initials = `${request.mentee.firstName[0]}${request.mentee.lastName[0]}`;
 
     return (
@@ -56,7 +52,9 @@ export default function MentorRequestsPage() {
               <div>
                 <CardTitle className="text-lg">
                   <Link
-                    href={`/mentor/mentees/${request.menteeId}`}
+                    href={`/profile?userId=${request.menteeId}&role=mentee`}
+                    target="_blank"
+                    rel="noreferrer"
                     className="hover:text-primary hover:underline"
                   >
                     {request.mentee.firstName} {request.mentee.lastName}
@@ -79,21 +77,21 @@ export default function MentorRequestsPage() {
           </div>
 
           {/* Interests */}
-          {menteeProfile && menteeProfile.interests.length > 0 && (
+          {menteeUser?.menteeProfile && menteeUser.menteeProfile.interests.length > 0 && (
             <div>
               <div className="mb-2 flex items-center gap-2 text-sm font-medium text-muted-foreground">
                 <Sparkles className="h-4 w-4" />
                 Areas of Interest
               </div>
               <div className="flex flex-wrap gap-2">
-                {menteeProfile.interests.slice(0, 4).map((interest, index) => (
+                {menteeUser.menteeProfile.interests.slice(0, 4).map((interest, index) => (
                   <Badge key={index} variant="outline">
                     {interest}
                   </Badge>
                 ))}
-                {menteeProfile.interests.length > 4 && (
+                {menteeUser.menteeProfile.interests.length > 4 && (
                   <Badge variant="outline" className="text-muted-foreground">
-                    +{menteeProfile.interests.length - 4} more
+                    +{menteeUser.menteeProfile.interests.length - 4} more
                   </Badge>
                 )}
               </div>

@@ -16,7 +16,7 @@ export function NavLink({ href, children, className, exactMatch = false }: NavLi
   
   const isActive = exactMatch 
     ? pathname === href 
-    : pathname === href || (href !== "/mentee" && pathname.startsWith(href));
+    : pathname === href || (href !== "/" && pathname.startsWith(href));
 
   return (
     <Link

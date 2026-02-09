@@ -56,6 +56,11 @@ export interface MenteeProfile {
   currentLearning?: string[];
 }
 
+export interface UserWithProfiles extends User {
+  menteeProfile?: MenteeProfile;
+  mentorProfile?: MentorProfile;
+}
+
 export interface MentorshipRequest {
   id: string;
   menteeId: string;
@@ -76,14 +81,6 @@ export interface Mentorship {
   startDate: string;
   nextMeetingDate?: string;
   meetingFrequency: string;
-}
-
-export interface MentorWithUser extends MentorProfile {
-  user: User;
-}
-
-export interface MenteeWithUser extends MenteeProfile {
-  user: User;
 }
 
 export interface MentorshipRequestWithUsers extends MentorshipRequest {

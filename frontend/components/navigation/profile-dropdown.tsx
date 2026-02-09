@@ -45,8 +45,8 @@ export function ProfileDropdown({
 
   // Icons for mobile nav items
   const navIcons: Record<string, React.ReactNode> = {
-    "/mentee": <Compass className="mr-2 h-4 w-4" />,
-    "/mentee/search": <Search className="mr-2 h-4 w-4" />,
+    "/": <Compass className="mr-2 h-4 w-4" />,
+    "/search": <Search className="mr-2 h-4 w-4" />,
   };
 
   return (
@@ -91,31 +91,31 @@ export function ProfileDropdown({
 
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
-            <Link href="/mentee/profile" className="flex items-center cursor-pointer">
+            <Link href="/profile" className="flex items-center cursor-pointer">
               <UserIcon className="mr-2 h-4 w-4" />
               <span>Profile</span>
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href="/mentee/requests" className="flex items-center cursor-pointer">
+            <Link href="/requests" className="flex items-center cursor-pointer">
               <Send className="mr-2 h-4 w-4" />
               <span>My Requests</span>
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href="/mentee/mentorships" className="flex items-center cursor-pointer">
+            <Link href="/mentorships" className="flex items-center cursor-pointer">
               <Users className="mr-2 h-4 w-4" />
               <span>Mentorships</span>
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href="/mentee/schedule" className="flex items-center cursor-pointer">
+            <Link href="/schedule" className="flex items-center cursor-pointer">
               <Calendar className="mr-2 h-4 w-4" />
               <span>Schedule</span>
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href="/mentee/settings" className="flex items-center cursor-pointer">
+            <Link href="/settings" className="flex items-center cursor-pointer">
               <Settings className="mr-2 h-4 w-4" />
               <span>Settings</span>
             </Link>
@@ -127,7 +127,7 @@ export function ProfileDropdown({
             <DropdownMenuItem asChild>
               <Link href="/mentor" className="flex items-center cursor-pointer">
                 <ArrowLeftRight className="mr-2 h-4 w-4" />
-                <span>Switch to Mentor View</span>
+                <span>Mentor Dashboard</span>
               </Link>
             </DropdownMenuItem>
           </>

@@ -6,7 +6,7 @@ import { FilterSidebar } from "@/components/search/filter-sidebar";
 import { ViewToggle } from "@/components/search/view-toggle";
 import { MentorCard } from "@/components/search/mentor-card";
 import { MentorListItem } from "@/components/search/mentor-list-item";
-import { getMentorsWithUsers, filterMentors } from "@/lib/dummy-data";
+import { getMentorUsersWithProfiles, filterMentorUsers } from "@/lib/dummy-data";
 import { ViewMode } from "@/lib/types";
 import { Search } from "lucide-react";
 
@@ -18,8 +18,8 @@ export default function MenteeSearchPage() {
     availability: [] as string[],
   });
 
-  const allMentors = getMentorsWithUsers();
-  const filteredMentors = filterMentors(allMentors, filters);
+  const allMentors = getMentorUsersWithProfiles();
+  const filteredMentors = filterMentorUsers(allMentors, filters);
 
   const activeFilterCount =
     filters.expertise.length +
@@ -59,11 +59,11 @@ export default function MenteeSearchPage() {
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {filteredMentors.map((mentor) => (
                   <MentorCard
-                    key={mentor.userId}
+                    key={mentor.id}
                     mentor={mentor}
                     onSendRequest={() => {
                       // Future: Open request modal
-                      alert(`Request sent to ${mentor.user.firstName} ${mentor.user.lastName}`);
+                      alert(`Request sent to ${mentor.firstName} ${mentor.lastName}`);
                     }}
                   />
                 ))}
@@ -72,11 +72,11 @@ export default function MenteeSearchPage() {
               <div className="space-y-4">
                 {filteredMentors.map((mentor) => (
                   <MentorListItem
-                    key={mentor.userId}
+                    key={mentor.id}
                     mentor={mentor}
                     onSendRequest={() => {
                       // Future: Open request modal
-                      alert(`Request sent to ${mentor.user.firstName} ${mentor.user.lastName}`);
+                      alert(`Request sent to ${mentor.firstName} ${mentor.lastName}`);
                     }}
                   />
                 ))}

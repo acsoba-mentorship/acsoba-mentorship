@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,17 +10,19 @@ import {
   CardFooter,
   CardHeader,
 } from "@/components/ui/card";
-import { MentorWithUser } from "@/lib/types";
+import type { UserWithProfiles } from "@/lib/types";
 import { CheckCircle, Clock } from "lucide-react";
 
 interface MentorCardProps {
-  mentor: MentorWithUser;
+  mentor: UserWithProfiles;
   onSendRequest?: () => void;
 }
 
 export function MentorCard({ mentor, onSendRequest }: MentorCardProps) {
-  const initials = `${mentor.user.firstName[0]}${mentor.user.lastName[0]}`;
-  const isAvailable = mentor.currentMenteeCount < mentor.maxMentees;
+  const mentorProfile = mentor.mentorProfile;
+  const initials = `${mentor.firstName[0]}${mentor.lastName[0]}`;
+  const isAvailable =
+    mentorProfile && mentorProfile.currentMenteeCount < mentorProfile.maxMentees;
 
   return (
     <Card className="flex h-full flex-col">
@@ -27,23 +30,29 @@ export function MentorCard({ mentor, onSendRequest }: MentorCardProps) {
         <div className="flex items-start gap-3">
           <Avatar className="h-12 w-12">
             <AvatarImage
-              src={mentor.user.avatarUrl}
-              alt={`${mentor.user.firstName} ${mentor.user.lastName}`}
+              src={mentor.avatarUrl}
+              alt={`${mentor.firstName} ${mentor.lastName}`}
             />
             <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
           <div className="flex-1 space-y-1">
             <div className="flex items-center gap-2">
               <h3 className="font-semibold leading-tight">
-                {mentor.user.firstName} {mentor.user.lastName}
+                <Link
+                  href={`/profile?userId=${mentor.id}&role=mentor`}
+                  rel="noreferrer"
+                  className="hover:text-primary hover:underline"
+                >
+                  {mentor.firstName} {mentor.lastName}
+                </Link>
               </h3>
-              {mentor.user.isVerifiedMentor && (
+              {mentor.isVerifiedMentor && (
                 <CheckCircle className="h-4 w-4 text-blue-500" />
               )}
             </div>
-            {mentor.user.title && (
+            {mentor.title && (
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {mentor.user.title}
+                {mentor.title}
               </p>
             )}
           </div>
@@ -52,17 +61,17 @@ export function MentorCard({ mentor, onSendRequest }: MentorCardProps) {
       <CardContent className="flex-1 space-y-3 pb-3">
         <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
           <Clock className="h-4 w-4" />
-          <span>{mentor.yearsOfExperience} years experience</span>
+          <span>{mentorProfile?.yearsOfExperience ?? 0} years experience</span>
         </div>
         <div className="flex flex-wrap gap-1">
-          {mentor.expertise.slice(0, 3).map((skill, index) => (
+          {mentorProfile?.expertise.slice(0, 3).map((skill, index) => (
             <Badge key={index} variant="secondary" className="text-xs">
               {skill}
             </Badge>
           ))}
-          {mentor.expertise.length > 3 && (
+          {mentorProfile && mentorProfile.expertise.length > 3 && (
             <Badge variant="outline" className="text-xs">
-              +{mentor.expertise.length - 3}
+              +{mentorProfile.expertise.length - 3}
             </Badge>
           )}
         </div>

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { RoleSwitcher } from "./role-switcher";
 import {
   LayoutDashboard,
   User,
@@ -19,7 +18,7 @@ const mentorNavItems = [
     icon: LayoutDashboard,
   },
   {
-    href: "/mentor/profile",
+    href: "/profile?role=mentor",
     label: "Profile",
     icon: User,
   },
@@ -47,18 +46,12 @@ export function MentorNav() {
         </Link>
       </div>
 
-      <div className="p-4">
-        <div className="mb-2 text-xs font-medium uppercase text-gray-500">
-          Mentor View
-        </div>
-        <RoleSwitcher />
-      </div>
-
       <div className="flex-1 space-y-1 p-4">
         {mentorNavItems.map((item) => {
+          const itemPath = item.href.split("?")[0];
           const isActive =
-            pathname === item.href ||
-            (item.href !== "/mentor" && pathname.startsWith(item.href));
+            pathname === itemPath ||
+            (itemPath !== "/mentor" && pathname.startsWith(itemPath));
           const Icon = item.icon;
 
           return (

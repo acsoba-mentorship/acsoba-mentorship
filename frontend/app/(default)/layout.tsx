@@ -1,6 +1,6 @@
 import { MenteeTopNav } from "@/components/navigation/mentee-top-nav";
 
-export default function MenteeLayout({
+export default function DefaultLayout({
   children,
 }: {
   children: React.ReactNode;

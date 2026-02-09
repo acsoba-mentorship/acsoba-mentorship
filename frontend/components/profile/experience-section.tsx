@@ -4,26 +4,15 @@ import { Briefcase } from "lucide-react";
 
 interface ExperienceSectionProps {
   experience: Experience[];
-  yearsOfExperience?: number;
   onEdit?: () => void;
 }
 
 export function ExperienceSection({
   experience,
-  yearsOfExperience,
   onEdit,
 }: ExperienceSectionProps) {
   return (
     <ProfileSection title="Experience" onEdit={onEdit}>
-      {yearsOfExperience !== undefined && (
-        <div className="mb-4 rounded-md bg-gray-50 p-3 dark:bg-gray-800">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Total Years of Experience
-          </p>
-          <p className="text-xl font-semibold">{yearsOfExperience} years</p>
-        </div>
-      )}
-
       {experience.length > 0 ? (
         <div className="space-y-4">
           {experience.map((exp) => (

@@ -59,7 +59,7 @@ export default function MenteeRequestsPage() {
               Start by finding a mentor and sending a request
             </p>
             <Button asChild className="mt-4">
-              <Link href="/mentee/search">Find Mentors</Link>
+              <Link href="/search">Find Mentors</Link>
             </Button>
           </CardContent>
         </Card>

@@ -8,12 +8,12 @@ import { GraduationCap } from "lucide-react";
 
 const mainNavItems = [
   {
-    href: "/mentee",
+    href: "/",
     label: "Explore",
     exactMatch: true,
   },
   {
-    href: "/mentee/search",
+    href: "/search",
     label: "Find Mentors",
   },
 ];
