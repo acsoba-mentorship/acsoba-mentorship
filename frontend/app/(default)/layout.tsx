@@ -1,4 +1,5 @@
 import { MenteeTopNav } from "@/components/navigation/mentee-top-nav";
+import { SiteFooter } from "@/components/landing/site-footer";
 
 export default function DefaultLayout({
   children,
@@ -11,6 +12,8 @@ export default function DefaultLayout({
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {children}
       </main>
+      <SiteFooter />
     </div>
   );
 }
+

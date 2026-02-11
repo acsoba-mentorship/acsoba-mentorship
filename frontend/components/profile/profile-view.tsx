@@ -11,11 +11,6 @@ import { getActiveRoles } from "@/lib/domain/user";
 
 interface ProfileViewProps {
   user: UserWithProfiles;
-  /**
-   * Whether the viewer is the same as the profile owner.
-   * Controls whether edit controls are shown.
-   * Defaults to false (read-only).
-   */
   isOwnProfile?: boolean;
   /**
    * Optionally force an initial active role tab when the user has multiple roles.
