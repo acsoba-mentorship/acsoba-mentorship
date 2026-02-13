@@ -1,10 +1,14 @@
-import { auth0 } from "@/lib/auth0";
+"use client";
+
+import { useAuth0 } from "@auth0/auth0-react";
 import LoginButton from "@/components/LoginButton";
 import LogoutButton from "@/components/LogoutButton";
 import Profile from "@/components/Profile";
 
-export default async function Home() {
-  const session = await auth0.getSession();
+export default function Home() {
+  const { isAuthenticated, isLoading } = useAuth0();
+
+  const isLoggedIn = isAuthenticated && !isLoading;
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4">
@@ -15,11 +19,15 @@ export default async function Home() {
           className="h-10 w-auto"
         />
         <h1 className="text-center text-3xl font-bold text-slate-100 md:text-4xl">
-          Next.js + Auth0
+          Next.js + Auth0 + Convex
         </h1>
 
         <div className="flex w-full flex-col items-center gap-8 rounded-2xl bg-slate-700/50 p-8 shadow-xl">
-          {session ? (
+          {isLoading ? (
+            <p className="text-center text-lg text-slate-300">
+              Checking your session...
+            </p>
+          ) : isLoggedIn ? (
             <div className="flex w-full flex-col items-center gap-6">
               <p className="text-lg font-semibold text-emerald-400">
                 ✅ Successfully logged in!
