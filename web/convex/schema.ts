@@ -54,6 +54,14 @@ const users = defineTable({
       isAvailable: v.boolean(),
     })
   ),
+
+  onboardingStatus: v.union(
+    v.literal("new"),
+    v.literal("verification_pending"),
+    v.literal("verified"),
+    v.literal("profile_setup_complete")
+  ),
+
   createdAt: v.number(),
 })
   .index("by_token", ["tokenIdentifier"])

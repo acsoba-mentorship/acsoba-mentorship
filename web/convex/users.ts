@@ -1,5 +1,12 @@
-import { mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+
+const onboardingStatusValidator = v.union(
+  v.literal("new"),
+  v.literal("verification_pending"),
+  v.literal("verified"),
+  v.literal("profile_setup_complete")
+);
 
 export const storeUser = mutation({
   args: {},
@@ -18,7 +25,7 @@ export const storeUser = mutation({
       return user._id;
     }
 
-    // 3. If new, create the bridge record
+    // 3. If new, create the bridge record with onboardingStatus: "new"
     return await ctx.db.insert("users", {
       name: identity.name ?? "",
       dateOfBirth: 0,
@@ -32,9 +39,55 @@ export const storeUser = mutation({
       phoneNumber: "",
       education: [],
       experience: [],
+      onboardingStatus: "new",
       // Mentee/Mentor profiles stay empty until they set them up
       // so we omit menteeProfile and mentorProfile here on purpose.
       createdAt: Date.now(),
     });
+  },
+});
+
+export const getCurrentUser = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    return await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+  },
+});
+
+// Ensures that users can only transition to the next status in the onboarding process
+const ALLOWED_TRANSITIONS: Record<string, string[]> = {
+  new: ["verification_pending"],
+  verification_pending: ["verified"],
+  verified: ["profile_setup_complete"],
+  profile_setup_complete: ["profile_setup_complete"], // idempotent
+};
+
+export const setOnboardingStatus = mutation({
+  args: { status: onboardingStatusValidator },
+  handler: async (ctx, { status }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+
+    if (!user) throw new Error("User not found");
+
+    const current = user.onboardingStatus ?? "new";
+    // Updates the user's onboarding status to the next valid status in the onboarding process
+    const allowed = ALLOWED_TRANSITIONS[current];
+    if (!allowed?.includes(status)) {
+      throw new Error(`Invalid transition from ${current} to ${status}`);
+    }
+
+    await ctx.db.patch(user._id, { onboardingStatus: status });
+    return user._id;
   },
 });
