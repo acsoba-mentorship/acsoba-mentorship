@@ -59,7 +59,8 @@ const users = defineTable({
     v.literal("new"),
     v.literal("verification_pending"),
     v.literal("verified"),
-    v.literal("profile_setup_complete")
+    v.literal("user_profile_complete"),
+    v.literal("mentee_profile_setup_complete")
   ),
 
   createdAt: v.number(),
