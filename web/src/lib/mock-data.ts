@@ -1,0 +1,98 @@
+import type { MockUser } from "./types";
+
+export const mockMentors: MockUser[] = [
+  {
+    id: "mentor-1",
+    name: "Emma Wilson",
+    email: "emma.wilson@example.com",
+    bio: "Senior ML engineer with 10+ years of experience in NLP and computer vision. Passionate about helping the next generation of engineers.",
+    location: "San Francisco, CA",
+    profilePictureUrl: "",
+    title: "Senior ML Engineer at TechCorp",
+    mentorProfile: {
+      yearsOfExperience: 12,
+      industries: ["Technology", "AI/ML"],
+      expertise: ["Machine Learning", "NLP", "Computer Vision", "Python"],
+      maxMentees: 3,
+      isAvailable: true,
+    },
+  },
+  {
+    id: "mentor-2",
+    name: "Alex Johnson",
+    email: "alex.johnson@example.com",
+    bio: "Full-stack developer turned engineering manager. I help mentees navigate career transitions and level up their technical skills.",
+    location: "New York, NY",
+    profilePictureUrl: "",
+    title: "Engineering Manager at StartupX",
+    mentorProfile: {
+      yearsOfExperience: 8,
+      industries: ["Technology", "Fintech"],
+      expertise: ["Full Stack", "React", "Node.js", "Leadership"],
+      maxMentees: 2,
+      isAvailable: true,
+    },
+  },
+  {
+    id: "mentor-3",
+    name: "Sarah Chen",
+    email: "sarah.chen@example.com",
+    bio: "Data scientist specializing in healthcare analytics. Previously at Google Health and now leading a data team at a biotech startup.",
+    location: "Boston, MA",
+    profilePictureUrl: "",
+    title: "Lead Data Scientist at BioHealth",
+    mentorProfile: {
+      yearsOfExperience: 7,
+      industries: ["Healthcare", "Technology"],
+      expertise: ["Data Science", "Statistics", "Python", "Healthcare Analytics"],
+      maxMentees: 2,
+      isAvailable: true,
+    },
+  },
+  {
+    id: "mentor-4",
+    name: "Marcus Rivera",
+    email: "marcus.rivera@example.com",
+    bio: "Cloud architect with deep expertise in AWS and distributed systems. I enjoy mentoring engineers who want to scale their infrastructure knowledge.",
+    location: "Austin, TX",
+    profilePictureUrl: "",
+    title: "Principal Cloud Architect at CloudScale",
+    mentorProfile: {
+      yearsOfExperience: 15,
+      industries: ["Technology", "Cloud Computing"],
+      expertise: ["AWS", "Distributed Systems", "Kubernetes", "DevOps"],
+      maxMentees: 4,
+      isAvailable: false,
+    },
+  },
+  {
+    id: "mentor-5",
+    name: "Priya Patel",
+    email: "priya.patel@example.com",
+    bio: "Product designer and UX researcher. I help mentees build user-centered design skills and grow their design careers.",
+    location: "Seattle, WA",
+    profilePictureUrl: "",
+    title: "Senior Product Designer at DesignCo",
+    mentorProfile: {
+      yearsOfExperience: 9,
+      industries: ["Technology", "Design"],
+      expertise: ["UX Design", "User Research", "Figma", "Design Systems"],
+      maxMentees: 3,
+      isAvailable: true,
+    },
+  },
+];
+
+export const mockCurrentUser: MockUser = {
+  id: "user-1",
+  name: "Jordan Lee",
+  email: "jordan.lee@example.com",
+  bio: "Aspiring software engineer with a passion for web development and open source. Currently learning React and TypeScript.",
+  location: "Chicago, IL",
+  profilePictureUrl: "",
+  title: "Junior Developer",
+  menteeProfile: {
+    goals: "Transition into a full-stack engineering role within 12 months.",
+    interests: ["Web Development", "React", "TypeScript", "Open Source"],
+  },
+};
