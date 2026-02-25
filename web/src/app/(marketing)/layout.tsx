@@ -1,4 +1,5 @@
 import { SiteNav } from "@/components/navigation/site-nav";
+import { SiteFooter } from "@/components/landing/site-footer";
 
 export default function MarketingLayout({
   children,
@@ -8,7 +9,8 @@ export default function MarketingLayout({
   return (
     <div className="min-h-screen">
       <SiteNav />
-      {children}
+      <main>{children}</main>
+      <SiteFooter />
     </div>
   );
 }
