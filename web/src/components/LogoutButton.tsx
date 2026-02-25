@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth0 } from "@auth0/auth0-react";
+import { Button } from "@/components/ui/button";
 
 export default function LogoutButton() {
   const { logout, isLoading } = useAuth0();
@@ -16,12 +17,8 @@ export default function LogoutButton() {
   };
 
   return (
-    <button
-      type="button"
-      onClick={handleLogout}
-      className="rounded-xl bg-red-400 px-8 py-4 text-lg font-semibold text-slate-900 shadow-lg transition-all hover:-translate-y-0.5 hover:bg-red-300 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-red-400/50"
-    >
+    <Button variant="destructive" size="lg" onClick={handleLogout}>
       Log Out
-    </button>
+    </Button>
   );
 }
