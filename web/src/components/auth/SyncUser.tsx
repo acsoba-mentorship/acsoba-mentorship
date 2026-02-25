@@ -1,20 +1,25 @@
-'use client'
-import { useConvexAuth } from "convex/react";
-import { useMutation } from "convex/react";
+'use client';
+
+import { useConvexAuth, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+
+const SYNCED_KEY = "convex_user_synced";
 
 export function SyncUser() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const storeUser = useMutation(api.users.storeUser);
-  const [done, setDone] = useState(false);
 
   useEffect(() => {
-    // Only run if we are authenticated and haven't synced yet this session
-    if (isAuthenticated && !done) {
-      storeUser().then(() => setDone(true));
+    if (!isLoading && !isAuthenticated) {
+      sessionStorage.removeItem(SYNCED_KEY);
+      return;
     }
-  }, [isAuthenticated, storeUser, done]);
 
-  return null; // This component renders nothing
+    if (!isLoading && isAuthenticated && !sessionStorage.getItem(SYNCED_KEY)) { 
+      storeUser().then(() => sessionStorage.setItem(SYNCED_KEY, "1"));
+    }
+  }, [isLoading, isAuthenticated, storeUser]);
+
+  return null;
 }

@@ -4,7 +4,6 @@ import {
   AuthLoading,
   Authenticated,
   Unauthenticated,
-  useConvexAuth,
   useQuery,
 } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -13,7 +12,6 @@ import LoginButton from "@/components/LoginButton";
 
 function WelcomeContent() {
   const currentUser = useQuery(api.users.getCurrentUser);
-
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4">
       <div className="flex w-full max-w-3xl flex-col gap-8 rounded-3xl bg-slate-800/80 p-8 shadow-2xl ring-1 ring-white/5">
@@ -79,8 +77,6 @@ function WelcomeContent() {
 }
 
 export default function WelcomePage() {
-  const { isLoading, isAuthenticated } = useConvexAuth();
-
   return (
     <>
       <AuthLoading>

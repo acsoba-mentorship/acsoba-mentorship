@@ -53,10 +53,11 @@ export const getCurrentUser = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
-    return await ctx.db
+    const currentUser = await ctx.db
       .query("users")
       .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
       .unique();
+    return currentUser;
   },
 });
 
