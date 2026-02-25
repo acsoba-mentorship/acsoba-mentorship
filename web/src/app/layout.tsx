@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ConvexClientProvider } from "./ConvexClientProvider";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { SyncUser } from "@/components/auth/SyncUser";
 
 const geistSans = Geist({
@@ -30,8 +31,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ConvexClientProvider>
-          <SyncUser />
-          {children}
+          <TooltipProvider>
+            <SyncUser />
+            {children}
+          </TooltipProvider>
         </ConvexClientProvider>
       </body>
     </html>

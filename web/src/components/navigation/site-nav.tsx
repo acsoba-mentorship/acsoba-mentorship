@@ -9,6 +9,7 @@ import {
   LogOut,
   Menu,
   Search,
+  Shield,
   User,
 } from "lucide-react";
 
@@ -139,6 +140,12 @@ function UserMenu() {
           <Link href="/profile">
             <User />
             Profile
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/mentor">
+            <Shield />
+            Mentor Panel
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
