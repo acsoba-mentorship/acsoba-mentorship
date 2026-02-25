@@ -3,7 +3,6 @@ import { v } from "convex/values";
 
 const onboardingStatusValidator = v.union(
   v.literal("new"),
-  v.literal("verification_pending"),
   v.literal("verified"),
   v.literal("user_profile_complete"),
   v.literal("mentee_profile_setup_complete")
@@ -63,8 +62,7 @@ export const getCurrentUser = query({
 
 // Ensures that users can only transition to the next status in the onboarding process
 const ALLOWED_TRANSITIONS: Record<string, string[]> = {
-  new: ["verification_pending"],
-  verification_pending: ["verified"],
+  new: ["verified"],
   verified: ["user_profile_complete"],
   user_profile_complete: ["mentee_profile_setup_complete"],
   mentee_profile_setup_complete: ["mentee_profile_setup_complete"], // idempotent

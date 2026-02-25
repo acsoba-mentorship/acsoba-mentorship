@@ -57,7 +57,6 @@ const users = defineTable({
 
   onboardingStatus: v.union(
     v.literal("new"),
-    v.literal("verification_pending"),
     v.literal("verified"),
     v.literal("user_profile_complete"),
     v.literal("mentee_profile_setup_complete")
