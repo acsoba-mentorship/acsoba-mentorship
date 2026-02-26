@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,6 +45,10 @@ const suggestedMentors = [
     initials: "SC",
   },
 ];
+
+export const metadata: Metadata = {
+  title: "Dashboard — ACS OBA Shepherds",
+};
 
 export default function DashboardPage() {
   return (

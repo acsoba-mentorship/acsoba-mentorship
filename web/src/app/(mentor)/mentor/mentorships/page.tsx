@@ -1,6 +1,11 @@
+import type { Metadata } from "next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Manage Mentorships — ACS OBA Shepherds",
+};
 
 export default function MentorMentorshipsPage() {
   return (
