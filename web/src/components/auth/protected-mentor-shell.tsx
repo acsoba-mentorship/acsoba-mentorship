@@ -12,8 +12,6 @@ export function ProtectedMentorShell({
 }) {
   const currentUser = useQuery(api.users.getCurrentUser);
 
-  console.log("currentUser", currentUser);
-
   if (currentUser === undefined) {
     return (
       <div className="flex min-h-screen">
@@ -42,9 +40,9 @@ export function ProtectedMentorShell({
     redirect("/");
   }
 
-  // if (!currentUser.mentorProfile) {
-  //   redirect("/mentor");
-  // }
+  if (!currentUser.mentorProfile) {
+    redirect("/dashboard");
+  }
 
   return <>{children}</>;
 }
