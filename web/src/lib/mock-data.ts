@@ -95,4 +95,11 @@ export const mockCurrentUser: MockUser = {
     goals: "Transition into a full-stack engineering role within 12 months.",
     interests: ["Web Development", "React", "TypeScript", "Open Source"],
   },
+  mentorProfile: {
+    yearsOfExperience: 3,
+    industries: ["Technology", "Education"],
+    expertise: ["React", "TypeScript", "Next.js", "Tailwind CSS"],
+    maxMentees: 2,
+    isAvailable: true,
+  },
 };
