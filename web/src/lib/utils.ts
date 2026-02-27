@@ -5,8 +5,14 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+function isValidDate(date: Date): boolean {
+  return !Number.isNaN(date.getTime())
+}
+
 export function formatDate(date: Date | number | string): string {
-  return new Date(date).toLocaleDateString("en-US", {
+  const d = new Date(date)
+  if (!isValidDate(d)) return "Invalid date"
+  return d.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -14,7 +20,9 @@ export function formatDate(date: Date | number | string): string {
 }
 
 export function formatDateTime(date: Date | number | string): string {
-  return new Date(date).toLocaleDateString("en-US", {
+  const d = new Date(date)
+  if (!isValidDate(d)) return "Invalid date"
+  return d.toLocaleDateString("en-US", {
     weekday: "short",
     month: "short",
     day: "numeric",
