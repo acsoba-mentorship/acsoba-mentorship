@@ -22,7 +22,7 @@ export function formatDate(date: Date | number | string): string {
 export function formatDateTime(date: Date | number | string): string {
   const d = new Date(date)
   if (!isValidDate(d)) return "Invalid date"
-  return d.toLocaleDateString("en-US", {
+  return d.toLocaleString("en-US", {
     weekday: "short",
     month: "short",
     day: "numeric",
@@ -30,6 +30,13 @@ export function formatDateTime(date: Date | number | string): string {
     hour: "numeric",
     minute: "2-digit",
   })
+}
+
+export function sanitizeId(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
 }
 
 export function getInitials(name: string): string {

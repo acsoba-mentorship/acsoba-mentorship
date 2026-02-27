@@ -8,6 +8,7 @@ import {
   EXPERTISE_FILTER_OPTIONS,
   AVAILABILITY_FILTER_OPTIONS,
 } from "@/lib/constants";
+import { sanitizeId } from "@/lib/utils";
 
 export interface SearchFilters {
   expertise: string[];
@@ -34,21 +35,24 @@ function FilterGroup({
     <div>
       <h3 className="mb-3 text-sm font-semibold">{title}</h3>
       <div className="space-y-2.5">
-        {options.map((option) => (
+        {options.map((option) => {
+          const id = sanitizeId(`${title}-${option}`)
+          return (
           <div key={option} className="flex items-center gap-2">
             <Checkbox
-              id={`${title}-${option}`}
+              id={id}
               checked={selected.includes(option)}
               onCheckedChange={() => onToggle(option)}
             />
             <Label
-              htmlFor={`${title}-${option}`}
+              htmlFor={id}
               className="text-sm font-normal cursor-pointer"
             >
               {option}
             </Label>
           </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   );
