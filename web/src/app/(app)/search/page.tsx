@@ -7,6 +7,7 @@ import { FilterSidebar, type SearchFilters } from "@/components/search/filter-si
 import { ViewToggle } from "@/components/search/view-toggle";
 import { MentorCard } from "@/components/search/mentor-card";
 import { MentorListItem } from "@/components/search/mentor-list-item";
+import { AVAILABLE, UNAVAILABLE } from "@/lib/constants";
 import { mockMentors } from "@/lib/mock-data";
 import type { ViewMode } from "@/lib/types";
 import { Search } from "lucide-react";
@@ -48,8 +49,8 @@ export default function SearchPage() {
 
       if (filters.availability.length > 0) {
         const isAvailable = profile.isAvailable;
-        const wantsAvailable = filters.availability.includes("Available");
-        const wantsUnavailable = filters.availability.includes("Unavailable");
+        const wantsAvailable = filters.availability.includes(AVAILABLE);
+        const wantsUnavailable = filters.availability.includes(UNAVAILABLE);
         if (wantsAvailable && !wantsUnavailable && !isAvailable) return false;
         if (wantsUnavailable && !wantsAvailable && isAvailable) return false;
       }

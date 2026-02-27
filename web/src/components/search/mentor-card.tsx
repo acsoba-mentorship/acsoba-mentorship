@@ -9,6 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MapPin, Briefcase } from "lucide-react";
+import { AVAILABLE, UNAVAILABLE } from "@/lib/constants";
 import { getInitials } from "@/lib/utils";
 import type { MockUser } from "@/lib/types";
 
@@ -35,7 +36,7 @@ export function MentorCard({ mentor }: MentorCardProps) {
             </CardDescription>
           </div>
           <Badge variant={profile.isAvailable ? "default" : "secondary"}>
-            {profile.isAvailable ? "Available" : "Unavailable"}
+            {profile.isAvailable ? AVAILABLE : UNAVAILABLE}
           </Badge>
         </div>
       </CardHeader>

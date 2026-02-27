@@ -17,6 +17,7 @@ import {
   Building,
   GraduationCap,
 } from "lucide-react";
+import { AVAILABLE, UNAVAILABLE } from "@/lib/constants";
 import type { MockUser } from "@/lib/types";
 
 interface MentorSidebarProps {
@@ -89,7 +90,7 @@ export function MentorSidebar({ user, isOwnProfile }: MentorSidebarProps) {
               variant={profile.isAvailable ? "default" : "secondary"}
               className="text-xs"
             >
-              {profile.isAvailable ? "Available" : "Unavailable"}
+              {profile.isAvailable ? AVAILABLE : UNAVAILABLE}
             </Badge>
           </div>
         </CardContent>

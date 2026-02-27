@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MapPin, Briefcase } from "lucide-react";
+import { AVAILABLE, UNAVAILABLE } from "@/lib/constants";
 import { getInitials } from "@/lib/utils";
 import type { MockUser } from "@/lib/types";
 
@@ -28,7 +29,7 @@ export function MentorListItem({ mentor }: MentorListItemProps) {
               <p className="text-sm text-muted-foreground">{mentor.title}</p>
             </div>
             <Badge variant={profile.isAvailable ? "default" : "secondary"}>
-              {profile.isAvailable ? "Available" : "Unavailable"}
+              {profile.isAvailable ? AVAILABLE : UNAVAILABLE}
             </Badge>
           </div>
           <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">

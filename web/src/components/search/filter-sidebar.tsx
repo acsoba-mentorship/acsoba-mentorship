@@ -4,22 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import {
+  EXPERTISE_FILTER_OPTIONS,
+  AVAILABILITY_FILTER_OPTIONS,
+} from "@/lib/constants";
 
 export interface SearchFilters {
   expertise: string[];
   availability: string[];
 }
-
-const expertiseOptions = [
-  "Machine Learning",
-  "Full Stack",
-  "Data Science",
-  "Cloud / DevOps",
-  "UX Design",
-  "Leadership",
-];
-
-const availabilityOptions = ["Available", "Unavailable"];
 
 interface FilterSidebarProps {
   filters: SearchFilters;
@@ -93,14 +86,14 @@ export function FilterSidebar({ filters, onFiltersChange }: FilterSidebarProps) 
         <Separator />
         <FilterGroup
           title="Expertise"
-          options={expertiseOptions}
+          options={[...EXPERTISE_FILTER_OPTIONS]}
           selected={filters.expertise}
           onToggle={(v) => toggleFilter("expertise", v)}
         />
         <Separator />
         <FilterGroup
           title="Availability"
-          options={availabilityOptions}
+          options={[...AVAILABILITY_FILTER_OPTIONS]}
           selected={filters.availability}
           onToggle={(v) => toggleFilter("availability", v)}
         />
