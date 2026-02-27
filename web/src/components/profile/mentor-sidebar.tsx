@@ -30,21 +30,12 @@ export function MentorSidebar({ user, isOwnProfile }: MentorSidebarProps) {
 
   if (!profile) {
     return (
-      <Card className="justify-center">
-        <CardContent className="flex flex-col items-center text-center mb-4">
-          <div className="rounded-full bg-muted p-3">
-            <GraduationCap className="size-6 text-muted-foreground" />
-          </div>
-          <p className="mt-3 font-medium">Become a Mentor</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Share your expertise and guide the next generation of professionals.
-          </p>
-          {isOwnProfile && (
-            <Button size="sm" className="mt-4">
-              Set Up Mentor Profile
-            </Button>
-          )}
-        </CardContent>
+      <Card className="flex flex-col items-center justify-center">
+        <CardHeader>
+          <CardTitle className="font-semibold">
+            Mentorship Details
+          </CardTitle>
+        </CardHeader>
       </Card>
     );
   }
