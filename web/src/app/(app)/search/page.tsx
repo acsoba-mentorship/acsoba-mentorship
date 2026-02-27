@@ -41,8 +41,9 @@ export default function SearchPage() {
 
       if (filters.expertise.length > 0) {
         const mentorSkills = profile.expertise.map((s) => s.toLowerCase());
-        const hasMatch = filters.expertise.some((f) =>
-          mentorSkills.some((s) => s.includes(f.toLowerCase()))
+        const lowercasedFilters = filters.expertise.map((f) => f.toLowerCase());
+        const hasMatch = lowercasedFilters.some((f) =>
+          mentorSkills.some((s) => s.includes(f))
         );
         if (!hasMatch) return false;
       }
@@ -58,9 +59,6 @@ export default function SearchPage() {
       return true;
     });
   }, [query, filters]);
-
-  const activeFilterCount =
-    filters.expertise.length + filters.availability.length;
 
   const clearAll = () => {
     setQuery("");
