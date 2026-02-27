@@ -32,7 +32,7 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
+import { cn, getInitials } from "@/lib/utils";
 
 const appNavLinks = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -92,14 +92,7 @@ function MobileNavLinks({
 function UserMenu() {
   const { user, logout } = useAuth0();
 
-  const initials = user?.name
-    ? user.name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2)
-    : "U";
+  const initials = user?.name ? getInitials(user.name) : "U";
 
   const handleLogout = () => {
     void logout({

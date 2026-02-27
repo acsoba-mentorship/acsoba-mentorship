@@ -23,3 +23,12 @@ export function formatDateTime(date: Date | number | string): string {
     minute: "2-digit",
   })
 }
+
+export function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2)
+}

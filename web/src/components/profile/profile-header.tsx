@@ -1,16 +1,8 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Mail } from "lucide-react";
+import { getInitials } from "@/lib/utils";
 import type { MockUser } from "@/lib/types";
-
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}
 
 interface ProfileHeaderProps {
   user: MockUser;
