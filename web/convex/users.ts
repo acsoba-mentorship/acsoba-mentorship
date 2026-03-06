@@ -33,6 +33,7 @@ export const storeUser = mutation({
       nationality: "",
       tokenIdentifier: identity.tokenIdentifier, // THE LINK
       profilePictureUrl: "",
+      title: "",
       bio: "",
       location: "",
       email: identity.email ?? "",
@@ -170,6 +171,258 @@ export const updateMenteeProfile = mutation({
       menteeProfile,
       onboardingStatus: "mentee_profile_setup_complete",
     });
+    return user._id;
+  },
+});
+
+// Post-onboarding profile editing (owner-only, derived from auth identity)
+
+const updateUserProfileBasicsArgs = v.object({
+  bio: v.optional(v.string()),
+  location: v.optional(v.string()),
+  title: v.optional(v.string()),
+});
+
+export const updateUserProfileBasics = mutation({
+  args: updateUserProfileBasicsArgs,
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+
+    if (!user) throw new Error("User not found");
+
+    const patch: Record<string, unknown> = {};
+    if (args.bio !== undefined) patch.bio = args.bio;
+    if (args.location !== undefined) patch.location = args.location;
+    if (args.title !== undefined) patch.title = args.title;
+
+    if (Object.keys(patch).length === 0) {
+      return user._id;
+    }
+
+    await ctx.db.patch(user._id, patch);
+    return user._id;
+  },
+});
+
+const updateMenteeProfileDetailsArgs = v.object({
+  goals: v.optional(v.string()),
+  interests: v.optional(v.array(v.string())),
+});
+
+export const updateMenteeProfileDetails = mutation({
+  args: updateMenteeProfileDetailsArgs,
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+
+    if (!user) throw new Error("User not found");
+
+    const previous = user.menteeProfile ?? { goals: "", interests: [] as string[] };
+
+    const menteeProfile = {
+      goals: args.goals ?? previous.goals,
+      interests: args.interests ?? previous.interests,
+    };
+
+    await ctx.db.patch(user._id, { menteeProfile });
+    return user._id;
+  },
+});
+
+const mentorProfileArgs = v.object({
+  yearsOfExperience: v.number(),
+  industries: v.array(v.string()),
+  expertise: v.array(v.string()),
+  maxMentees: v.number(),
+  isAvailable: v.boolean(),
+});
+
+export const updateMentorProfile = mutation({
+  args: mentorProfileArgs,
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+
+    if (!user) throw new Error("User not found");
+
+    const mentorProfile = {
+      yearsOfExperience: args.yearsOfExperience,
+      industries: args.industries,
+      expertise: args.expertise,
+      maxMentees: args.maxMentees,
+      isAvailable: args.isAvailable,
+    };
+
+    await ctx.db.patch(user._id, { mentorProfile });
+    return user._id;
+  },
+});
+
+const educationEntry = v.object({
+  institution: v.string(),
+  degree: v.string(),
+  fieldOfStudy: v.string(),
+  startDate: v.number(),
+  endDate: v.number(),
+  description: v.optional(v.string()),
+});
+
+export const addEducation = mutation({
+  args: { entry: educationEntry },
+  handler: async (ctx, { entry }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+
+    if (!user) throw new Error("User not found");
+
+    const education = [...user.education, entry];
+    await ctx.db.patch(user._id, { education });
+    return user._id;
+  },
+});
+
+export const updateEducation = mutation({
+  args: { index: v.number(), entry: educationEntry },
+  handler: async (ctx, { index, entry }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+
+    if (!user) throw new Error("User not found");
+
+    if (index < 0 || index >= user.education.length) {
+      throw new Error("Invalid education index");
+    }
+
+    const education = user.education.map((item, idx) =>
+      idx === index ? entry : item
+    );
+
+    await ctx.db.patch(user._id, { education });
+    return user._id;
+  },
+});
+
+export const deleteEducation = mutation({
+  args: { index: v.number() },
+  handler: async (ctx, { index }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+
+    if (!user) throw new Error("User not found");
+
+    if (index < 0 || index >= user.education.length) {
+      throw new Error("Invalid education index");
+    }
+
+    const education = user.education.filter((_, idx) => idx !== index);
+    await ctx.db.patch(user._id, { education });
+    return user._id;
+  },
+});
+
+const experienceEntry = v.object({
+  company: v.string(),
+  title: v.string(),
+  startDate: v.number(),
+  endDate: v.number(),
+  description: v.optional(v.string()),
+});
+
+export const addExperience = mutation({
+  args: { entry: experienceEntry },
+  handler: async (ctx, { entry }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+
+    if (!user) throw new Error("User not found");
+
+    const experience = [...user.experience, entry];
+    await ctx.db.patch(user._id, { experience });
+    return user._id;
+  },
+});
+
+export const updateExperience = mutation({
+  args: { index: v.number(), entry: experienceEntry },
+  handler: async (ctx, { index, entry }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+
+    if (!user) throw new Error("User not found");
+
+    if (index < 0 || index >= user.experience.length) {
+      throw new Error("Invalid experience index");
+    }
+
+    const experience = user.experience.map((item, idx) =>
+      idx === index ? entry : item
+    );
+
+    await ctx.db.patch(user._id, { experience });
+    return user._id;
+  },
+});
+
+export const deleteExperience = mutation({
+  args: { index: v.number() },
+  handler: async (ctx, { index }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .unique();
+
+    if (!user) throw new Error("User not found");
+
+    if (index < 0 || index >= user.experience.length) {
+      throw new Error("Invalid experience index");
+    }
+
+    const experience = user.experience.filter((_, idx) => idx !== index);
+    await ctx.db.patch(user._id, { experience });
     return user._id;
   },
 });
