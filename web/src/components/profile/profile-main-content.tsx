@@ -22,14 +22,7 @@ import { InterestsSectionForm } from "./forms/interests-section-form";
 import { EducationForm } from "./forms/education-form";
 import { ExperienceForm } from "./forms/experience-form";
 import { formatDate } from "@/lib/utils";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 
 interface ProfileMainContentProps {
   user: User;
@@ -55,36 +48,24 @@ export function ProfileMainContent({
   const [experienceEditOpen, setExperienceEditOpen] = useState(false);
   const [experienceEditIndex, setExperienceEditIndex] = useState<number | null>(null);
   const [experienceDeleteIndex, setExperienceDeleteIndex] = useState<number | null>(null);
-  const [isDeletingEducation, setIsDeletingEducation] = useState(false);
-  const [isDeletingExperience, setIsDeletingExperience] = useState(false);
 
   const deleteEducation = useMutation(api.users.deleteEducation);
   const deleteExperience = useMutation(api.users.deleteExperience);
 
   const handleDeleteEducation = async () => {
     if (educationDeleteIndex === null) return;
-    setIsDeletingEducation(true);
-    try {
-      await deleteEducation({ index: educationDeleteIndex });
-      setEducationDeleteIndex(null);
-      setEducationEditOpen(false);
-      setEducationEditIndex(null);
-    } finally {
-      setIsDeletingEducation(false);
-    }
+    await deleteEducation({ index: educationDeleteIndex });
+    setEducationDeleteIndex(null);
+    setEducationEditOpen(false);
+    setEducationEditIndex(null);
   };
 
   const handleDeleteExperience = async () => {
     if (experienceDeleteIndex === null) return;
-    setIsDeletingExperience(true);
-    try {
-      await deleteExperience({ index: experienceDeleteIndex });
-      setExperienceDeleteIndex(null);
-      setExperienceEditOpen(false);
-      setExperienceEditIndex(null);
-    } finally {
-      setIsDeletingExperience(false);
-    }
+    await deleteExperience({ index: experienceDeleteIndex });
+    setExperienceDeleteIndex(null);
+    setExperienceEditOpen(false);
+    setExperienceEditIndex(null);
   };
 
   return (
@@ -253,35 +234,13 @@ export function ProfileMainContent({
         )}
       </ProfileSectionCard>
       {isOwnProfile && (
-        <Dialog
+        <DeleteConfirmDialog
           open={educationDeleteIndex !== null}
           onOpenChange={(open) => !open && setEducationDeleteIndex(null)}
-        >
-          <DialogContent showCloseButton={false}>
-            <DialogHeader>
-              <DialogTitle>Delete education</DialogTitle>
-              <DialogDescription>
-                Are you sure you want to delete this education entry? This action cannot be undone.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setEducationDeleteIndex(null)}
-                disabled={isDeletingEducation}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleDeleteEducation}
-                disabled={isDeletingEducation}
-              >
-                {isDeletingEducation ? "Deleting..." : "Delete"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          title="Delete education"
+          description="Are you sure you want to delete this education entry? This action cannot be undone."
+          onConfirm={handleDeleteEducation}
+        />
       )}
       {isOwnProfile && educationEditIndex !== null && education[educationEditIndex] && (
         <ProfileEditDialog
@@ -369,35 +328,13 @@ export function ProfileMainContent({
         )}
       </ProfileSectionCard>
       {isOwnProfile && (
-        <Dialog
+        <DeleteConfirmDialog
           open={experienceDeleteIndex !== null}
           onOpenChange={(open) => !open && setExperienceDeleteIndex(null)}
-        >
-          <DialogContent showCloseButton={false}>
-            <DialogHeader>
-              <DialogTitle>Delete experience</DialogTitle>
-              <DialogDescription>
-                Are you sure you want to delete this experience entry? This action cannot be undone.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setExperienceDeleteIndex(null)}
-                disabled={isDeletingExperience}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleDeleteExperience}
-                disabled={isDeletingExperience}
-              >
-                {isDeletingExperience ? "Deleting..." : "Delete"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          title="Delete experience"
+          description="Are you sure you want to delete this experience entry? This action cannot be undone."
+          onConfirm={handleDeleteExperience}
+        />
       )}
       {isOwnProfile && experienceEditIndex !== null && experience[experienceEditIndex] && (
         <ProfileEditDialog
