@@ -48,15 +48,13 @@ function ProfileContent() {
     );
   }
 
-  console.log(user)
-
   return (
     <div className="space-y-6">
       <ProfileHeader user={user} />
       <Separator />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <ProfileMainContent user={user} />
+        <ProfileMainContent user={user} isOwnProfile={isOwnProfile(String(user._id))} />
         <MentorSidebar user={user} isOwnProfile={isOwnProfile(String(user._id))} />
       </div>
     </div>
