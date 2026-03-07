@@ -18,10 +18,10 @@ import {
   GraduationCap,
 } from "lucide-react";
 import { AVAILABLE, UNAVAILABLE } from "@/lib/constants";
-import type { MockUser } from "@/lib/types";
+import type { User } from "@/lib/types";
 
 interface MentorSidebarProps {
-  user: MockUser;
+  user: User;
   isOwnProfile?: boolean;
 }
 

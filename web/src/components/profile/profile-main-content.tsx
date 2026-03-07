@@ -7,10 +7,10 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Target, Sparkles } from "lucide-react";
-import type { MockUser } from "@/lib/types";
+import type { User } from "@/lib/types";
 
 interface ProfileMainContentProps {
-  user: MockUser;
+  user: User;
 }
 
 export function ProfileMainContent({ user }: ProfileMainContentProps) {

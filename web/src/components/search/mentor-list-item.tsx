@@ -5,10 +5,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MapPin, Briefcase } from "lucide-react";
 import { AVAILABLE, UNAVAILABLE } from "@/lib/constants";
 import { getInitials } from "@/lib/utils";
-import type { MockUser } from "@/lib/types";
+import type { User } from "@/lib/types";
 
 interface MentorListItemProps {
-  mentor: MockUser;
+  mentor: User;
 }
 
 export function MentorListItem({ mentor }: MentorListItemProps) {

@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { ConvexClientProvider } from "./ConvexClientProvider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SyncUser } from "@/components/auth/SyncUser";
+import { ConvexClientProvider } from "./ConvexClientProvider";
+import { CurrentUserProvider } from "./CurrentUserProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,7 +34,9 @@ export default function RootLayout({
         <ConvexClientProvider>
           <TooltipProvider>
             <SyncUser />
-            {children}
+            <CurrentUserProvider>
+              {children}
+            </CurrentUserProvider>
           </TooltipProvider>
         </ConvexClientProvider>
       </body>

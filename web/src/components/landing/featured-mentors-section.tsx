@@ -27,7 +27,7 @@ export function FeaturedMentorsSection() {
         </div>
         <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
           {featured.map((mentor) => (
-              <Card key={mentor.id}>
+              <Card key={mentor._id}>
                 <CardHeader>
                   <div className="flex items-center gap-4">
                     <Avatar className="h-12 w-12">
