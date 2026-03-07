@@ -35,6 +35,8 @@ import { CURRENT_YEAR, MONTHS, YEAR_OPTIONS } from "@/lib/constants";
 interface ExperienceFormProps {
   /** When provided, form is in edit mode and we call updateExperience(index, entry). */
   editIndex?: number;
+  /** Called when user clicks Delete. Only shown in edit mode. */
+  onDelete?: () => void;
   /** Pre-fill when editing. */
   initialEntry?: {
     company: string;
@@ -57,6 +59,7 @@ const defaultValues: ExperienceEntryFormValues = {
 
 export function ExperienceForm({
   editIndex,
+  onDelete,
   initialEntry,
   onSuccess,
 }: ExperienceFormProps) {
@@ -283,13 +286,27 @@ export function ExperienceForm({
             </FormItem>
           )}
         />
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => onSuccess?.()}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? "Saving..." : "Save"}
-          </Button>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            {onDelete && (
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={onDelete}
+              >
+                Delete
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" onClick={() => onSuccess?.()}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={form.formState.isSubmitting}>
+              {form.formState.isSubmitting ? "Saving..." : "Save"}
+            </Button>
+          </div>
         </div>
       </form>
     </Form>

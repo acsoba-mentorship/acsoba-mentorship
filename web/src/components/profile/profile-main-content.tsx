@@ -11,6 +11,8 @@ import {
   Pencil,
   Plus,
 } from "lucide-react";
+import { useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import type { User } from "@/lib/types";
 import { ProfileSectionCard } from "./profile-section-card";
 import { ProfileEditDialog } from "./profile-edit-dialog";
@@ -20,6 +22,14 @@ import { InterestsSectionForm } from "./forms/interests-section-form";
 import { EducationForm } from "./forms/education-form";
 import { ExperienceForm } from "./forms/experience-form";
 import { formatDate } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface ProfileMainContentProps {
   user: User;
@@ -40,9 +50,42 @@ export function ProfileMainContent({
   const [educationAddOpen, setEducationAddOpen] = useState(false);
   const [educationEditOpen, setEducationEditOpen] = useState(false);
   const [educationEditIndex, setEducationEditIndex] = useState<number | null>(null);
+  const [educationDeleteIndex, setEducationDeleteIndex] = useState<number | null>(null);
   const [experienceAddOpen, setExperienceAddOpen] = useState(false);
   const [experienceEditOpen, setExperienceEditOpen] = useState(false);
   const [experienceEditIndex, setExperienceEditIndex] = useState<number | null>(null);
+  const [experienceDeleteIndex, setExperienceDeleteIndex] = useState<number | null>(null);
+  const [isDeletingEducation, setIsDeletingEducation] = useState(false);
+  const [isDeletingExperience, setIsDeletingExperience] = useState(false);
+
+  const deleteEducation = useMutation(api.users.deleteEducation);
+  const deleteExperience = useMutation(api.users.deleteExperience);
+
+  const handleDeleteEducation = async () => {
+    if (educationDeleteIndex === null) return;
+    setIsDeletingEducation(true);
+    try {
+      await deleteEducation({ index: educationDeleteIndex });
+      setEducationDeleteIndex(null);
+      setEducationEditOpen(false);
+      setEducationEditIndex(null);
+    } finally {
+      setIsDeletingEducation(false);
+    }
+  };
+
+  const handleDeleteExperience = async () => {
+    if (experienceDeleteIndex === null) return;
+    setIsDeletingExperience(true);
+    try {
+      await deleteExperience({ index: experienceDeleteIndex });
+      setExperienceDeleteIndex(null);
+      setExperienceEditOpen(false);
+      setExperienceEditIndex(null);
+    } finally {
+      setIsDeletingExperience(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -209,6 +252,37 @@ export function ProfileMainContent({
           <p className="text-sm text-muted-foreground italic">No education added yet.</p>
         )}
       </ProfileSectionCard>
+      {isOwnProfile && (
+        <Dialog
+          open={educationDeleteIndex !== null}
+          onOpenChange={(open) => !open && setEducationDeleteIndex(null)}
+        >
+          <DialogContent showCloseButton={false}>
+            <DialogHeader>
+              <DialogTitle>Delete education</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete this education entry? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setEducationDeleteIndex(null)}
+                disabled={isDeletingEducation}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteEducation}
+                disabled={isDeletingEducation}
+              >
+                {isDeletingEducation ? "Deleting..." : "Delete"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
       {isOwnProfile && educationEditIndex !== null && education[educationEditIndex] && (
         <ProfileEditDialog
           open={educationEditOpen}
@@ -233,6 +307,7 @@ export function ProfileMainContent({
               setEducationEditOpen(false);
               setEducationEditIndex(null);
             }}
+            onDelete={() => setEducationDeleteIndex(educationEditIndex)}
           />
         </ProfileEditDialog>
       )}
@@ -293,6 +368,37 @@ export function ProfileMainContent({
           <p className="text-sm text-muted-foreground italic">No experience added yet.</p>
         )}
       </ProfileSectionCard>
+      {isOwnProfile && (
+        <Dialog
+          open={experienceDeleteIndex !== null}
+          onOpenChange={(open) => !open && setExperienceDeleteIndex(null)}
+        >
+          <DialogContent showCloseButton={false}>
+            <DialogHeader>
+              <DialogTitle>Delete experience</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete this experience entry? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setExperienceDeleteIndex(null)}
+                disabled={isDeletingExperience}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteExperience}
+                disabled={isDeletingExperience}
+              >
+                {isDeletingExperience ? "Deleting..." : "Delete"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
       {isOwnProfile && experienceEditIndex !== null && experience[experienceEditIndex] && (
         <ProfileEditDialog
           open={experienceEditOpen}
@@ -316,6 +422,7 @@ export function ProfileMainContent({
               setExperienceEditOpen(false);
               setExperienceEditIndex(null);
             }}
+            onDelete={() => setExperienceDeleteIndex(experienceEditIndex)}
           />
         </ProfileEditDialog>
       )}
