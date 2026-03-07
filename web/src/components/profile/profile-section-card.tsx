@@ -12,8 +12,12 @@ interface ProfileSectionCardProps {
   title: string;
   description?: string;
   icon?: React.ReactNode;
-  showEdit?: boolean; /** When true, show the edit button. Pass ProfileEditDialog as editTrigger. */
-  editTrigger?: React.ReactNode; /** Slot for the edit button/dialog trigger. Use ProfileEditDialog with trigger=icon button. */
+  /** When true, show edit/add affordances. */
+  showEdit?: boolean;
+  /** Slot for the Add button (e.g. +). Renders in header when provided. */
+  addTrigger?: React.ReactNode;
+  /** Slot for the edit button (pencil). Use ProfileEditDialog with trigger=icon button. */
+  editTrigger?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -22,6 +26,7 @@ export function ProfileSectionCard({
   description,
   icon,
   showEdit,
+  addTrigger,
   editTrigger,
   children,
 }: ProfileSectionCardProps) {
@@ -33,7 +38,7 @@ export function ProfileSectionCard({
             {icon}
             <CardTitle className="font-semibold">{title}</CardTitle>
           </div>
-          {showEdit && editTrigger}
+          {showEdit && (addTrigger ?? editTrigger)}
         </div>
         {description && (
           <CardDescription className="text-xs">{description}</CardDescription>

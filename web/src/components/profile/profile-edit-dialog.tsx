@@ -10,9 +10,13 @@ import {
 } from "@/components/ui/dialog";
 
 interface ProfileEditDialogProps {
-  trigger: React.ReactNode;
+  /** When omitted and open/onOpenChange are used, dialog is controlled only (no trigger). */
+  trigger?: React.ReactNode;
   title: string;
   description?: string;
+  /** Controlled mode: when provided, caller can close on success. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   children: React.ReactNode;
 }
 
@@ -24,11 +28,13 @@ export function ProfileEditDialog({
   trigger,
   title,
   description,
+  open,
+  onOpenChange,
   children,
 }: ProfileEditDialogProps) {
   return (
-    <Dialog>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      {trigger != null && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>

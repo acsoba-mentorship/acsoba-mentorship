@@ -276,8 +276,8 @@ export const updateMentorProfile = mutation({
 
 const educationEntry = v.object({
   institution: v.string(),
-  degree: v.string(),
-  fieldOfStudy: v.string(),
+  degree: v.optional(v.string()),
+  fieldOfStudy: v.optional(v.string()),
   startDate: v.number(),
   endDate: v.number(),
   description: v.optional(v.string()),
