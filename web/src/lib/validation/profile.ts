@@ -105,6 +105,22 @@ export const experienceEntrySchema = z
 export type ExperienceEntryFormValues = z.infer<typeof experienceEntrySchema>;
 export type ExperienceEntryFormInput = z.input<typeof experienceEntrySchema>;
 
+// --- Mentor profile ---
+export const mentorDetailsSchema = z.object({
+  yearsOfExperience: z.int("Must be an integer").min(0, "Must be 0 or more").max(50),
+  maxMentees: z.int("Must be an integer").min(1, "Must be at least 1").max(100),
+  isAvailable: z.boolean(),
+});
+
+export type MentorDetailsFormValues = z.infer<typeof mentorDetailsSchema>;
+
+export const mentorExpertiseSchema = z.object({
+  industries: z.array(z.string().min(1)),
+  expertise: z.array(z.string().min(1)),
+});
+
+export type MentorExpertiseFormValues = z.infer<typeof mentorExpertiseSchema>;
+
 /** Parse form values into Convex experience entry shape. */
 export function experienceFormToEntry(v: ExperienceEntryFormValues): {
   company: string;

@@ -33,7 +33,7 @@ export function ProfileSectionCard({
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             {icon}
             <CardTitle className="font-semibold">{title}</CardTitle>
