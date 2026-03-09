@@ -2,10 +2,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Mail } from "lucide-react";
 import { getInitials } from "@/lib/utils";
-import type { MockUser } from "@/lib/types";
+import type { User } from "@/lib/types";
 
 interface ProfileHeaderProps {
-  user: MockUser;
+  user: User;
 }
 
 export function ProfileHeader({ user }: ProfileHeaderProps) {

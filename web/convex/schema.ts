@@ -10,6 +10,8 @@ const users = defineTable({
   tokenIdentifier: v.string(), // Auth0 ID token
 
   profilePictureUrl: v.string(),
+  // Professional headline / job title shown in the profile header
+  title: v.string(),
   bio: v.string(),
   location: v.string(),
 
@@ -21,10 +23,11 @@ const users = defineTable({
   education: v.array(
     v.object({
       institution: v.string(),
-      degree: v.string(),
-      fieldOfStudy: v.string(),
+      degree: v.optional(v.string()),
+      fieldOfStudy: v.optional(v.string()),
       startDate: v.number(),
-      endDate: v.number(),
+      endDate: v.optional(v.number()),
+      description: v.optional(v.string()),
     })
   ),
   experience: v.array(
@@ -32,7 +35,8 @@ const users = defineTable({
       company: v.string(),
       title: v.string(),
       startDate: v.number(),
-      endDate: v.number(),
+      endDate: v.optional(v.number()),
+      description: v.optional(v.string()),
     })
   ),
 
