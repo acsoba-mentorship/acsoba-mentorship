@@ -206,7 +206,10 @@ export function EducationForm({
               <FormItem>
                 <FormLabel>End month (optional)</FormLabel>
                 <Select
-                  onValueChange={(v) => field.onChange(parseInt(v, 10))}
+                  onValueChange={(v) => {
+                    field.onChange(parseInt(v, 10));
+                    void form.trigger(["endMonth", "endYear"]);
+                  }}
                   value={field.value ? String(field.value) : ""}
                 >
                   <FormControl>
@@ -233,7 +236,10 @@ export function EducationForm({
               <FormItem>
                 <FormLabel>End year (optional)</FormLabel>
                 <Select
-                  onValueChange={(v) => field.onChange(parseInt(v, 10))}
+                  onValueChange={(v) => {
+                    field.onChange(parseInt(v, 10));
+                    void form.trigger(["endMonth", "endYear"]);
+                  }}
                   value={field.value ? String(field.value) : ""}
                 >
                   <FormControl>

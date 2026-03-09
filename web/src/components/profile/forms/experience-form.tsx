@@ -217,7 +217,10 @@ export function ExperienceForm({
                 <FormItem>
                   <FormLabel>End month</FormLabel>
                   <Select
-                    onValueChange={(v) => field.onChange(parseInt(v, 10))}
+                    onValueChange={(v) => {
+                      field.onChange(parseInt(v, 10));
+                      void form.trigger(["endMonth", "endYear"]);
+                    }}
                     value={field.value ? String(field.value) : ""}
                   >
                     <FormControl>
@@ -244,7 +247,10 @@ export function ExperienceForm({
                 <FormItem>
                   <FormLabel>End year</FormLabel>
                   <Select
-                    onValueChange={(v) => field.onChange(parseInt(v, 10))}
+                    onValueChange={(v) => {
+                      field.onChange(parseInt(v, 10));
+                      void form.trigger(["endMonth", "endYear"]);
+                    }}
                     value={field.value ? String(field.value) : ""}
                   >
                     <FormControl>

@@ -26,16 +26,48 @@ export type InterestsFormValues = z.infer<typeof interestsSchema>;
 const monthSchema = z.number().min(1).max(12);
 const yearSchema = z.number().min(1900).max(2100);
 
-export const educationEntrySchema = z.object({
-  institution: z.string().min(1, "Institution is required").max(200),
-  degree: z.string().max(200).optional().default(""),
-  fieldOfStudy: z.string().max(200).optional().default(""),
-  startMonth: monthSchema,
-  startYear: yearSchema,
-  endMonth: monthSchema.optional(),
-  endYear: yearSchema.optional(),
-  description: z.string().max(5000).optional().default(""),
-});
+function isEndDateAfterOrEqualStart(
+  startYear: number,
+  startMonth: number,
+  endYear: number,
+  endMonth: number
+): boolean {
+  return endYear > startYear || (endYear === startYear && endMonth >= startMonth);
+}
+
+export const educationEntrySchema = z
+  .object({
+    institution: z.string().min(1, "Institution is required").max(200),
+    degree: z.string().max(200).optional().default(""),
+    fieldOfStudy: z.string().max(200).optional().default(""),
+    startMonth: monthSchema,
+    startYear: yearSchema,
+    endMonth: monthSchema.optional(),
+    endYear: yearSchema.optional(),
+    description: z.string().max(5000).optional().default(""),
+  })
+  .superRefine((data, ctx) => {
+    if (data.endYear == null || data.endMonth == null) return;
+    if (
+      !isEndDateAfterOrEqualStart(
+        data.startYear,
+        data.startMonth,
+        data.endYear,
+        data.endMonth
+      )
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "End date cannot be earlier than start date",
+        path: ["endMonth"],
+      });
+      ctx.addIssue({
+        code: "custom",
+        message: " ",
+        path: ["endYear"],
+      });
+    }
+  });
 
 export type EducationEntryFormValues = z.infer<typeof educationEntrySchema>;
 export type EducationEntryFormInput = z.input<typeof educationEntrySchema>;
@@ -87,7 +119,29 @@ export const experienceEntrySchema = z
       return data.endMonth != null && data.endYear != null;
     },
     { message: "End date is required when not currently working here", path: ["endMonth"] }
-  );
+  )
+  .superRefine((data, ctx) => {
+    if (data.current || data.endYear == null || data.endMonth == null) return;
+    if (
+      !isEndDateAfterOrEqualStart(
+        data.startYear,
+        data.startMonth,
+        data.endYear,
+        data.endMonth
+      )
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "End date cannot be earlier than start date",
+        path: ["endMonth"],
+      });
+      ctx.addIssue({
+        code: "custom",
+        message: " ",
+        path: ["endYear"],
+      });
+    }
+  });
 
 export type ExperienceEntryFormValues = z.infer<typeof experienceEntrySchema>;
 export type ExperienceEntryFormInput = z.input<typeof experienceEntrySchema>;
