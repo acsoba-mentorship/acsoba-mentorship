@@ -28,8 +28,8 @@ import {
   type ExperienceEntryFormInput,
   type ExperienceEntryFormValues,
   experienceFormToEntry,
-  fromTimestamp,
 } from "@/lib/validation/profile";
+import { fromTimestamp } from "@/lib/utils";
 import { CURRENT_YEAR, MONTHS, YEAR_OPTIONS } from "@/lib/constants";
 
 interface ExperienceFormProps {
@@ -42,7 +42,7 @@ interface ExperienceFormProps {
     company: string;
     title: string;
     startDate: number;
-    endDate: number;
+    endDate?: number;
     description?: string;
   };
   onSuccess?: () => void;
@@ -66,6 +66,8 @@ export function ExperienceForm({
   const addExperience = useMutation(api.users.addExperience);
   const updateExperience = useMutation(api.users.updateExperience);
 
+  const isCurrentRole = initialEntry?.endDate == null;
+
   const form = useForm<ExperienceEntryFormInput, unknown, ExperienceEntryFormValues>({
     resolver: zodResolver(experienceEntrySchema),
     defaultValues: initialEntry
@@ -74,9 +76,9 @@ export function ExperienceForm({
           title: initialEntry.title,
           startMonth: fromTimestamp(initialEntry.startDate).month,
           startYear: fromTimestamp(initialEntry.startDate).year,
-          endMonth: fromTimestamp(initialEntry.endDate).month,
-          endYear: fromTimestamp(initialEntry.endDate).year,
-          current: false,
+          endMonth: isCurrentRole ? undefined : fromTimestamp(initialEntry.endDate!).month,
+          endYear: isCurrentRole ? undefined : fromTimestamp(initialEntry.endDate!).year,
+          current: isCurrentRole,
           description: initialEntry.description ?? "",
         }
       : defaultValues,

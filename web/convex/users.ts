@@ -279,7 +279,7 @@ const educationEntry = v.object({
   degree: v.optional(v.string()),
   fieldOfStudy: v.optional(v.string()),
   startDate: v.number(),
-  endDate: v.number(),
+  endDate: v.optional(v.number()),
   description: v.optional(v.string()),
 });
 
@@ -355,7 +355,7 @@ const experienceEntry = v.object({
   company: v.string(),
   title: v.string(),
   startDate: v.number(),
-  endDate: v.number(),
+  endDate: v.optional(v.number()),
   description: v.optional(v.string()),
 });
 

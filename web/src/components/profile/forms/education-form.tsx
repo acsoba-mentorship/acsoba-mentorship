@@ -27,8 +27,8 @@ import {
   type EducationEntryFormInput,
   type EducationEntryFormValues,
   educationFormToEntry,
-  fromTimestamp,
 } from "@/lib/validation/profile";
+import { fromTimestamp } from "@/lib/utils";
 import { CURRENT_YEAR, MONTHS, YEAR_OPTIONS } from "@/lib/constants";
 
 interface EducationFormProps {
@@ -42,7 +42,7 @@ interface EducationFormProps {
     degree?: string;
     fieldOfStudy?: string;
     startDate: number;
-    endDate: number;
+    endDate?: number;
     description?: string;
   };
   onSuccess?: () => void;
@@ -75,8 +75,8 @@ export function EducationForm({
           fieldOfStudy: initialEntry.fieldOfStudy ?? "",
           startMonth: fromTimestamp(initialEntry.startDate).month,
           startYear: fromTimestamp(initialEntry.startDate).year,
-          endMonth: fromTimestamp(initialEntry.endDate).month,
-          endYear: fromTimestamp(initialEntry.endDate).year,
+          endMonth: initialEntry.endDate != null ? fromTimestamp(initialEntry.endDate).month : undefined,
+          endYear: initialEntry.endDate != null ? fromTimestamp(initialEntry.endDate).year : undefined,
           description: initialEntry.description ?? "",
         }
       : defaultValues,

@@ -206,7 +206,7 @@ export function ProfileMainContent({
                     </p>
                   )}
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {formatDate(entry.startDate)} – {formatDate(entry.endDate ?? entry.startDate)}
+                    {formatDate(entry.startDate)} - {entry.endDate != null ? formatDate(entry.endDate) : "Present"}
                   </p>
                   {entry.description && (
                     <p className="mt-2 text-muted-foreground">{entry.description}</p>
@@ -259,7 +259,9 @@ export function ProfileMainContent({
               degree: education[educationEditIndex].degree ?? "",
               fieldOfStudy: education[educationEditIndex].fieldOfStudy ?? "",
               startDate: education[educationEditIndex].startDate,
-              endDate: education[educationEditIndex].endDate ?? education[educationEditIndex].startDate,
+              ...(education[educationEditIndex].endDate != null
+                ? { endDate: education[educationEditIndex].endDate }
+                : {}),
               description: education[educationEditIndex].description,
             }}
             onSuccess={() => {
@@ -300,7 +302,7 @@ export function ProfileMainContent({
                   <p className="font-medium">{entry.company}</p>
                   <p className="text-muted-foreground">{entry.title}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {formatDate(entry.startDate)} – {formatDate(entry.endDate ?? entry.startDate)}
+                    {formatDate(entry.startDate)} - {entry.endDate != null ? formatDate(entry.endDate) : "Present"}
                   </p>
                   {entry.description && (
                     <p className="mt-2 text-muted-foreground whitespace-pre-wrap">{entry.description}</p>
@@ -352,7 +354,9 @@ export function ProfileMainContent({
               company: experience[experienceEditIndex].company,
               title: experience[experienceEditIndex].title,
               startDate: experience[experienceEditIndex].startDate,
-              endDate: experience[experienceEditIndex].endDate ?? experience[experienceEditIndex].startDate,
+              ...(experience[experienceEditIndex].endDate != null
+                ? { endDate: experience[experienceEditIndex].endDate }
+                : {}),
               description: experience[experienceEditIndex].description,
             }}
             onSuccess={() => {

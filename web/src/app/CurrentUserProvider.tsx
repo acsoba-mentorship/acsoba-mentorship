@@ -27,10 +27,7 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo<CurrentUserContextValue>(() => {
-    const currentId =
-      currentUser && "_id" in currentUser
-        ? String((currentUser as any)._id)
-        : null;
+    const currentId = currentUser?._id ? String(currentUser._id) : null;
 
     const isOwnProfile = (viewedUserId: string | null | undefined) => {
       if (!currentId || !viewedUserId) return false;

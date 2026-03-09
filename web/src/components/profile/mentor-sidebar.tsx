@@ -65,9 +65,9 @@ export function MentorSidebar({ user, isOwnProfile = false }: MentorSidebarProps
               Experience
             </span>
             <span className="text-sm font-medium">
-              {profile?.yearsOfExperience 
-              ? `${profile?.yearsOfExperience} year${profile?.yearsOfExperience === 1 ? "" : "s"}` 
-              : "No experience set yet"}
+              {profile?.yearsOfExperience != null
+                ? `${profile.yearsOfExperience} year${profile.yearsOfExperience === 1 ? "" : "s"}`
+                : "No experience set yet"}
             </span>
           </div>
           <Separator />

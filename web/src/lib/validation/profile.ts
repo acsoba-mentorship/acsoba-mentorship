@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { toStartOfMonth } from "@/lib/utils";
 
 export const aboutSchema = z.object({
   bio: z.string().max(2000).default(""),
@@ -39,43 +40,29 @@ export const educationEntrySchema = z.object({
 export type EducationEntryFormValues = z.infer<typeof educationEntrySchema>;
 export type EducationEntryFormInput = z.input<typeof educationEntrySchema>;
 
-/** Convert form month/year to Convex timestamp (start of month UTC). */
-export function toStartOfMonth(year: number, month: number): number {
-  return Date.UTC(year, month - 1, 1);
-}
-
-/** Get year and month (1-12) from a Convex timestamp for form defaults. */
-export function fromTimestamp(ts: number): { year: number; month: number } {
-  const d = new Date(ts);
-  return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1 };
-}
-
 /** Parse form values into Convex education entry shape. */
 export function educationFormToEntry(v: EducationEntryFormValues): {
   institution: string;
   degree?: string;
   fieldOfStudy?: string;
   startDate: number;
-  endDate: number;
+  endDate?: number;
   description?: string;
 } {
   const startDate = toStartOfMonth(v.startYear, v.startMonth);
-  const endDate =
-    v.endYear != null && v.endMonth != null
-      ? toStartOfMonth(v.endYear, v.endMonth)
-      : Date.now();
+  const hasEndDate = v.endYear != null && v.endMonth != null;
   const result: {
     institution: string;
     degree?: string;
     fieldOfStudy?: string;
     startDate: number;
-    endDate: number;
+    endDate?: number;
     description?: string;
   } = {
     institution: v.institution,
     startDate,
-    endDate,
   };
+  if (hasEndDate) result.endDate = toStartOfMonth(v.endYear!, v.endMonth!);
   if (v.degree) result.degree = v.degree;
   if (v.fieldOfStudy) result.fieldOfStudy = v.fieldOfStudy;
   if (v.description) result.description = v.description;
@@ -107,8 +94,8 @@ export type ExperienceEntryFormInput = z.input<typeof experienceEntrySchema>;
 
 // --- Mentor profile ---
 export const mentorDetailsSchema = z.object({
-  yearsOfExperience: z.int("Must be an integer").min(0, "Must be 0 or more").max(50),
-  maxMentees: z.int("Must be an integer").min(1, "Must be at least 1").max(100),
+  yearsOfExperience: z.number().int("Must be an integer").min(0, "Must be 0 or more").max(50),
+  maxMentees: z.number().int("Must be an integer").min(1, "Must be at least 1").max(100),
   isAvailable: z.boolean(),
 });
 
@@ -126,20 +113,17 @@ export function experienceFormToEntry(v: ExperienceEntryFormValues): {
   company: string;
   title: string;
   startDate: number;
-  endDate: number;
+  endDate?: number;
   description?: string;
 } {
   const startDate = toStartOfMonth(v.startYear, v.startMonth);
-  const endDate = v.current
-    ? Date.now()
-    : v.endYear != null && v.endMonth != null
-      ? toStartOfMonth(v.endYear, v.endMonth)
-      : startDate;
+  const hasEndDate =
+    !v.current && v.endYear != null && v.endMonth != null;
   return {
     company: v.company,
     title: v.title,
     startDate,
-    endDate,
+    ...(hasEndDate ? { endDate: toStartOfMonth(v.endYear!, v.endMonth!) } : {}),
     ...(v.description ? { description: v.description } : {}),
   };
 }
