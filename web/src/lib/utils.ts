@@ -52,6 +52,20 @@ export function formatDate(date: Date | number | string): string {
   })
 }
 
+/**
+ * Format date in UTC. Use for timestamps stored as midnight UTC so display is consistent across timezones.
+ */
+export function formatDateUTC(date: Date | number | string): string {
+  const d = new Date(date)
+  if (!isValidDate(d)) return "Invalid date"
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  })
+}
+
 export function formatDateTime(date: Date | number | string): string {
   const d = new Date(date)
   if (!isValidDate(d)) return "Invalid date"

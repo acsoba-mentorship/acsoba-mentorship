@@ -21,7 +21,7 @@ import { GoalsSectionForm } from "./forms/goals-section-form";
 import { InterestsSectionForm } from "./forms/interests-section-form";
 import { EducationForm } from "./forms/education-form";
 import { ExperienceForm } from "./forms/experience-form";
-import { formatDate } from "@/lib/utils";
+import { formatDateUTC } from "@/lib/utils";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 
 interface ProfileMainContentProps {
@@ -206,7 +206,7 @@ export function ProfileMainContent({
                     </p>
                   )}
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {formatDate(entry.startDate)} - {entry.endDate != null ? formatDate(entry.endDate) : "Present"}
+                    {formatDateUTC(entry.startDate)} - {entry.endDate != null ? formatDateUTC(entry.endDate) : "Present"}
                   </p>
                   {entry.description && (
                     <p className="mt-2 text-muted-foreground">{entry.description}</p>
@@ -302,7 +302,7 @@ export function ProfileMainContent({
                   <p className="font-medium">{entry.company}</p>
                   <p className="text-muted-foreground">{entry.title}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {formatDate(entry.startDate)} - {entry.endDate != null ? formatDate(entry.endDate) : "Present"}
+                    {formatDateUTC(entry.startDate)} – {entry.endDate != null ? formatDateUTC(entry.endDate) : "Present"}
                   </p>
                   {entry.description && (
                     <p className="mt-2 text-muted-foreground whitespace-pre-wrap">{entry.description}</p>
