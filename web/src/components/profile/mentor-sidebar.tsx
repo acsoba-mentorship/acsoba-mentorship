@@ -77,9 +77,9 @@ export function MentorSidebar({ user, isOwnProfile = false }: MentorSidebarProps
               Max Mentees
             </span>
             <span className="text-sm font-medium">
-              {profile?.maxMentees 
-              ? `${profile?.maxMentees}` 
-              : "No max mentees set yet"}
+              {profile?.maxMentees != null
+                ? `${profile.maxMentees}`
+                : "No max mentees set yet"}
             </span>
           </div>
           <Separator />
