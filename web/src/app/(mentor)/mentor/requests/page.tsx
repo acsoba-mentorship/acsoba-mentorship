@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import type { FunctionReturnType } from "convex/server";
+import { useMutation, useQuery } from "convex/react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,79 +11,34 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useCurrentUser } from "@/app/CurrentUserProvider";
+import { api } from "../../../../../convex/_generated/api";
 import {
   Inbox,
   History,
   Calendar,
   MessageSquare,
   Sparkles,
+  Search,
+  TriangleAlert,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
-interface MockRequest {
-  id: string;
-  menteeName: string;
-  menteeInitials: string;
-  menteeTitle: string;
-  message: string;
-  interests: string[];
-  status: "pending" | "accepted" | "rejected";
-  createdAt: string;
-}
+type RequestStatus = "pending" | "accepted" | "rejected";
 
-const mockRequests: MockRequest[] = [
-  {
-    id: "req-1",
-    menteeName: "Jordan Lee",
-    menteeInitials: "JL",
-    menteeTitle: "Junior Developer",
-    message:
-      "Hi! I'm a junior developer looking to transition into full-stack engineering. I'd love to learn from your experience in React and TypeScript. Could we set up regular sessions to work through real-world projects?",
-    interests: ["Web Development", "React", "TypeScript", "Open Source"],
-    status: "pending",
-    createdAt: "2026-02-20T10:00:00Z",
-  },
-  {
-    id: "req-2",
-    menteeName: "Aisha Okonkwo",
-    menteeInitials: "AO",
-    menteeTitle: "Graduate Student",
-    message:
-      "I'm finishing my CS degree and very interested in machine learning. Your work in NLP is inspiring and I'd appreciate guidance on breaking into the industry.",
-    interests: ["Machine Learning", "NLP", "Python"],
-    status: "pending",
-    createdAt: "2026-02-18T14:30:00Z",
-  },
-  {
-    id: "req-3",
-    menteeName: "Ryan Park",
-    menteeInitials: "RP",
-    menteeTitle: "Career Switcher",
-    message:
-      "Coming from a finance background, I'm pivoting into software engineering. Would love mentorship on building a solid portfolio and preparing for interviews.",
-    interests: ["Career Transition", "Full Stack", "Interview Prep"],
-    status: "accepted",
-    createdAt: "2026-01-15T09:00:00Z",
-  },
-  {
-    id: "req-4",
-    menteeName: "Maya Singh",
-    menteeInitials: "MS",
-    menteeTitle: "Frontend Developer",
-    message:
-      "I want to level up from frontend to full-stack. Your background in engineering management is exactly what I need for career advice.",
-    interests: ["Leadership", "System Design"],
-    status: "rejected",
-    createdAt: "2026-01-10T11:00:00Z",
-  },
-];
+type MentorRequest = FunctionReturnType<
+  typeof api.mentorRequests.requestsByMentor
+>[number];
 
-function StatusBadge({ status }: { status: MockRequest["status"] }) {
+function StatusBadge({ status }: { status: RequestStatus }) {
   const variants: Record<
-    MockRequest["status"],
+    RequestStatus,
     { label: string; variant: "default" | "secondary" | "destructive" }
   > = {
     pending: { label: "Pending", variant: "secondary" },
@@ -95,9 +52,15 @@ function StatusBadge({ status }: { status: MockRequest["status"] }) {
 function RequestCard({
   request,
   showActions,
+  isUpdating,
+  onAccept,
+  onReject,
 }: {
-  request: MockRequest;
+  request: MentorRequest;
   showActions: boolean;
+  isUpdating: boolean;
+  onAccept: (requestId: MentorRequest["_id"]) => void;
+  onReject: (requestId: MentorRequest["_id"]) => void;
 }) {
   return (
     <Card>
@@ -153,10 +116,18 @@ function RequestCard({
                 size="sm"
                 variant="outline"
                 className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => onReject(request._id)}
+                disabled={isUpdating}
               >
-                Reject
+                {isUpdating ? "Updating..." : "Reject"}
               </Button>
-              <Button size="sm">Accept</Button>
+              <Button
+                size="sm"
+                onClick={() => onAccept(request._id)}
+                disabled={isUpdating}
+              >
+                {isUpdating ? "Updating..." : "Accept"}
+              </Button>
             </div>
           )}
         </div>
@@ -189,11 +160,146 @@ function EmptyState({
   );
 }
 
-export default function MentorRequestsPage() {
-  const [requests] = useState(mockRequests);
+function RequestsLoadingState() {
+  return (
+    <div className="space-y-4">
+      {Array.from({ length: 3 }).map((_, index) => (
+        <Card key={index}>
+          <CardHeader>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <Skeleton className="size-12 rounded-full" />
+                <div className="space-y-2">
+                  <Skeleton className="h-5 w-40" />
+                  <Skeleton className="h-4 w-28" />
+                </div>
+              </div>
+              <Skeleton className="h-6 w-20 rounded-full" />
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Skeleton className="h-24 w-full rounded-lg" />
+            <Skeleton className="h-5 w-48" />
+            <div className="flex items-center justify-between border-t pt-4">
+              <Skeleton className="h-4 w-32" />
+              <div className="flex gap-2">
+                <Skeleton className="h-9 w-20 rounded-md" />
+                <Skeleton className="h-9 w-20 rounded-md" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
 
-  const pendingRequests = requests.filter((r) => r.status === "pending");
-  const historyRequests = requests.filter((r) => r.status !== "pending");
+function RequestSection({
+  requests,
+  emptyIcon,
+  emptyTitle,
+  emptyDescription,
+  showActions,
+  activeRequestId,
+  onAccept,
+  onReject,
+}: {
+  requests: MentorRequest[];
+  emptyIcon: typeof Inbox;
+  emptyTitle: string;
+  emptyDescription: string;
+  showActions: boolean;
+  activeRequestId: MentorRequest["_id"] | null;
+  onAccept: (requestId: MentorRequest["_id"]) => void;
+  onReject: (requestId: MentorRequest["_id"]) => void;
+}) {
+  if (requests.length === 0) {
+    return (
+      <EmptyState
+        icon={emptyIcon}
+        title={emptyTitle}
+        description={emptyDescription}
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {requests.map((request) => (
+        <RequestCard
+          key={request._id}
+          request={request}
+          showActions={showActions}
+          isUpdating={activeRequestId === request._id}
+          onAccept={onAccept}
+          onReject={onReject}
+        />
+      ))}
+    </div>
+  );
+}
+
+export default function MentorRequestsPage() {
+  const { currentUser } = useCurrentUser();
+  const [query, setQuery] = useState("");
+  const [activeRequestId, setActiveRequestId] =
+    useState<MentorRequest["_id"] | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const requests = useQuery(
+    api.mentorRequests.requestsByMentor,
+    currentUser?._id ? { mentorId: currentUser._id } : "skip"
+  );
+  const acceptRequest = useMutation(api.mentorRequests.acceptRequest);
+  const rejectRequest = useMutation(api.mentorRequests.rejectRequest);
+
+  const filteredRequests = useMemo(() => {
+    if (!requests) {
+      return [];
+    }
+
+    const normalizedQuery = query.trim().toLowerCase();
+
+    return requests.filter((request) => {
+      if (!normalizedQuery) {
+        return true;
+      }
+
+      const searchable = [
+        request.menteeName,
+        request.menteeTitle,
+        request.message,
+        ...request.interests,
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return searchable.includes(normalizedQuery);
+    });
+  }, [query, requests]);
+
+  const pendingRequests = filteredRequests.filter((r) => r.status === "pending");
+  const acceptedRequests = filteredRequests.filter((r) => r.status === "accepted");
+  const rejectedRequests = filteredRequests.filter((r) => r.status === "rejected");
+
+  const handleRequestAction = async (
+    requestId: MentorRequest["_id"],
+    action: (args: { requestId: MentorRequest["_id"] }) => Promise<unknown>
+  ) => {
+    setActiveRequestId(requestId);
+    setActionError(null);
+
+    try {
+      await action({ requestId });
+    } catch (error) {
+      setActionError(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while updating the request."
+      );
+    } finally {
+      setActiveRequestId(null);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -204,12 +310,30 @@ export default function MentorRequestsPage() {
         </p>
       </div>
 
+      <div className="relative max-w-md">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search by mentee name, title, or interest..."
+          className="pl-9"
+        />
+      </div>
+
+      {actionError && (
+        <Alert variant="destructive">
+          <TriangleAlert className="size-4" />
+          <AlertTitle>Request update failed</AlertTitle>
+          <AlertDescription>{actionError}</AlertDescription>
+        </Alert>
+      )}
+
       <Tabs defaultValue="pending" className="w-full">
         <TabsList>
           <TabsTrigger value="pending" className="gap-2">
             <Inbox className="size-4" />
             Pending
-            {pendingRequests.length > 0 && (
+            {pendingRequests.length > 0 && requests && (
               <Badge
                 variant="secondary"
                 className="ml-1 h-5 min-w-5 px-1.5 text-xs"
@@ -218,48 +342,91 @@ export default function MentorRequestsPage() {
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="history" className="gap-2">
+          <TabsTrigger value="accepted" className="gap-2">
             <History className="size-4" />
-            History
+            Accepted
+            {acceptedRequests.length > 0 && requests && (
+              <Badge
+                variant="secondary"
+                className="ml-1 h-5 min-w-5 px-1.5 text-xs"
+              >
+                {acceptedRequests.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="rejected" className="gap-2">
+            <History className="size-4" />
+            Rejected
+            {rejectedRequests.length > 0 && requests && (
+              <Badge
+                variant="secondary"
+                className="ml-1 h-5 min-w-5 px-1.5 text-xs"
+              >
+                {rejectedRequests.length}
+              </Badge>
+            )}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="pending" className="mt-6">
-          {pendingRequests.length > 0 ? (
-            <div className="space-y-4">
-              {pendingRequests.map((request) => (
-                <RequestCard
-                  key={request.id}
-                  request={request}
-                  showActions
-                />
-              ))}
-            </div>
+          {requests === undefined || currentUser === undefined ? (
+            <RequestsLoadingState />
           ) : (
-            <EmptyState
-              icon={Inbox}
-              title="No pending requests"
-              description="You're all caught up! New requests from mentees will appear here."
+            <RequestSection
+              requests={pendingRequests}
+              emptyIcon={Inbox}
+              emptyTitle="No pending requests"
+              emptyDescription="You're all caught up! New requests from mentees will appear here."
+              showActions
+              activeRequestId={activeRequestId}
+              onAccept={(requestId) =>
+                void handleRequestAction(requestId, acceptRequest)
+              }
+              onReject={(requestId) =>
+                void handleRequestAction(requestId, rejectRequest)
+              }
             />
           )}
         </TabsContent>
 
-        <TabsContent value="history" className="mt-6">
-          {historyRequests.length > 0 ? (
-            <div className="space-y-4">
-              {historyRequests.map((request) => (
-                <RequestCard
-                  key={request.id}
-                  request={request}
-                  showActions={false}
-                />
-              ))}
-            </div>
+        <TabsContent value="accepted" className="mt-6">
+          {requests === undefined || currentUser === undefined ? (
+            <RequestsLoadingState />
           ) : (
-            <EmptyState
-              icon={History}
-              title="No request history"
-              description="Accepted and rejected requests will appear here."
+            <RequestSection
+              requests={acceptedRequests}
+              emptyIcon={History}
+              emptyTitle="No accepted requests"
+              emptyDescription="Accepted mentorship requests will appear here."
+              showActions={false}
+              activeRequestId={activeRequestId}
+              onAccept={(requestId) =>
+                void handleRequestAction(requestId, acceptRequest)
+              }
+              onReject={(requestId) =>
+                void handleRequestAction(requestId, rejectRequest)
+              }
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="rejected" className="mt-6">
+          {requests === undefined || currentUser === undefined ? (
+            <RequestsLoadingState />
+          ) : (
+            <RequestSection
+              requests={rejectedRequests}
+              emptyIcon={History}
+              emptyTitle="No rejected requests"
+              emptyDescription="Rejected mentorship requests will appear here."
+              showActions={false}
+              activeRequestId={activeRequestId}
+              onAccept={(requestId) =>
+                void handleRequestAction(requestId, acceptRequest)
+              }
+              onReject={(requestId) =>
+                void handleRequestAction(requestId, rejectRequest)
+              }
             />
           )}
         </TabsContent>
