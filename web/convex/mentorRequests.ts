@@ -31,6 +31,22 @@ async function getAuthenticatedUser(ctx: QueryCtx | MutationCtx) {
   return currentUser;
 }
 
+function requireMentorProfile(user: Doc<"users">) {
+  if (!user.mentorProfile) {
+    throw new Error("Only mentors can perform this action");
+  }
+
+  return user;
+}
+
+function requireMenteeProfile(user: Doc<"users">) {
+  if (!user.menteeProfile) {
+    throw new Error("Only mentees can perform this action");
+  }
+
+  return user;
+}
+
 async function buildMentorRequestView(
   ctx: QueryCtx | MutationCtx,
   request: Doc<"mentorshipRequests">
@@ -57,6 +73,7 @@ async function buildMenteeRequestView(
     mentorName: mentor?.name?.trim() || "Unknown user",
     mentorInitials: getInitials(mentor?.name?.trim() || "Unknown user"),
     mentorTitle: mentor?.title?.trim() || "Community member",
+    mentorUsername: mentor?.username ?? null,
     expertise: mentor?.mentorProfile?.expertise ?? [],
   };
 }
@@ -64,7 +81,7 @@ async function buildMenteeRequestView(
 export const requestsByMentor = query({
   args: { mentorId: v.id("users") },
   handler: async (ctx, { mentorId }) => {
-    const currentUser = await getAuthenticatedUser(ctx);
+    const currentUser = requireMentorProfile(await getAuthenticatedUser(ctx));
 
     if (currentUser._id !== mentorId) {
       throw new Error("Unauthorized to view this mentor's requests");
@@ -85,7 +102,7 @@ export const requestsByMentor = query({
 export const requestsByMentee = query({
   args: { menteeId: v.id("users") },
   handler: async (ctx, { menteeId }) => {
-    const currentUser = await getAuthenticatedUser(ctx);
+    const currentUser = requireMenteeProfile(await getAuthenticatedUser(ctx));
 
     if (currentUser._id !== menteeId) {
       throw new Error("Unauthorized to view this mentee's requests");
@@ -105,24 +122,30 @@ export const requestsByMentee = query({
 
 export const createRequest = mutation({
   args: {
-    mentorId: v.id("users"),
-    menteeId: v.id("users"),
+    mentorUsername: v.string(),
     message: v.string(),
   },
-  handler: async (ctx, { mentorId, menteeId, message }) => {
-    const currentUser = await getAuthenticatedUser(ctx);
+  handler: async (ctx, { mentorUsername, message }) => {
+    const currentUser = requireMenteeProfile(await getAuthenticatedUser(ctx));
     const trimmedMessage = message.trim();
 
-    if (currentUser._id !== menteeId) {
-      throw new Error("Unauthorized to create this request");
+    const mentor = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", mentorUsername))
+      .unique();
+
+    if (!mentor) {
+      throw new Error("Mentor not found");
     }
+
+    const mentorId = mentor._id;
+    const menteeId = currentUser._id;
 
     if (mentorId === menteeId) {
       throw new Error("You cannot request mentorship from yourself");
     }
 
-    const mentor = await ctx.db.get(mentorId);
-    if (!mentor?.mentorProfile || !mentor.mentorProfile.isAvailable) {
+    if (!mentor.mentorProfile || !mentor.mentorProfile.isAvailable) {
       throw new Error("Selected mentor is not available for mentorship");
     }
 
@@ -158,7 +181,7 @@ export const createRequest = mutation({
 export const acceptRequest = mutation({
   args: { requestId: v.id("mentorshipRequests") },
   handler: async (ctx, { requestId }) => {
-    const currentUser = await getAuthenticatedUser(ctx);
+    const currentUser = requireMentorProfile(await getAuthenticatedUser(ctx));
     const request = await ctx.db.get(requestId);
 
     if (!request) {
@@ -185,7 +208,7 @@ export const acceptRequest = mutation({
 export const rejectRequest = mutation({
   args: { requestId: v.id("mentorshipRequests") },
   handler: async (ctx, { requestId }) => {
-    const currentUser = await getAuthenticatedUser(ctx);
+    const currentUser = requireMentorProfile(await getAuthenticatedUser(ctx));
     const request = await ctx.db.get(requestId);
 
     if (!request) {

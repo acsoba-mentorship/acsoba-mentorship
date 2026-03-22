@@ -72,12 +72,8 @@ const users = defineTable({
   createdAt: v.number(),
 })
   .index("by_token", ["tokenIdentifier"])
-<<<<<<< HEAD
   .index("by_username", ["username"])
   .index("by_mentor_availability", ["mentorProfile.isAvailable"])
-=======
-  .index("by_mentor_availability", ["mentorProfile.isAvailable"]);
->>>>>>> 6428825 (fix: implement mentorship requests)
 
 const mentorshipRequests = defineTable({
   mentorId: v.id("users"),

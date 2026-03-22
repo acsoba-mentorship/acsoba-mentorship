@@ -2,19 +2,26 @@
 
 import { useState, useMemo } from "react";
 import { useConvexAuth, useQuery } from "convex/react";
+import type { FunctionReturnType } from "convex/server";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { FilterSidebar, type SearchFilters } from "@/components/search/filter-sidebar";
 import { ViewToggle } from "@/components/search/view-toggle";
 import { MentorCard } from "@/components/search/mentor-card";
 import { MentorListItem } from "@/components/search/mentor-list-item";
+import { useCurrentUser } from "@/app/CurrentUserProvider";
+import { api } from "../../../../convex/_generated/api";
 import { AVAILABLE, UNAVAILABLE } from "@/lib/constants";
 import type { ViewMode } from "@/lib/types";
 import { Search } from "lucide-react";
-import { api } from "../../../../convex/_generated/api";
-import { Skeleton } from "@/components/ui/skeleton";
+
+type MenteeRequest = FunctionReturnType<
+  typeof api.mentorRequests.requestsByMentee
+>[number];
 
 export default function SearchPage() {
+  const { currentUser } = useCurrentUser();
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<SearchFilters>({
@@ -25,6 +32,25 @@ export default function SearchPage() {
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const mentors = useQuery(api.users.listMentors, isAuthenticated ? { limit: 50 } : "skip");
   const mentorsLoading = authLoading || (isAuthenticated && mentors === undefined);
+  const sentRequests = useQuery(
+    api.mentorRequests.requestsByMentee,
+    currentUser?._id && currentUser.menteeProfile
+      ? { menteeId: currentUser._id }
+      : "skip"
+  );
+
+  const latestRequestByMentor = useMemo(() => {
+    const requestsByMentor = new Map<string, MenteeRequest>();
+
+    for (const request of sentRequests ?? []) {
+      const mentorKey = request.mentorUsername;
+      if (mentorKey && !requestsByMentor.has(mentorKey)) {
+        requestsByMentor.set(mentorKey, request);
+      }
+    }
+
+    return requestsByMentor;
+  }, [sentRequests]);
 
   const filteredMentors = useMemo(() => {
     return (mentors ?? []).filter((mentor) => {
@@ -113,13 +139,29 @@ export default function SearchPage() {
             viewMode === "grid" ? (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {filteredMentors.map((mentor) => (
-                  <MentorCard key={mentor.username} mentor={mentor} />
+                  <MentorCard
+                    key={mentor.username}
+                    mentor={mentor}
+                    currentUsername={currentUser?.username}
+                    hasMenteeProfile={!!currentUser?.menteeProfile}
+                    latestRequestStatus={
+                      latestRequestByMentor.get(mentor.username)?.status ?? null
+                    }
+                  />
                 ))}
               </div>
             ) : (
               <div className="space-y-4">
                 {filteredMentors.map((mentor) => (
-                  <MentorListItem key={mentor.username} mentor={mentor} />
+                  <MentorListItem
+                    key={mentor.username}
+                    mentor={mentor}
+                    currentUsername={currentUser?.username}
+                    hasMenteeProfile={!!currentUser?.menteeProfile}
+                    latestRequestStatus={
+                      latestRequestByMentor.get(mentor.username)?.status ?? null
+                    }
+                  />
                 ))}
               </div>
             )

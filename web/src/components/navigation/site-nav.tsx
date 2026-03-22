@@ -4,7 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
+import { useCurrentUser } from "@/app/CurrentUserProvider";
 import {
+  Inbox,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -34,16 +36,20 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn, getInitials } from "@/lib/utils";
 
-const appNavLinks = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/search", label: "Find Mentors", icon: Search },
-  { href: "/profile", label: "Profile", icon: User },
-] as const;
-
-function NavLinks({ pathname }: { pathname: string }) {
+function NavLinks({
+  pathname,
+  links,
+}: {
+  pathname: string;
+  links: {
+    href: string;
+    label: string;
+    icon: typeof LayoutDashboard;
+  }[];
+}) {
   return (
     <>
-      {appNavLinks.map((link) => (
+      {links.map((link) => (
         <Link
           key={link.href}
           href={link.href}
@@ -64,12 +70,18 @@ function NavLinks({ pathname }: { pathname: string }) {
 
 function MobileNavLinks({
   pathname,
+  links,
 }: {
   pathname: string;
+  links: {
+    href: string;
+    label: string;
+    icon: typeof LayoutDashboard;
+  }[];
 }) {
   return (
     <nav className="flex flex-col gap-3 pt-4">
-      {appNavLinks.map((link) => (
+      {links.map((link) => (
         <SheetClose key={link.href} asChild>
           <Link
             href={link.href}
@@ -91,6 +103,7 @@ function MobileNavLinks({
 
 function UserMenu() {
   const { user, logout } = useAuth0();
+  const { currentUser } = useCurrentUser();
 
   const initials = user?.name ? getInitials(user.name) : "U";
 
@@ -135,12 +148,22 @@ function UserMenu() {
             Profile
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/mentor">
-            <Shield />
-            Mentor Panel
-          </Link>
-        </DropdownMenuItem>
+        {currentUser?.menteeProfile && (
+          <DropdownMenuItem asChild>
+            <Link href="/requests">
+              <Inbox />
+              My Requests
+            </Link>
+          </DropdownMenuItem>
+        )}
+        {currentUser?.mentorProfile && (
+          <DropdownMenuItem asChild>
+            <Link href="/mentor">
+              <Shield />
+              Mentor Panel
+            </Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>
           <LogOut />
@@ -182,9 +205,20 @@ function AuthButtons() {
 
 export function SiteNav() {
   const pathname = usePathname();
+  const { currentUser } = useCurrentUser();
+
+  const appNavLinks = [
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/search", label: "Find Mentors", icon: Search },
+    ...(currentUser?.menteeProfile
+      ? [{ href: "/requests", label: "My Requests", icon: Inbox }]
+      : []),
+    { href: "/profile", label: "Profile", icon: User },
+  ];
 
   const isAppRoute =
     pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/requests") ||
     pathname.startsWith("/search") ||
     pathname.startsWith("/profile");
 
@@ -207,7 +241,7 @@ export function SiteNav() {
                 </Link>
               </SheetTitle>
             </SheetHeader>
-            {isAppRoute && <MobileNavLinks pathname={pathname} />}
+            {isAppRoute && <MobileNavLinks pathname={pathname} links={appNavLinks} />}
             <div className="mt-auto pb-4 px-3">
               <Unauthenticated>
                 <AuthButtons />
@@ -224,7 +258,7 @@ export function SiteNav() {
         {/* Desktop nav links (only on app routes) */}
         {isAppRoute && (
           <nav className="hidden items-center gap-6 md:flex">
-            <NavLinks pathname={pathname} />
+            <NavLinks pathname={pathname} links={appNavLinks} />
           </nav>
         )}
 

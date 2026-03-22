@@ -302,8 +302,7 @@ export const updateUsername = mutation({
       );
     }
 
-    const user = await ctx.db
-      .query("users")
+    const user = await ctx.db      .query("users")
       .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
       .unique();
 
@@ -349,7 +348,7 @@ export const updateUsername = mutation({
   },
 });
 
-// Ensures that users can only transition to the next status in the onboarding process
+// Ensures// Ensures that users can only transition to the next status in the onboarding process
 const ALLOWED_TRANSITIONS: Record<string, string[]> = {
   new: ["verified"],
   verified: ["user_profile_complete"],
