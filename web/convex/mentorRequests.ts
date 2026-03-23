@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
 function getInitials(name: string): string {
@@ -47,35 +47,42 @@ function requireMenteeProfile(user: Doc<"users">) {
   return user;
 }
 
-async function buildMentorRequestView(
-  ctx: QueryCtx | MutationCtx,
-  request: Doc<"mentorshipRequests">
+function buildMentorRequestView(
+  request: Doc<"mentorshipRequests">,
+  mentee: Doc<"users"> | null
 ) {
-  const mentee = await ctx.db.get(request.menteeId);
-
+  const name = mentee?.name?.trim() || "Unknown user";
   return {
     ...request,
-    menteeName: mentee?.name?.trim() || "Unknown user",
-    menteeInitials: getInitials(mentee?.name?.trim() || "Unknown user"),
+    menteeName: name,
+    menteeInitials: getInitials(name),
     menteeTitle: mentee?.title?.trim() || "Community member",
     interests: mentee?.menteeProfile?.interests ?? [],
   };
 }
 
-async function buildMenteeRequestView(
-  ctx: QueryCtx | MutationCtx,
-  request: Doc<"mentorshipRequests">
+function buildMenteeRequestView(
+  request: Doc<"mentorshipRequests">,
+  mentor: Doc<"users"> | null
 ) {
-  const mentor = await ctx.db.get(request.mentorId);
-
+  const name = mentor?.name?.trim() || "Unknown user";
   return {
     ...request,
-    mentorName: mentor?.name?.trim() || "Unknown user",
-    mentorInitials: getInitials(mentor?.name?.trim() || "Unknown user"),
+    mentorName: name,
+    mentorInitials: getInitials(name),
     mentorTitle: mentor?.title?.trim() || "Community member",
     mentorUsername: mentor?.username ?? null,
     expertise: mentor?.mentorProfile?.expertise ?? [],
   };
+}
+
+async function fetchUsersById(
+  ctx: QueryCtx | MutationCtx,
+  ids: Id<"users">[]
+): Promise<Map<Id<"users">, Doc<"users"> | null>> {
+  const unique = [...new Set(ids)];
+  const docs = await Promise.all(unique.map((id) => ctx.db.get(id)));
+  return new Map(unique.map((id, i) => [id, docs[i] ?? null]));
 }
 
 export const requestsByMentor = query({
@@ -93,8 +100,10 @@ export const requestsByMentor = query({
       .order("desc")
       .collect();
 
-    return Promise.all(
-      requests.map((request) => buildMentorRequestView(ctx, request))
+    const menteeById = await fetchUsersById(ctx, requests.map((r) => r.menteeId));
+
+    return requests.map((request) =>
+      buildMentorRequestView(request, menteeById.get(request.menteeId) ?? null)
     );
   },
 });
@@ -114,8 +123,10 @@ export const requestsByMentee = query({
       .order("desc")
       .collect();
 
-    return Promise.all(
-      requests.map((request) => buildMenteeRequestView(ctx, request))
+    const mentorById = await fetchUsersById(ctx, requests.map((r) => r.mentorId));
+
+    return requests.map((request) =>
+      buildMenteeRequestView(request, mentorById.get(request.mentorId) ?? null)
     );
   },
 });
