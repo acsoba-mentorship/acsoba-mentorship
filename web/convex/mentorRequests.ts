@@ -164,6 +164,10 @@ export const createRequest = mutation({
       throw new Error("A request message is required");
     }
 
+    if (trimmedMessage.length > 1000) {
+      throw new Error("Request message must be 1000 characters or fewer");
+    }
+
     const existingRequest = await ctx.db
       .query("mentorshipRequests")
       .withIndex("by_mentorId_menteeId", (q) =>
