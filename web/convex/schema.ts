@@ -75,13 +75,28 @@ const users = defineTable({
   .index("by_username", ["username"])
   .index("by_mentor_availability", ["mentorProfile.isAvailable"])
 
-// TODO: Create mentorship requests table -- represents the request for a mentorship by mentee
-// mentorId, menteeId, status, requestMessage, createdAt, updatedAt
+const mentorshipRequests = defineTable({
+  mentorId: v.id("users"),
+  menteeId: v.id("users"),
+  status: v.union(
+    v.literal("pending"),
+    v.literal("accepted"),
+    v.literal("rejected")
+  ),
+  message: v.string(),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+})
+  .index("by_mentorId", ["mentorId"])
+  .index("by_menteeId", ["menteeId"])
+  .index("by_mentorId_status", ["mentorId", "status"])
+  .index("by_menteeId_status", ["menteeId", "status"])
+  .index("by_mentorId_menteeId", ["mentorId", "menteeId"]);
 
 // TODO: Create mentorships table -- represents the successful connection between a mentor and a mentee
 // mentorId, menteeId, startDate, endDate, status, createdAt, updatedAt
 
 export default defineSchema({
   users,
+  mentorshipRequests,
 });
-

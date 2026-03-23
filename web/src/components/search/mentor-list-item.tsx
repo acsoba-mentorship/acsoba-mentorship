@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,12 +6,22 @@ import { MapPin, Briefcase } from "lucide-react";
 import { AVAILABLE, UNAVAILABLE } from "@/lib/constants";
 import { getInitials } from "@/lib/utils";
 import type { PublicMentorProfile } from "@/lib/types";
+import type { RequestStatus } from "@/components/requests/types";
+import { SendRequestDialog } from "@/components/requests/send-request-dialog";
 
 interface MentorListItemProps {
   mentor: PublicMentorProfile;
+  currentUsername?: string;
+  hasMenteeProfile: boolean;
+  latestRequestStatus: RequestStatus | null;
 }
 
-export function MentorListItem({ mentor }: MentorListItemProps) {
+export function MentorListItem({
+  mentor,
+  currentUsername,
+  hasMenteeProfile,
+  latestRequestStatus,
+}: MentorListItemProps) {
   const profile = mentor.mentorProfile;
   if (!profile) return null;
 
@@ -63,9 +72,12 @@ export function MentorListItem({ mentor }: MentorListItemProps) {
                 {profile.yearsOfExperience}yr exp
               </span>
             </div>
-            <Button size="sm" disabled={!profile.isAvailable}>
-              {profile.isAvailable ? "Send Request" : "Not Available"}
-            </Button>
+            <SendRequestDialog
+              mentor={mentor}
+              currentUsername={currentUsername}
+              hasMenteeProfile={hasMenteeProfile}
+              latestStatus={latestRequestStatus}
+            />
           </div>
         </div>
       </CardContent>

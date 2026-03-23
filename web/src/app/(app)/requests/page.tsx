@@ -2,8 +2,10 @@
 
 import { useMemo, useState } from "react";
 import type { FunctionReturnType } from "convex/server";
-import { useMutation, useQuery } from "convex/react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useQuery } from "convex/react";
+import { Inbox, Search } from "lucide-react";
+import { api } from "../../../../convex/_generated/api";
+import { useCurrentUser } from "@/app/CurrentUserProvider";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,42 +14,29 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { useCurrentUser } from "@/app/CurrentUserProvider";
-import { api } from "../../../../../convex/_generated/api";
 import {
   MentorshipRequestCard,
   RequestsEmptyState,
   RequestsLoadingState,
 } from "@/components/requests/mentorship-request-card";
-import { History, Inbox, Search, TriangleAlert } from "lucide-react";
 
-type MentorRequest = FunctionReturnType<
-  typeof api.mentorRequests.requestsByMentor
+type MenteeRequest = FunctionReturnType<
+  typeof api.mentorRequests.requestsByMentee
 >[number];
 
-function RequestSection({
+function RequestList({
   requests,
-  emptyIcon,
   emptyTitle,
   emptyDescription,
-  showActions,
-  activeRequestId,
-  onAccept,
-  onReject,
 }: {
-  requests: MentorRequest[];
-  emptyIcon: typeof Inbox;
+  requests: MenteeRequest[];
   emptyTitle: string;
   emptyDescription: string;
-  showActions: boolean;
-  activeRequestId: MentorRequest["_id"] | null;
-  onAccept: (requestId: MentorRequest["_id"]) => void;
-  onReject: (requestId: MentorRequest["_id"]) => void;
 }) {
   if (requests.length === 0) {
     return (
       <RequestsEmptyState
-        icon={emptyIcon}
+        icon={Inbox}
         title={emptyTitle}
         description={emptyDescription}
       />
@@ -59,39 +48,30 @@ function RequestSection({
       {requests.map((request) => (
         <MentorshipRequestCard
           key={request._id}
-          name={request.menteeName}
-          initials={request.menteeInitials}
-          title={request.menteeTitle}
+          name={request.mentorName}
+          initials={request.mentorInitials}
+          title={request.mentorTitle}
           message={request.message}
-          tags={request.interests}
-          tagsLabel="Areas of Interest"
+          tags={request.expertise}
+          tagsLabel="Mentor Expertise"
           status={request.status}
           createdAt={request.createdAt}
-          showActions={showActions}
-          isUpdating={activeRequestId === request._id}
-          onAccept={() => onAccept(request._id)}
-          onReject={() => onReject(request._id)}
         />
       ))}
     </div>
   );
 }
 
-export default function MentorRequestsPage() {
+export default function MenteeRequestsPage() {
   const { currentUser } = useCurrentUser();
   const [query, setQuery] = useState("");
-  const [activeRequestId, setActiveRequestId] =
-    useState<MentorRequest["_id"] | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
 
   const requests = useQuery(
-    api.mentorRequests.requestsByMentor,
-    currentUser?._id && currentUser.mentorProfile
-      ? { mentorId: currentUser._id }
+    api.mentorRequests.requestsByMentee,
+    currentUser?._id && currentUser.menteeProfile
+      ? { menteeId: currentUser._id }
       : "skip"
   );
-  const acceptRequest = useMutation(api.mentorRequests.acceptRequest);
-  const rejectRequest = useMutation(api.mentorRequests.rejectRequest);
 
   const filteredRequests = useMemo(() => {
     if (!requests) {
@@ -106,10 +86,10 @@ export default function MentorRequestsPage() {
       }
 
       const searchable = [
-        request.menteeName,
-        request.menteeTitle,
+        request.mentorName,
+        request.mentorTitle,
         request.message,
-        ...request.interests,
+        ...request.expertise,
       ]
         .join(" ")
         .toLowerCase();
@@ -122,32 +102,13 @@ export default function MentorRequestsPage() {
   const acceptedRequests = filteredRequests.filter((r) => r.status === "accepted");
   const rejectedRequests = filteredRequests.filter((r) => r.status === "rejected");
 
-  const handleRequestAction = async (
-    requestId: MentorRequest["_id"],
-    action: (args: { requestId: MentorRequest["_id"] }) => Promise<unknown>
-  ) => {
-    setActiveRequestId(requestId);
-    setActionError(null);
-
-    try {
-      await action({ requestId });
-    } catch (error) {
-      setActionError(
-        error instanceof Error
-          ? error.message
-          : "Something went wrong while updating the request."
-      );
-    } finally {
-      setActiveRequestId(null);
-    }
-  };
-
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">Mentorship Requests</h1>
+        <h1 className="text-3xl font-bold">My Mentorship Requests</h1>
         <p className="mt-2 text-muted-foreground">
-          Review and respond to incoming mentorship requests from mentees.
+          Track the mentorship requests you&apos;ve sent and see whether mentors
+          have accepted or rejected them.
         </p>
       </div>
 
@@ -156,23 +117,14 @@ export default function MentorRequestsPage() {
         <Input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search by mentee name, title, or interest..."
+          placeholder="Search by mentor name, title, or expertise..."
           className="pl-9"
         />
       </div>
 
-      {actionError && (
-        <Alert variant="destructive">
-          <TriangleAlert className="size-4" />
-          <AlertTitle>Request update failed</AlertTitle>
-          <AlertDescription>{actionError}</AlertDescription>
-        </Alert>
-      )}
-
       <Tabs defaultValue="pending" className="w-full">
         <TabsList>
           <TabsTrigger value="pending" className="gap-2">
-            <Inbox className="size-4" />
             Pending
             {pendingRequests.length > 0 && requests && (
               <Badge
@@ -184,7 +136,6 @@ export default function MentorRequestsPage() {
             )}
           </TabsTrigger>
           <TabsTrigger value="accepted" className="gap-2">
-            <History className="size-4" />
             Accepted
             {acceptedRequests.length > 0 && requests && (
               <Badge
@@ -196,7 +147,6 @@ export default function MentorRequestsPage() {
             )}
           </TabsTrigger>
           <TabsTrigger value="rejected" className="gap-2">
-            <History className="size-4" />
             Rejected
             {rejectedRequests.length > 0 && requests && (
               <Badge
@@ -211,21 +161,12 @@ export default function MentorRequestsPage() {
 
         <TabsContent value="pending" className="mt-6">
           {requests === undefined || currentUser === undefined ? (
-            <RequestsLoadingState showActions />
+            <RequestsLoadingState />
           ) : (
-            <RequestSection
+            <RequestList
               requests={pendingRequests}
-              emptyIcon={Inbox}
               emptyTitle="No pending requests"
-              emptyDescription="You're all caught up! New requests from mentees will appear here."
-              showActions
-              activeRequestId={activeRequestId}
-              onAccept={(requestId) =>
-                void handleRequestAction(requestId, acceptRequest)
-              }
-              onReject={(requestId) =>
-                void handleRequestAction(requestId, rejectRequest)
-              }
+              emptyDescription="Requests you send to mentors will appear here while you wait for a response."
             />
           )}
         </TabsContent>
@@ -234,19 +175,10 @@ export default function MentorRequestsPage() {
           {requests === undefined || currentUser === undefined ? (
             <RequestsLoadingState />
           ) : (
-            <RequestSection
+            <RequestList
               requests={acceptedRequests}
-              emptyIcon={History}
               emptyTitle="No accepted requests"
               emptyDescription="Accepted mentorship requests will appear here."
-              showActions={false}
-              activeRequestId={activeRequestId}
-              onAccept={(requestId) =>
-                void handleRequestAction(requestId, acceptRequest)
-              }
-              onReject={(requestId) =>
-                void handleRequestAction(requestId, rejectRequest)
-              }
             />
           )}
         </TabsContent>
@@ -255,19 +187,10 @@ export default function MentorRequestsPage() {
           {requests === undefined || currentUser === undefined ? (
             <RequestsLoadingState />
           ) : (
-            <RequestSection
+            <RequestList
               requests={rejectedRequests}
-              emptyIcon={History}
               emptyTitle="No rejected requests"
               emptyDescription="Rejected mentorship requests will appear here."
-              showActions={false}
-              activeRequestId={activeRequestId}
-              onAccept={(requestId) =>
-                void handleRequestAction(requestId, acceptRequest)
-              }
-              onReject={(requestId) =>
-                void handleRequestAction(requestId, rejectRequest)
-              }
             />
           )}
         </TabsContent>
