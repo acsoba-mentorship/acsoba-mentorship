@@ -18,10 +18,10 @@ import {
   type MentorExpertiseFormValues,
 } from "@/lib/validation/profile";
 import { TagInput } from "./tag-input";
-import type { User } from "@/lib/types";
+import type { PublicUserProfile } from "@/lib/types";
 
 interface MentorExpertiseFormProps {
-  user: User;
+  user: PublicUserProfile;
   onSuccess?: () => void;
 }
 

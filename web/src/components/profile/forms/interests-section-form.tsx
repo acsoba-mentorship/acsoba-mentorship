@@ -18,10 +18,10 @@ import {
   type InterestsFormValues,
 } from "@/lib/validation/profile";
 import { TagInput } from "./tag-input";
-import type { User } from "@/lib/types";
+import type { PublicUserProfile } from "@/lib/types";
 
 interface InterestsSectionFormProps {
-  user: User;
+  user: PublicUserProfile;
   onSuccess?: () => void;
 }
 

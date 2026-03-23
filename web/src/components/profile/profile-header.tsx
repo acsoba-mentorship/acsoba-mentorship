@@ -1,11 +1,11 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Mail } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { getInitials } from "@/lib/utils";
-import type { User } from "@/lib/types";
+import type { PublicUserProfile } from "@/lib/types";
 
 interface ProfileHeaderProps {
-  user: User;
+  user: PublicUserProfile;
 }
 
 export function ProfileHeader({ user }: ProfileHeaderProps) {
@@ -34,12 +34,6 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
             <span className="flex items-center gap-1">
               <MapPin className="size-3.5" />
               {user.location}
-            </span>
-          )}
-          {user.email && (
-            <span className="flex items-center gap-1">
-              <Mail className="size-3.5" />
-              {user.email}
             </span>
           )}
         </div>

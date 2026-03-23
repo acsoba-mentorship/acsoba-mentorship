@@ -15,7 +15,7 @@ function ProfileByUsernameContent() {
   const params = useParams<{ username?: string }>();
   const username = params?.username ?? "";
   const { isAuthenticated, isLoading } = useConvexAuth();
-  const { currentUser, isOwnProfile } = useCurrentUser();
+  const { currentUser } = useCurrentUser();
 
   const viewedUser = useQuery(
     api.users.getUserByUsername,
@@ -43,6 +43,8 @@ function ProfileByUsernameContent() {
     );
   }
 
+  const isOwnProfile = currentUser?.username === viewedUser.username;
+
   return (
     <div className="space-y-6">
       <ProfileHeader user={viewedUser} />
@@ -51,11 +53,11 @@ function ProfileByUsernameContent() {
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <ProfileMainContent
           user={viewedUser}
-          isOwnProfile={isOwnProfile(String(viewedUser._id))}
+          isOwnProfile={isOwnProfile}
         />
         <MentorSidebar
           user={viewedUser}
-          isOwnProfile={isOwnProfile(String(viewedUser._id))}
+          isOwnProfile={isOwnProfile}
         />
       </div>
     </div>

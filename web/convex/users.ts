@@ -170,7 +170,42 @@ export const getUserByUsername = query({
       .withIndex("by_username", (q) => q.eq("username", normalized))
       .unique();
 
-    return user;
+    if (!user) return null;
+
+    return {
+      username: user.username,
+      name: user.name,
+      title: user.title,
+      bio: user.bio,
+      location: user.location,
+      profilePictureUrl: user.profilePictureUrl,
+      education: user.education,
+      experience: user.experience,
+      menteeProfile: user.menteeProfile,
+      mentorProfile: user.mentorProfile,
+    };
+  },
+});
+
+/** Check whether a username is already taken. Used by the profile edit form
+ *  to validate uniqueness without leaking any user data to the caller. */
+export const checkUsernameAvailable = query({
+  args: { username: v.string() },
+  handler: async (ctx, { username }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const normalized = normalizeUsername(username);
+    if (!isValidUsername(normalized)) {
+      return { available: false };
+    }
+
+    const existing = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", normalized))
+      .unique();
+
+    return { available: existing === null };
   },
 });
 

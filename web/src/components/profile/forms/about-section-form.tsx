@@ -22,11 +22,11 @@ import {
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { aboutSchema, type AboutFormInput, type AboutFormValues } from "@/lib/validation/profile";
-import type { User } from "@/lib/types";
+import type { PublicUserProfile } from "@/lib/types";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 
 interface AboutSectionFormProps {
-  user: User;
+  user: PublicUserProfile;
   onSuccess?: () => void;
 }
 
@@ -54,8 +54,8 @@ export function AboutSectionForm({ user, onSuccess }: AboutSectionFormProps) {
   const usernameChanged = normalizedUsername !== user.username;
   const usernameFormatValid = usernameChanged && !form.formState.errors.username;
 
-  const existingUserForUsername = useQuery(
-    api.users.getUserByUsername,
+  const usernameAvailability = useQuery(
+    api.users.checkUsernameAvailable,
     usernameFormatValid ? { username: normalizedUsername } : "skip"
   );
 
@@ -63,8 +63,8 @@ export function AboutSectionForm({ user, onSuccess }: AboutSectionFormProps) {
   const usernameState: UsernameState = (() => {
     if (!usernameChanged) return "idle";
     if (!usernameFormatValid) return "invalid";
-    if (existingUserForUsername === undefined) return "checking";
-    if (existingUserForUsername !== null && String(existingUserForUsername._id) !== String(user._id)) return "taken";
+    if (usernameAvailability === undefined) return "checking";
+    if (!usernameAvailability.available) return "taken";
     return "valid";
   })();
 
