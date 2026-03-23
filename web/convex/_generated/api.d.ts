@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as init from "../init.js";
 import type * as users from "../users.js";
 import type * as verification from "../verification.js";
 
@@ -18,6 +19,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  init: typeof init;
   users: typeof users;
   verification: typeof verification;
 }>;

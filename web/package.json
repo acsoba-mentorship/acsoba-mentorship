@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed:sample-users": "npx convex dev --run init"
   },
   "dependencies": {
     "@auth0/auth0-react": "^2.13.0",
