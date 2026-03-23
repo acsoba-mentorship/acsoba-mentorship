@@ -11,7 +11,7 @@ import { useCurrentUser } from "@/app/CurrentUserProvider";
 
 function ProfileContent() {
   const { isAuthenticated, isLoading } = useConvexAuth();
-  const { currentUser, isOwnProfile } = useCurrentUser();
+  const { currentUser } = useCurrentUser();
 
   const loading = isLoading || (isAuthenticated && currentUser === undefined);
 
@@ -38,8 +38,8 @@ function ProfileContent() {
       <Separator />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <ProfileMainContent user={user} isOwnProfile={isOwnProfile(String(user._id))} />
-        <MentorSidebar user={user} isOwnProfile={isOwnProfile(String(user._id))} />
+        <ProfileMainContent user={user} isOwnProfile={true} />
+        <MentorSidebar user={user} isOwnProfile={true} />
       </div>
     </div>
   );

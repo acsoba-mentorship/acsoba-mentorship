@@ -24,8 +24,8 @@ export type PublicUserProfile = {
   profilePictureUrl: string;
   education: Doc<"users">["education"];
   experience: Doc<"users">["experience"];
-  menteeProfile: Doc<"users">["menteeProfile"];
-  mentorProfile: Doc<"users">["mentorProfile"];
+  menteeProfile?: Doc<"users">["menteeProfile"];
+  mentorProfile?: Doc<"users">["mentorProfile"];
 };
 
 /** Reduced DTO returned by listMentors — safe to expose to any authenticated
