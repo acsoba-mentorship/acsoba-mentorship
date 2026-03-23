@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,6 +14,7 @@ interface MentorListItemProps {
 
 export function MentorListItem({ mentor }: MentorListItemProps) {
   const profile = mentor.mentorProfile;
+  const username = mentor?.username ?? null;
   if (!profile) return null;
 
   return (
@@ -25,7 +27,18 @@ export function MentorListItem({ mentor }: MentorListItemProps) {
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="font-medium">{mentor.name}</p>
+              <p className="font-medium">
+                {username ? (
+                  <Link
+                    href={`/profile/${username}`}
+                    className="hover:underline focus-visible:underline"
+                  >
+                    {mentor.name}
+                  </Link>
+                ) : (
+                  mentor.name
+                )}
+              </p>
               <p className="text-sm text-muted-foreground">{mentor.title}</p>
             </div>
             <Badge variant={profile.isAvailable ? "default" : "secondary"}>

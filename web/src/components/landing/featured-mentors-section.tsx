@@ -1,4 +1,7 @@
-import { mockMentors } from "@/lib/mock-data";
+ "use client";
+
+import { useConvexAuth, useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import { getInitials } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -10,9 +13,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { MapPin } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function FeaturedMentorsSection() {
-  const featured = mockMentors.filter((m) => m.mentorProfile?.isAvailable).slice(0, 3);
+  const { isAuthenticated } = useConvexAuth();
+  const mentors = useQuery(api.users.listMentors, isAuthenticated ? { limit: 50 } : "skip");
+
+  const featured = (mentors ?? []).filter((m) => m.mentorProfile?.isAvailable).slice(0, 3);
+  const loading = isAuthenticated && mentors === undefined;
 
   return (
     <section className="py-24">
@@ -26,7 +34,19 @@ export function FeaturedMentorsSection() {
           </p>
         </div>
         <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-          {featured.map((mentor) => (
+          {loading ? (
+            <>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="space-y-4 rounded-xl border p-6">
+                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="h-4 w-1/2" />
+                  <Skeleton className="h-24 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                </div>
+              ))}
+            </>
+          ) : (
+            featured.map((mentor) => (
               <Card key={mentor._id}>
                 <CardHeader>
                   <div className="flex items-center gap-4">
@@ -56,7 +76,8 @@ export function FeaturedMentorsSection() {
                   </div>
                 </CardContent>
               </Card>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </section>

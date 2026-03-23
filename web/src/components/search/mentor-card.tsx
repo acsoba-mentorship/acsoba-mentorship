@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -19,6 +20,7 @@ interface MentorCardProps {
 
 export function MentorCard({ mentor }: MentorCardProps) {
   const profile = mentor.mentorProfile;
+  const username = mentor?.username ?? null;
   if (!profile) return null;
 
   return (
@@ -30,7 +32,18 @@ export function MentorCard({ mentor }: MentorCardProps) {
             <AvatarFallback>{getInitials(mentor.name)}</AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
-            <CardTitle className="text-base">{mentor.name}</CardTitle>
+            <CardTitle className="text-base">
+              {username ? (
+                <Link
+                  href={`/profile/${username}`}
+                  className="hover:underline focus-visible:underline"
+                >
+                  {mentor.name}
+                </Link>
+              ) : (
+                mentor.name
+              )}
+            </CardTitle>
             <CardDescription className="line-clamp-1">
               {mentor.title}
             </CardDescription>

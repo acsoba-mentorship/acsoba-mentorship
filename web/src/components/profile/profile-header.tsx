@@ -11,6 +11,7 @@ interface ProfileHeaderProps {
 export function ProfileHeader({ user }: ProfileHeaderProps) {
   const hasMentor = !!user.mentorProfile;
   const hasMentee = !!user.menteeProfile;
+  const username = user.username
 
   return (
     <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
@@ -26,6 +27,7 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
           {hasMentee && <Badge variant="secondary">Mentee</Badge>}
           {hasMentor && <Badge>Mentor</Badge>}
         </div>
+        {username && <p className="mt-1 text-sm text-muted-foreground">@{username}</p>}
         <p className="mt-1 text-muted-foreground">{user.title}</p>
         <div className="mt-2 flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground sm:justify-start">
           {user.location && (
