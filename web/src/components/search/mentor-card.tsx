@@ -32,27 +32,27 @@ export function MentorCard({
   if (!profile) return null;
 
   return (
-    <Card className="flex flex-col">
-      <CardHeader className="pb-3">
-        <div className="flex items-start gap-3">
+    <Card className="flex flex-col transition-shadow hover:shadow-[0_20px_50px_rgba(0,15,51,0.05)]">
+      <CardHeader className="pb-3 border-b border-border/50">
+        <div className="flex items-start gap-3 overflow-hidden">
           <Avatar>
             <AvatarImage src={mentor.profilePictureUrl || undefined} />
-            <AvatarFallback>{getInitials(mentor.name)}</AvatarFallback>
+            <AvatarFallback className="bg-primary/10 text-primary">{getInitials(mentor.name)}</AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
             <CardTitle className="text-base">
               <Link
                 href={`/profile/${mentor.username}`}
-                className="hover:underline focus-visible:underline"
+                className="hover:underline focus-visible:underline line-clamp-1"
               >
                 {mentor.name}
               </Link>
             </CardTitle>
-            <CardDescription className="line-clamp-1">
+            <CardDescription className="line-clamp-2">
               {mentor.title}
             </CardDescription>
           </div>
-          <Badge variant={profile.isAvailable ? "default" : "secondary"}>
+          <Badge className={profile.isAvailable ? "border-0 bg-emerald-50 text-emerald-700" : "border-0 bg-muted text-muted-foreground"}>
             {profile.isAvailable ? AVAILABLE : UNAVAILABLE}
           </Badge>
         </div>
@@ -63,12 +63,12 @@ export function MentorCard({
         </p>
         <div className="flex flex-wrap gap-1.5">
           {profile.expertise.slice(0, 3).map((skill) => (
-            <Badge key={skill} variant="outline" className="text-xs">
+            <Badge key={skill} variant="secondary" className="text-xs">
               {skill}
             </Badge>
           ))}
           {profile.expertise.length > 3 && (
-            <Badge variant="outline" className="text-xs text-muted-foreground">
+            <Badge variant="secondary" className="text-xs text-muted-foreground">
               +{profile.expertise.length - 3}
             </Badge>
           )}

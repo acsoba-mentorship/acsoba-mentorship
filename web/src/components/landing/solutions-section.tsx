@@ -24,7 +24,7 @@ const solutions = [
 
 export function SolutionsSection() {
   return (
-    <section className="border-t bg-muted/50 py-24">
+    <section className="bg-background py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-bold tracking-tight">
@@ -38,8 +38,8 @@ export function SolutionsSection() {
           {solutions.map((solution) => (
             <Card key={solution.title}>
               <CardHeader>
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-                  <solution.icon className="h-5 w-5 text-primary-foreground" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
+                  <solution.icon className="h-5 w-5 text-secondary-foreground" />
                 </div>
                 <CardTitle className="mt-4">{solution.title}</CardTitle>
               </CardHeader>

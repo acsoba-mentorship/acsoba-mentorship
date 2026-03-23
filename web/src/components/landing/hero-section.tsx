@@ -10,9 +10,10 @@ function UnauthenticatedCTA() {
   const { loginWithRedirect, isLoading } = useAuth0();
 
   return (  
-    <div className="flex flex-wrap justify-center gap-4">
+    <div className="flex flex-wrap gap-4">
       <Button
         size="lg"
+        variant="destructive"
         onClick={() => {
           if (!isLoading)
             void loginWithRedirect({
@@ -20,17 +21,18 @@ function UnauthenticatedCTA() {
             });
         }}
       >
-        Get Started
+        Join as Mentor
         <ArrowRight />
       </Button>
       <Button
         variant="outline"
         size="lg"
+        className="border-white/40 hover:bg-white/10 hover:text-white"
         onClick={() => {
           if (!isLoading) void loginWithRedirect();
         }}
       >
-        Log In
+        Find a Mentor
       </Button>
     </div>
   );
@@ -38,8 +40,12 @@ function UnauthenticatedCTA() {
 
 function AuthenticatedCTA() {
   return (
-    <div className="flex flex-wrap justify-center gap-4">
-      <Button size="lg" asChild>
+    <div className="flex flex-wrap gap-4">
+      <Button
+        size="lg"
+        variant="destructive"
+        asChild
+      >
         <Link href="/dashboard">
           Go to Dashboard
           <ArrowRight />
@@ -51,15 +57,15 @@ function AuthenticatedCTA() {
 
 export function HeroSection() {
   return (
-    <section className="mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
-      <div className="mx-auto max-w-2xl text-center">
-        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-          Find the mentor who&apos;ll shape your future
+    <section className="bg-gradient-to-br from-primary via-[#001A4D] to-[#002F6C] py-32 sm:py-40">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="max-w-xl">
+        <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
+          The Best Is Yet To Be. Give Back. Guide Forward.
         </h1>
-        <p className="mt-6 text-lg leading-8 text-muted-foreground">
-          ACS OBA Shepherds connects aspiring professionals with experienced
-          mentors. Get personalized guidance, grow your skills, and accelerate
-          your career.
+        <p className="mt-6 text-lg leading-8 text-white/70">
+          Connect with fellow ACS alumni for mentorship, career advice, and
+          shared wisdom. Your experience can shape the next generation.
         </p>
         <div className="mt-10">
           <Authenticated>
@@ -68,6 +74,7 @@ export function HeroSection() {
           <Unauthenticated>
             <UnauthenticatedCTA />
           </Unauthenticated>
+        </div>
         </div>
       </div>
     </section>

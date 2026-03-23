@@ -69,7 +69,7 @@ export function ProfileMainContent({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* About */}
       <ProfileSectionCard
         title="About"
@@ -163,7 +163,7 @@ export function ProfileMainContent({
         {mentee && mentee.interests.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
             {mentee.interests.map((interest) => (
-              <Badge key={interest} variant="outline" className="text-xs">
+              <Badge key={interest} variant="secondary" className="text-xs">
                 {interest}
               </Badge>
             ))}
@@ -197,9 +197,9 @@ export function ProfileMainContent({
         {education.length > 0 ? (
           <ul className="space-y-4">
             {education.map((entry, i) => (
-              <li key={i} className="flex items-start justify-between gap-2 rounded-lg border p-3">
+              <li key={i} className="flex items-start justify-between gap-2 rounded-lg bg-muted/40 p-3">
                 <div className="min-w-0 flex-1 text-sm">
-                  <p className="font-medium">{entry.institution}</p>
+                  <p className="font-semibold">{entry.institution}</p>
                   {(entry.degree || entry.fieldOfStudy) && (
                     <p className="text-muted-foreground">
                       {[entry.degree, entry.fieldOfStudy].filter(Boolean).join(", ")}
@@ -209,7 +209,7 @@ export function ProfileMainContent({
                     {formatDateUTC(entry.startDate)} - {entry.endDate != null ? formatDateUTC(entry.endDate) : "Present"}
                   </p>
                   {entry.description && (
-                    <p className="mt-2 text-muted-foreground">{entry.description}</p>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground/80">{entry.description}</p>
                   )}
                 </div>
                 {isOwnProfile && (
@@ -297,15 +297,15 @@ export function ProfileMainContent({
         {experience.length > 0 ? (
           <ul className="space-y-4">
             {experience.map((entry, i) => (
-              <li key={i} className="flex items-start justify-between gap-2 rounded-lg border p-3">
+              <li key={i} className="flex items-start justify-between gap-2 rounded-lg bg-muted/40 p-3">
                 <div className="min-w-0 flex-1 text-sm">
-                  <p className="font-medium">{entry.company}</p>
+                  <p className="font-semibold">{entry.company}</p>
                   <p className="text-muted-foreground">{entry.title}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {formatDateUTC(entry.startDate)} – {entry.endDate != null ? formatDateUTC(entry.endDate) : "Present"}
                   </p>
                   {entry.description && (
-                    <p className="mt-2 text-muted-foreground whitespace-pre-wrap">{entry.description}</p>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground/80 whitespace-pre-wrap">{entry.description}</p>
                   )}
                 </div>
                 {isOwnProfile && (

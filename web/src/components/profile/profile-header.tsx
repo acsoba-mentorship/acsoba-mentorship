@@ -11,30 +11,38 @@ interface ProfileHeaderProps {
 export function ProfileHeader({ user }: ProfileHeaderProps) {
   const hasMentor = !!user.mentorProfile;
   const hasMentee = !!user.menteeProfile;
-  const username = user.username
+  const username = user.username;
+  const isAvailable = user.mentorProfile?.isAvailable;
 
   return (
-    <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-      <Avatar className="size-20">
-        <AvatarImage src={user.profilePictureUrl || undefined} />
-        <AvatarFallback className="text-xl">
-          {getInitials(user.name)}
-        </AvatarFallback>
-      </Avatar>
-      <div className="flex-1 text-center sm:text-left">
-        <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-          <h1 className="text-2xl font-bold">{user.name}</h1>
+    <div>
+      <div className="relative -mx-4 sm:-mx-6 lg:-mx-8 -mt-8 h-48 bg-gradient-to-br from-primary to-[#001A4D]">
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2">
+          <Avatar className="size-24 ring-4 ring-background bg-background">
+            <AvatarImage src={user.profilePictureUrl || undefined} />
+            <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+              {getInitials(user.name)}
+            </AvatarFallback>
+          </Avatar>
+        </div>
+      </div>
+
+      <div className="pt-16 text-center">
+        <h1 className="text-2xl font-bold">{user.name}</h1>
+        <p className="mt-1 text-muted-foreground">{user.title}</p>
+        {user.location && (
+          <p className="mt-1 flex items-center justify-center gap-1 text-sm text-muted-foreground">
+            <MapPin className="size-3.5" />
+            {user.location}
+          </p>
+        )}
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
           {hasMentee && <Badge variant="secondary">Mentee</Badge>}
           {hasMentor && <Badge>Mentor</Badge>}
-        </div>
-        {username && <p className="mt-1 text-sm text-muted-foreground">@{username}</p>}
-        <p className="mt-1 text-muted-foreground">{user.title}</p>
-        <div className="mt-2 flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground sm:justify-start">
-          {user.location && (
-            <span className="flex items-center gap-1">
-              <MapPin className="size-3.5" />
-              {user.location}
-            </span>
+          {isAvailable && (
+            <Badge className="border-0 bg-emerald-50 text-emerald-700">
+              Available
+            </Badge>
           )}
         </div>
       </div>

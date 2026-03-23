@@ -54,10 +54,10 @@ function NavLinks({
           key={link.href}
           href={link.href}
           className={cn(
-            "flex items-center gap-2 text-sm font-medium transition-colors hover:text-foreground",
+            "flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary-foreground",
             pathname === link.href
-              ? "text-foreground"
-              : "text-muted-foreground"
+              ? "text-primary-foreground"
+              : "text-primary-foreground/60"
           )}
         >
           <link.icon className="size-4" />
@@ -119,7 +119,7 @@ function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="rounded-full">
+        <Button variant="ghost" size="icon" className="rounded-full text-primary-foreground hover:text-primary-foreground hover:bg-primary-foreground/10">
           <Avatar size="sm">
             <AvatarImage src={user?.picture ?? undefined} alt={user?.name ?? "User"} />
             <AvatarFallback>{initials}</AvatarFallback>
@@ -182,6 +182,7 @@ function AuthButtons() {
       <Button
         variant="ghost"
         size="sm"
+        className="text-primary-foreground hover:text-primary-foreground hover:bg-primary-foreground/10"
         onClick={() => {
           if (!isLoading) void loginWithRedirect();
         }}
@@ -190,6 +191,7 @@ function AuthButtons() {
       </Button>
       <Button
         size="sm"
+        variant="destructive"
         onClick={() => {
           if (!isLoading)
             void loginWithRedirect({
@@ -223,12 +225,12 @@ export function SiteNav() {
     pathname.startsWith("/profile");
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full bg-primary">
       <div className="mx-auto flex h-14 max-w-7xl items-center px-4 sm:px-6 lg:px-8">
         {/* Mobile hamburger */}
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon-sm" className="mr-2 md:hidden">
+            <Button variant="ghost" size="icon-sm" className="mr-2 text-primary-foreground hover:text-primary-foreground hover:bg-primary-foreground/10 md:hidden">
               <Menu className="size-5" />
               <span className="sr-only">Toggle menu</span>
             </Button>
@@ -251,7 +253,7 @@ export function SiteNav() {
         </Sheet>
 
         {/* Logo */}
-        <Link href="/" className="mr-6 flex items-center gap-2 font-bold">
+        <Link href="/" className="mr-6 flex items-center gap-2 font-bold text-primary-foreground">
           ACS OBA Shepherds
         </Link>
 

@@ -43,8 +43,8 @@ export default function DashboardPage() {
         {stats.map((stat) => (
           <Card key={stat.label}>
             <CardContent className="flex items-center gap-4 p-6">
-              <div className="rounded-md bg-muted p-2.5">
-                <stat.icon className="size-5 text-muted-foreground" />
+              <div className="rounded-md bg-primary/10 p-2.5">
+                <stat.icon className="size-5 text-primary" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{stat.value}</p>
@@ -57,7 +57,7 @@ export default function DashboardPage() {
 
       {/* Quick Actions */}
       <Card>
-        <CardHeader>
+        <CardHeader className="bg-muted/30">
           <CardTitle>Quick Actions</CardTitle>
           <CardDescription>
             Jump into common tasks to manage your mentorship journey.
@@ -84,7 +84,7 @@ export default function DashboardPage() {
       {/* Suggested Mentors */}
       <div>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold">Suggested Mentors</h2>
+          <h2 className="text-xl font-semibold tracking-tight">Suggested Mentors</h2>
           <Button asChild variant="ghost" size="sm">
             <Link href="/search">
               View all
@@ -105,8 +105,8 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center py-8">
-            <div className="rounded-full bg-muted p-4">
-              <Calendar className="size-8 text-muted-foreground/50" />
+            <div className="rounded-full bg-primary/10 p-4">
+              <Calendar className="size-8 text-primary/40" />
             </div>
             <p className="mt-4 font-medium">No recent activity</p>
             <p className="mt-1 text-sm text-muted-foreground">

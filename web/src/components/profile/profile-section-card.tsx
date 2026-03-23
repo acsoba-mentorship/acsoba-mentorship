@@ -36,12 +36,12 @@ export function ProfileSectionCard({
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             {icon}
-            <CardTitle className="font-semibold">{title}</CardTitle>
+            <CardTitle className="font-semibold tracking-wide">{title}</CardTitle>
           </div>
           {showEdit && (addTrigger ?? editTrigger)}
         </div>
         {description && (
-          <CardDescription className="text-xs">{description}</CardDescription>
+          <CardDescription className="text-xs text-muted-foreground/80">{description}</CardDescription>
         )}
       </CardHeader>
       <CardContent>

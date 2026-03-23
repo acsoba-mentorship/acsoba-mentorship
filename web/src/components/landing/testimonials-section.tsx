@@ -28,7 +28,7 @@ const testimonials = [
 
 export function TestimonialsSection() {
   return (
-    <section className="border-t bg-muted/50 py-24">
+    <section className="py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-bold tracking-tight">
@@ -43,7 +43,11 @@ export function TestimonialsSection() {
           {testimonials.map((testimonial) => (
             <Card key={testimonial.name}>
               <CardContent className="pt-6">
-                <Quote className="h-8 w-8 text-muted-foreground/30" />
+                <div className="flex gap-0.5 text-secondary-foreground">
+                  {"★★★★★".split("").map((star, i) => (
+                    <span key={i} className="text-base">{star}</span>
+                  ))}
+                </div>
                 <blockquote className="mt-4 text-sm leading-relaxed text-muted-foreground">
                   &ldquo;{testimonial.quote}&rdquo;
                 </blockquote>

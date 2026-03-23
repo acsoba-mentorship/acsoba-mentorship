@@ -14,17 +14,14 @@ import { formatDate } from "@/lib/utils";
 import type { RequestStatus } from "./types";
 
 export function RequestStatusBadge({ status }: { status: RequestStatus }) {
-  const variants: Record<
-    RequestStatus,
-    { label: string; variant: "default" | "secondary" | "destructive" }
-  > = {
-    pending: { label: "Pending", variant: "secondary" },
-    accepted: { label: "Accepted", variant: "default" },
-    rejected: { label: "Rejected", variant: "destructive" },
+  const styles: Record<RequestStatus, { label: string; className: string }> = {
+    pending: { label: "Pending", className: "border-0 bg-amber-50 text-amber-700" },
+    accepted: { label: "Accepted", className: "border-0 bg-emerald-50 text-emerald-700" },
+    rejected: { label: "Rejected", className: "border-0 bg-red-50 text-red-700" },
   };
-  const variant = variants[status];
+  const style = styles[status];
 
-  return <Badge variant={variant.variant}>{variant.label}</Badge>;
+  return <Badge className={style.className}>{style.label}</Badge>;
 }
 
 export function MentorshipRequestCard({
@@ -59,8 +56,8 @@ export function MentorshipRequestCard({
       <CardHeader>
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-4">
-            <Avatar className="size-12 border">
-              <AvatarFallback className="text-sm font-medium">
+            <Avatar className="size-12">
+              <AvatarFallback className="text-sm font-medium bg-primary/10 text-primary">
                 {initials}
               </AvatarFallback>
             </Avatar>
@@ -73,9 +70,9 @@ export function MentorshipRequestCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="rounded-lg bg-muted/50 p-4">
+        <div className="rounded-lg bg-muted/40 p-4">
           <div className="mb-2 flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <MessageSquare className="size-4" />
+            <MessageSquare className="size-4 text-primary/60" />
             Message
           </div>
           <p className="text-sm leading-relaxed">{message}</p>
@@ -89,7 +86,7 @@ export function MentorshipRequestCard({
             </div>
             <div className="flex flex-wrap gap-2">
               {tags.map((tag) => (
-                <Badge key={tag} variant="outline">
+                <Badge key={tag} variant="secondary">
                   {tag}
                 </Badge>
               ))}
@@ -97,7 +94,7 @@ export function MentorshipRequestCard({
           </div>
         )}
 
-        <div className="flex items-center justify-between border-t pt-4">
+        <div className="flex items-center justify-between border-t border-border/50 pt-4">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Calendar className="size-4" />
             Requested {formatDate(createdAt)}
@@ -136,8 +133,8 @@ export function RequestsEmptyState({
   return (
     <Card>
       <CardContent className="flex flex-col items-center justify-center py-16">
-        <div className="rounded-full bg-muted p-4">
-          <Icon className="size-8 text-muted-foreground/50" />
+        <div className="rounded-full bg-primary/10 p-4">
+          <Icon className="size-8 text-primary/40" />
         </div>
         <h3 className="mt-4 font-semibold">{title}</h3>
         <p className="mt-1 text-center text-sm text-muted-foreground">
