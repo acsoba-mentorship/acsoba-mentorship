@@ -117,7 +117,13 @@ export const storeUser = mutation({
     );
 
     return await ctx.db.insert("users", {
-      name: identity.name ?? "",
+      name: (() => {
+        const name = identity.name ?? "";
+        if (name.includes("@")) {
+          return name.split("@")[0];
+        }
+        return name.slice(0, 5);
+      })(),
       username: temporaryUsername,
       usernameUpdatedAt: Date.now(),
       isTemporaryUsername: true,
