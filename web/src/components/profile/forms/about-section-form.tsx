@@ -23,75 +23,52 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { aboutSchema, type AboutFormInput, type AboutFormValues } from "@/lib/validation/profile";
 import type { User } from "@/lib/types";
-import { Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 
 interface AboutSectionFormProps {
   user: User;
   onSuccess?: () => void;
 }
 
-function normalizeUsername(value: string | undefined): string {
-  return (value ?? "").trim().toLowerCase();
-}
-
-function hasUsernameChanged(nextUsername: string, currentUsername: string): boolean {
-  return nextUsername !== currentUsername;
-}
-
-function isUsernameTakenByAnotherUser(
-  shouldCheck: boolean,
-  existingUserId: string | null,
-  currentUserId: string
-): boolean {
-  if (!shouldCheck || !existingUserId) return false;
-  return existingUserId !== currentUserId;
-}
+type UsernameState = "idle" | "checking" | "invalid" | "taken" | "valid";
 
 export function AboutSectionForm({ user, onSuccess }: AboutSectionFormProps) {
   const updateUserProfileBasics = useMutation(api.users.updateUserProfileBasics);
   const updateUsername = useMutation(api.users.updateUsername);
-  const usernameStatus = useQuery(api.users.getUsernameChangeStatus, {});
-  const currentUsername = user.username;
-  const currentUserId = String(user._id);
+  const usernameChangeStatus = useQuery(api.users.getUsernameChangeStatus, {});
 
   const form = useForm<AboutFormInput, unknown, AboutFormValues>({
     resolver: zodResolver(aboutSchema),
+    mode: "onChange",
     defaultValues: {
       bio: user.bio ?? "",
       location: user.location ?? "",
       title: user.title ?? "",
-      username: currentUsername,
+      username: user.username,
     },
   });
 
-  const watchedUsername = useWatch({
-    control: form.control,
-    name: "username",
-  });
+  const watchedUsername = useWatch({ control: form.control, name: "username" });
 
-  const normalizedUsername = normalizeUsername(watchedUsername);
-  const isUsernameFormatValid = normalizedUsername.length > 0 && !form.formState.errors.username;
-  const shouldCheckUsernameUniqueness = isUsernameFormatValid && hasUsernameChanged(normalizedUsername, currentUsername);
+  const normalizedUsername = (watchedUsername ?? "").trim().toLowerCase();
+  const usernameChanged = normalizedUsername !== user.username;
+  const usernameFormatValid = usernameChanged && !form.formState.errors.username;
 
   const existingUserForUsername = useQuery(
     api.users.getUserByUsername,
-    shouldCheckUsernameUniqueness ? { username: normalizedUsername } : "skip"
+    usernameFormatValid ? { username: normalizedUsername } : "skip"
   );
 
-  // Existing user ID for the username if FOUND
-  const existingUserId = existingUserForUsername
-    ? String(existingUserForUsername._id)
-    : null;
+  // Derive a single state that drives all username feedback and submit gating
+  const usernameState: UsernameState = (() => {
+    if (!usernameChanged) return "idle";
+    if (!usernameFormatValid) return "invalid";
+    if (existingUserForUsername === undefined) return "checking";
+    if (existingUserForUsername !== null && String(existingUserForUsername._id) !== String(user._id)) return "taken";
+    return "valid";
+  })();
 
-  const isUsernameTaken = isUsernameTakenByAnotherUser(
-    shouldCheckUsernameUniqueness,
-    existingUserId,
-    currentUserId
-  );
-
-  // Show loading state if username status is still loading
-  const isUsernameStatusLoading = usernameStatus === undefined;
-  if (isUsernameStatusLoading) {
+  if (usernameChangeStatus === undefined) {
     return (
       <div className="flex min-h-32 items-center justify-center">
         <Loader2 className="size-5 animate-spin text-muted-foreground" />
@@ -99,32 +76,25 @@ export function AboutSectionForm({ user, onSuccess }: AboutSectionFormProps) {
     );
   }
 
-  const canChangeUsername = usernameStatus.canChangeUsername;
+  const { canChangeUsername } = usernameChangeStatus;
   const cooldownMessage = "Username changes are currently unavailable.";
-  const shouldChangeUsername = hasUsernameChanged(normalizedUsername, currentUsername);
 
-  // Can be submitted if: there are no form errors, the username is not taken, and the username is not being changed (or if the username can be changed)
   const canSubmit =
     !form.formState.isSubmitting &&
     !form.formState.errors.username &&
-    !isUsernameTaken &&
-    (!shouldChangeUsername || canChangeUsername);
+    usernameState !== "checking" &&
+    usernameState !== "taken" &&
+    usernameState !== "invalid" &&
+    (!usernameChanged || canChangeUsername);
 
   const onSubmit = async (values: AboutFormValues) => {
-    if (values.username !== currentUsername) {
+    if (values.username !== user.username) {
       if (!canChangeUsername) {
-        form.setError("username", {
-          type: "manual",
-          message: cooldownMessage,
-        });
+        form.setError("username", { type: "manual", message: cooldownMessage });
         return;
       }
-
-      if (isUsernameTaken) {
-        form.setError("username", {
-          type: "manual",
-          message: "Username is already taken.",
-        });
+      if (usernameState === "taken") {
+        form.setError("username", { type: "manual", message: "Username is already taken." });
         return;
       }
     }
@@ -135,7 +105,7 @@ export function AboutSectionForm({ user, onSuccess }: AboutSectionFormProps) {
       title: values.title,
     });
 
-    if (values.username !== currentUsername) {
+    if (values.username !== user.username) {
       await updateUsername({ username: values.username });
     }
     onSuccess?.();
@@ -157,7 +127,6 @@ export function AboutSectionForm({ user, onSuccess }: AboutSectionFormProps) {
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck={false}
-                    disabled={false}
                     {...field}
                   />
                 ) : (
@@ -180,10 +149,31 @@ export function AboutSectionForm({ user, onSuccess }: AboutSectionFormProps) {
                   </TooltipProvider>
                 )}
               </FormControl>
-              {isUsernameTaken && (
-                <p className="text-sm text-destructive">Username is already taken.</p>
+              {usernameState === "checking" && (
+                <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <Loader2 className="size-3.5 animate-spin" />
+                  Checking username…
+                </p>
               )}
-              <FormMessage />
+              {usernameState === "invalid" && (
+                <p className="flex items-center gap-1.5 text-sm text-destructive">
+                  <XCircle className="size-3.5" />
+                  {form.formState.errors.username?.message ?? "Invalid username."}
+                </p>
+              )}
+              {usernameState === "taken" && (
+                <p className="flex items-center gap-1.5 text-sm text-destructive">
+                  <XCircle className="size-3.5" />
+                  Username is already taken.
+                </p>
+              )}
+              {usernameState === "valid" && (
+                <p className="flex items-center gap-1.5 text-sm text-green-600">
+                  <CheckCircle2 className="size-3.5" />
+                  Username is available.
+                </p>
+              )}
+              {usernameState === "idle" && <FormMessage />}
             </FormItem>
           )}
         />

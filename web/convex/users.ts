@@ -229,7 +229,7 @@ export const updateUsername = mutation({
     const normalized = normalizeUsername(username);
     if (!isValidUsername(normalized)) {
       throw new Error(
-        "Invalid username. Use 3-24 lowercase letters, numbers, or underscores."
+        "Invalid username. Use 3-20 lowercase letters, numbers, or underscores."
       );
     }
 
