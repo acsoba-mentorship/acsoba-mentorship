@@ -168,7 +168,7 @@ export const createRequest = mutation({
       throw new Error("Request message must be 1000 characters or fewer");
     }
 
-    const existingRequest = await ctx.db
+    const existingPending = await ctx.db
       .query("mentorshipRequests")
       .withIndex("by_mentorId_menteeId", (q) =>
         q.eq("mentorId", mentorId).eq("menteeId", menteeId)
@@ -176,8 +176,20 @@ export const createRequest = mutation({
       .filter((q) => q.eq(q.field("status"), "pending"))
       .first();
 
-    if (existingRequest) {
+    if (existingPending) {
       throw new Error("You already have a pending request for this mentor");
+    }
+
+    const existingAccepted = await ctx.db
+      .query("mentorshipRequests")
+      .withIndex("by_mentorId_menteeId", (q) =>
+        q.eq("mentorId", mentorId).eq("menteeId", menteeId)
+      )
+      .filter((q) => q.eq(q.field("status"), "accepted"))
+      .first();
+
+    if (existingAccepted) {
+      throw new Error("You are already connected with this mentor");
     }
 
     const now = Date.now();
