@@ -156,15 +156,19 @@ export function SendRequestDialog({
         )}
 
         <div className="space-y-2">
-          <p className="text-sm font-medium">Message</p>
+          <label htmlFor="request-message" className="text-sm font-medium">
+            Message
+          </label>
           <Textarea
+            id="request-message"
+            aria-describedby="request-message-counter"
             value={message}
             onChange={(event) => setMessage(event.target.value)}
             placeholder="Hi! I’d love mentorship on..."
             className="min-h-32"
             maxLength={1000}
           />
-          <p className="text-right text-xs text-muted-foreground">
+          <p id="request-message-counter" className="text-right text-xs text-muted-foreground">
             {message.length}/1000
           </p>
         </div>
