@@ -1,14 +1,15 @@
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MapPin, Briefcase } from "lucide-react";
 import { AVAILABLE, UNAVAILABLE } from "@/lib/constants";
 import { getInitials } from "@/lib/utils";
-import type { User } from "@/lib/types";
+import type { PublicMentorProfile } from "@/lib/types";
 
 interface MentorListItemProps {
-  mentor: User;
+  mentor: PublicMentorProfile;
 }
 
 export function MentorListItem({ mentor }: MentorListItemProps) {
@@ -25,7 +26,14 @@ export function MentorListItem({ mentor }: MentorListItemProps) {
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="font-medium">{mentor.name}</p>
+              <p className="font-medium">
+                <Link
+                  href={`/profile/${mentor.username}`}
+                  className="hover:underline focus-visible:underline"
+                >
+                  {mentor.name}
+                </Link>
+              </p>
               <p className="text-sm text-muted-foreground">{mentor.title}</p>
             </div>
             <Badge variant={profile.isAvailable ? "default" : "secondary"}>

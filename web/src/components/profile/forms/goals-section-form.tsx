@@ -15,10 +15,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { goalsSchema, type GoalsFormValues } from "@/lib/validation/profile";
-import type { User } from "@/lib/types";
+import type { PublicUserProfile } from "@/lib/types";
 
 interface GoalsSectionFormProps {
-  user: User;
+  user: PublicUserProfile;
   onSuccess?: () => void;
 }
 

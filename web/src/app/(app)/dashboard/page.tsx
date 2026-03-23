@@ -8,8 +8,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Search,
   Users,
@@ -18,33 +16,13 @@ import {
   ArrowRight,
   BookOpen,
 } from "lucide-react";
+import { SuggestedMentors } from "@/components/dashboard/suggested-mentors";
 
 const stats = [
   { label: "Active Mentorships", value: "0", icon: Users },
   { label: "Pending Requests", value: "0", icon: Send },
   { label: "Upcoming Sessions", value: "0", icon: Calendar },
 ] as const;
-
-const suggestedMentors = [
-  {
-    name: "Emma Wilson",
-    title: "Senior ML Engineer",
-    expertise: ["Machine Learning", "Python"],
-    initials: "EW",
-  },
-  {
-    name: "Alex Johnson",
-    title: "Engineering Manager",
-    expertise: ["Full Stack", "Leadership"],
-    initials: "AJ",
-  },
-  {
-    name: "Sarah Chen",
-    title: "Lead Data Scientist",
-    expertise: ["Data Science", "Healthcare"],
-    initials: "SC",
-  },
-];
 
 export const metadata: Metadata = {
   title: "Dashboard — ACS OBA Shepherds",
@@ -114,32 +92,7 @@ export default function DashboardPage() {
             </Link>
           </Button>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {suggestedMentors.map((mentor) => (
-            <Card key={mentor.name}>
-              <CardContent className="p-6">
-                <div className="flex items-start gap-4">
-                  <Avatar>
-                    <AvatarFallback>{mentor.initials}</AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium">{mentor.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {mentor.title}
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {mentor.expertise.map((skill) => (
-                        <Badge key={skill} variant="secondary" className="text-xs">
-                          {skill}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <SuggestedMentors />
       </div>
 
       {/* Empty Activity */}

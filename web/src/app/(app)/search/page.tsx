@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FilterSidebar, type SearchFilters } from "@/components/search/filter-sidebar";
@@ -8,9 +9,10 @@ import { ViewToggle } from "@/components/search/view-toggle";
 import { MentorCard } from "@/components/search/mentor-card";
 import { MentorListItem } from "@/components/search/mentor-list-item";
 import { AVAILABLE, UNAVAILABLE } from "@/lib/constants";
-import { mockMentors } from "@/lib/mock-data";
 import type { ViewMode } from "@/lib/types";
 import { Search } from "lucide-react";
+import { api } from "../../../../convex/_generated/api";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function SearchPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
@@ -20,8 +22,12 @@ export default function SearchPage() {
     availability: [],
   });
 
+  const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
+  const mentors = useQuery(api.users.listMentors, isAuthenticated ? { limit: 50 } : "skip");
+  const mentorsLoading = authLoading || (isAuthenticated && mentors === undefined);
+
   const filteredMentors = useMemo(() => {
-    return mockMentors.filter((mentor) => {
+    return (mentors ?? []).filter((mentor) => {
       const profile = mentor.mentorProfile;
       if (!profile) return false;
 
@@ -58,7 +64,7 @@ export default function SearchPage() {
 
       return true;
     });
-  }, [query, filters]);
+  }, [query, filters, mentors]);
 
   const clearAll = () => {
     setQuery("");
@@ -93,17 +99,27 @@ export default function SearchPage() {
           </div>
 
           {/* Results */}
-          {filteredMentors.length > 0 ? (
+          {mentorsLoading ? (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="space-y-3 rounded-xl border p-4">
+                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="h-3 w-1/2" />
+                  <Skeleton className="h-20 w-full" />
+                </div>
+              ))}
+            </div>
+          ) : filteredMentors.length > 0 ? (
             viewMode === "grid" ? (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {filteredMentors.map((mentor) => (
-                  <MentorCard key={mentor._id} mentor={mentor} />
+                  <MentorCard key={mentor.username} mentor={mentor} />
                 ))}
               </div>
             ) : (
               <div className="space-y-4">
                 {filteredMentors.map((mentor) => (
-                  <MentorListItem key={mentor._id} mentor={mentor} />
+                  <MentorListItem key={mentor.username} mentor={mentor} />
                 ))}
               </div>
             )

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { HeroSection } from "@/components/landing/hero-section";
 import { SolutionsSection } from "@/components/landing/solutions-section";
-import { FeaturedMentorsSection } from "@/components/landing/featured-mentors-section";
 import { TestimonialsSection } from "@/components/landing/testimonials-section";
 
 export const metadata: Metadata = {
@@ -15,7 +14,8 @@ export default function MarketingHomePage() {
     <>
       <HeroSection />
       <SolutionsSection />
-      <FeaturedMentorsSection />
+      {/* TODO: FeaturedMentorsSection removed — listMentors requires auth and returns
+          sensitive fields. Re-add once a public/sanitized mentor endpoint exists. */}
       <TestimonialsSection />
     </>
   );

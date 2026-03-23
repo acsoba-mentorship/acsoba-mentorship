@@ -1,10 +1,22 @@
 import { z } from "zod";
 import { toStartOfMonth } from "@/lib/utils";
 
+const usernameRegex = /^[a-z0-9](?:[a-z0-9_]*[a-z0-9])?$/;
+
 export const aboutSchema = z.object({
   bio: z.string().max(2000).default(""),
   location: z.string().max(200).default(""),
   title: z.string().max(200).default(""),
+  username: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(3, "Username must be at least 3 characters")
+    .max(20, "Username must be at most 20 characters")
+    .regex(
+      usernameRegex,
+      "Use lowercase letters, numbers, or underscores (no leading/trailing underscore)"
+    ),
 });
 
 export type AboutFormValues = z.infer<typeof aboutSchema>;

@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -11,10 +12,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MapPin, Briefcase } from "lucide-react";
 import { AVAILABLE, UNAVAILABLE } from "@/lib/constants";
 import { getInitials } from "@/lib/utils";
-import type { User } from "@/lib/types";
+import type { PublicMentorProfile } from "@/lib/types";
 
 interface MentorCardProps {
-  mentor: User;
+  mentor: PublicMentorProfile;
 }
 
 export function MentorCard({ mentor }: MentorCardProps) {
@@ -30,7 +31,14 @@ export function MentorCard({ mentor }: MentorCardProps) {
             <AvatarFallback>{getInitials(mentor.name)}</AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
-            <CardTitle className="text-base">{mentor.name}</CardTitle>
+            <CardTitle className="text-base">
+              <Link
+                href={`/profile/${mentor.username}`}
+                className="hover:underline focus-visible:underline"
+              >
+                {mentor.name}
+              </Link>
+            </CardTitle>
             <CardDescription className="line-clamp-1">
               {mentor.title}
             </CardDescription>

@@ -1,45 +1,64 @@
 "use client";
 
 import { Suspense } from "react";
+import { useParams } from "next/navigation";
+import { useConvexAuth, useQuery } from "convex/react";
+import { api } from "../../../../../convex/_generated/api";
+import { useCurrentUser } from "@/app/CurrentUserProvider";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProfileHeader } from "@/components/profile/profile-header";
 import { ProfileMainContent } from "@/components/profile/profile-main-content";
 import { MentorSidebar } from "@/components/profile/mentor-sidebar";
-import { useConvexAuth } from "convex/react";
-import { useCurrentUser } from "@/app/CurrentUserProvider";
 
-function ProfileContent() {
+function ProfileByUsernameContent() {
+  const params = useParams<{ username?: string }>();
+  const username = params?.username ?? "";
   const { isAuthenticated, isLoading } = useConvexAuth();
   const { currentUser } = useCurrentUser();
 
-  const loading = isLoading || (isAuthenticated && currentUser === undefined);
+  const viewedUser = useQuery(
+    api.users.getUserByUsername,
+    isAuthenticated && username ? { username } : "skip"
+  );
+
+  const loading =
+    isLoading ||
+    (isAuthenticated && currentUser === undefined) ||
+    (isAuthenticated && username && viewedUser === undefined);
 
   if (loading) {
     return <ProfileSkeleton />;
   }
 
-  const user = currentUser ?? null;
-
-  if (!user) {
+  // TODO: Create generic 404 page for this case
+  if (!viewedUser) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-7 w-48" />
         <p className="text-sm text-muted-foreground">
-          No profile available. Please sign in to view your profile.
+          Profile not found for the username: <span className="font-medium">@{username}</span>.
         </p>
       </div>
     );
   }
 
+  const isOwnProfile = currentUser?.username === viewedUser.username;
+
   return (
     <div className="space-y-6">
-      <ProfileHeader user={user} />
+      <ProfileHeader user={viewedUser} />
       <Separator />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <ProfileMainContent user={user} isOwnProfile={true} />
-        <MentorSidebar user={user} isOwnProfile={true} />
+        <ProfileMainContent
+          user={viewedUser}
+          isOwnProfile={isOwnProfile}
+        />
+        <MentorSidebar
+          user={viewedUser}
+          isOwnProfile={isOwnProfile}
+        />
       </div>
     </div>
   );
@@ -72,10 +91,10 @@ function ProfileSkeleton() {
   );
 }
 
-export default function ProfilePage() {
+export default function ProfileByUsernamePage() {
   return (
     <Suspense fallback={<ProfileSkeleton />}>
-      <ProfileContent />
+      <ProfileByUsernameContent />
     </Suspense>
   );
 }

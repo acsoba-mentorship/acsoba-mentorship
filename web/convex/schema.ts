@@ -4,6 +4,9 @@ import { v } from "convex/values";
 const users = defineTable({
   // Personal information
   name: v.string(),
+  username: v.string(),
+  usernameUpdatedAt: v.number(),
+  isTemporaryUsername: v.boolean(),
   dateOfBirth: v.number(),
   gender: v.string(),
   nationality: v.string(),
@@ -69,6 +72,7 @@ const users = defineTable({
   createdAt: v.number(),
 })
   .index("by_token", ["tokenIdentifier"])
+  .index("by_username", ["username"])
   .index("by_mentor_availability", ["mentorProfile.isAvailable"])
 
 // TODO: Create mentorship requests table -- represents the request for a mentorship by mentee

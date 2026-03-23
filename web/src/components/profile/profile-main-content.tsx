@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import type { User } from "@/lib/types";
+import type { PublicUserProfile } from "@/lib/types";
 import { ProfileSectionCard } from "./profile-section-card";
 import { ProfileEditDialog } from "./profile-edit-dialog";
 import { AboutSectionForm } from "./forms/about-section-form";
@@ -25,7 +25,7 @@ import { formatDateUTC } from "@/lib/utils";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 
 interface ProfileMainContentProps {
-  user: User;
+  user: PublicUserProfile;
   isOwnProfile?: boolean;
 }
 

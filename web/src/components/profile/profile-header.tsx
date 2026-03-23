@@ -1,16 +1,17 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Mail } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { getInitials } from "@/lib/utils";
-import type { User } from "@/lib/types";
+import type { PublicUserProfile } from "@/lib/types";
 
 interface ProfileHeaderProps {
-  user: User;
+  user: PublicUserProfile;
 }
 
 export function ProfileHeader({ user }: ProfileHeaderProps) {
   const hasMentor = !!user.mentorProfile;
   const hasMentee = !!user.menteeProfile;
+  const username = user.username
 
   return (
     <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
@@ -26,18 +27,13 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
           {hasMentee && <Badge variant="secondary">Mentee</Badge>}
           {hasMentor && <Badge>Mentor</Badge>}
         </div>
+        {username && <p className="mt-1 text-sm text-muted-foreground">@{username}</p>}
         <p className="mt-1 text-muted-foreground">{user.title}</p>
         <div className="mt-2 flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground sm:justify-start">
           {user.location && (
             <span className="flex items-center gap-1">
               <MapPin className="size-3.5" />
               {user.location}
-            </span>
-          )}
-          {user.email && (
-            <span className="flex items-center gap-1">
-              <Mail className="size-3.5" />
-              {user.email}
             </span>
           )}
         </div>

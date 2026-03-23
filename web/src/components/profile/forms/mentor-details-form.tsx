@@ -19,10 +19,10 @@ import {
   mentorDetailsSchema,
   type MentorDetailsFormValues,
 } from "@/lib/validation/profile";
-import type { User } from "@/lib/types";
+import type { PublicUserProfile } from "@/lib/types";
 
 interface MentorDetailsFormProps {
-  user: User;
+  user: PublicUserProfile;
   onSuccess?: () => void;
 }
 

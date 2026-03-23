@@ -17,14 +17,14 @@ import {
   Pencil,
 } from "lucide-react";
 import { AVAILABLE, UNAVAILABLE } from "@/lib/constants";
-import type { User } from "@/lib/types";
+import type { PublicUserProfile } from "@/lib/types";
 import { ProfileSectionCard } from "./profile-section-card";
 import { ProfileEditDialog } from "./profile-edit-dialog";
 import { MentorDetailsForm } from "./forms/mentor-details-form";
 import { MentorExpertiseForm } from "./forms/mentor-expertise-form";
 
 interface MentorSidebarProps {
-  user: User;
+  user: PublicUserProfile;
   isOwnProfile?: boolean;
 }
 
