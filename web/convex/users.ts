@@ -209,33 +209,67 @@ export const checkUsernameAvailable = query({
   },
 });
 
+const MENTOR_LIST_MAX = 100;
+
+function toPublicMentorDTO(user: {
+  username: string;
+  name: string;
+  title: string;
+  bio: string;
+  location: string;
+  profilePictureUrl: string;
+  mentorProfile?: {
+    yearsOfExperience: number;
+    industries: string[];
+    expertise: string[];
+    maxMentees: number;
+    isAvailable: boolean;
+  };
+}) {
+  return {
+    username: user.username,
+    name: user.name,
+    title: user.title,
+    bio: user.bio,
+    location: user.location,
+    profilePictureUrl: user.profilePictureUrl,
+    mentorProfile: user.mentorProfile,
+  };
+}
+
 export const listMentors = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, { limit }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
+    const effectiveLimit = Math.min(
+      Math.max(limit ?? MENTOR_LIST_MAX, 1),
+      MENTOR_LIST_MAX
+    );
+
+    // Fetch available mentors first up to the limit
     const available = await ctx.db
       .query("users")
       .withIndex("by_mentor_availability", (q) =>
         q.eq("mentorProfile.isAvailable", true)
       )
-      .collect();
+      .take(effectiveLimit);
 
-    const unavailable = await ctx.db
-      .query("users")
-      .withIndex("by_mentor_availability", (q) =>
-        q.eq("mentorProfile.isAvailable", false)
-      )
-      .collect();
+    const remaining = effectiveLimit - available.length;
 
-    const mentors = [...available, ...unavailable];
+    // Fill remaining slots with unavailable mentors only if needed
+    const unavailable =
+      remaining > 0
+        ? await ctx.db
+            .query("users")
+            .withIndex("by_mentor_availability", (q) =>
+              q.eq("mentorProfile.isAvailable", false)
+            )
+            .take(remaining)
+        : [];
 
-    if (limit === undefined || limit <= 0) {
-      return mentors;
-    }
-
-    return mentors.slice(0, limit);
+    return [...available, ...unavailable].map(toPublicMentorDTO);
   },
 });
 

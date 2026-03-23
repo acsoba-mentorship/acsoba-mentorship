@@ -12,15 +12,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MapPin, Briefcase } from "lucide-react";
 import { AVAILABLE, UNAVAILABLE } from "@/lib/constants";
 import { getInitials } from "@/lib/utils";
-import type { User } from "@/lib/types";
+import type { PublicMentorProfile } from "@/lib/types";
 
 interface MentorCardProps {
-  mentor: User;
+  mentor: PublicMentorProfile;
 }
 
 export function MentorCard({ mentor }: MentorCardProps) {
   const profile = mentor.mentorProfile;
-  const username = mentor?.username ?? null;
   if (!profile) return null;
 
   return (
@@ -33,16 +32,12 @@ export function MentorCard({ mentor }: MentorCardProps) {
           </Avatar>
           <div className="min-w-0 flex-1">
             <CardTitle className="text-base">
-              {username ? (
-                <Link
-                  href={`/profile/${username}`}
-                  className="hover:underline focus-visible:underline"
-                >
-                  {mentor.name}
-                </Link>
-              ) : (
-                mentor.name
-              )}
+              <Link
+                href={`/profile/${mentor.username}`}
+                className="hover:underline focus-visible:underline"
+              >
+                {mentor.name}
+              </Link>
             </CardTitle>
             <CardDescription className="line-clamp-1">
               {mentor.title}

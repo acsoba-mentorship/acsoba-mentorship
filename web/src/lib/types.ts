@@ -27,3 +27,15 @@ export type PublicUserProfile = {
   menteeProfile: Doc<"users">["menteeProfile"];
   mentorProfile: Doc<"users">["mentorProfile"];
 };
+
+/** Reduced DTO returned by listMentors — safe to expose to any authenticated
+ *  client. Contains only the fields needed by mentor cards and search. */
+export type PublicMentorProfile = {
+  username: string;
+  name: string;
+  title: string;
+  bio: string;
+  location: string;
+  profilePictureUrl: string;
+  mentorProfile: Doc<"users">["mentorProfile"];
+};

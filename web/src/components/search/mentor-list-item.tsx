@@ -6,15 +6,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MapPin, Briefcase } from "lucide-react";
 import { AVAILABLE, UNAVAILABLE } from "@/lib/constants";
 import { getInitials } from "@/lib/utils";
-import type { User } from "@/lib/types";
+import type { PublicMentorProfile } from "@/lib/types";
 
 interface MentorListItemProps {
-  mentor: User;
+  mentor: PublicMentorProfile;
 }
 
 export function MentorListItem({ mentor }: MentorListItemProps) {
   const profile = mentor.mentorProfile;
-  const username = mentor?.username ?? null;
   if (!profile) return null;
 
   return (
@@ -28,16 +27,12 @@ export function MentorListItem({ mentor }: MentorListItemProps) {
           <div className="flex items-start justify-between gap-2">
             <div>
               <p className="font-medium">
-                {username ? (
-                  <Link
-                    href={`/profile/${username}`}
-                    className="hover:underline focus-visible:underline"
-                  >
-                    {mentor.name}
-                  </Link>
-                ) : (
-                  mentor.name
-                )}
+                <Link
+                  href={`/profile/${mentor.username}`}
+                  className="hover:underline focus-visible:underline"
+                >
+                  {mentor.name}
+                </Link>
               </p>
               <p className="text-sm text-muted-foreground">{mentor.title}</p>
             </div>

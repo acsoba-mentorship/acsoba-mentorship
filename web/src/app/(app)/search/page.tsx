@@ -113,13 +113,13 @@ export default function SearchPage() {
             viewMode === "grid" ? (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {filteredMentors.map((mentor) => (
-                  <MentorCard key={mentor._id} mentor={mentor} />
+                  <MentorCard key={mentor.username} mentor={mentor} />
                 ))}
               </div>
             ) : (
               <div className="space-y-4">
                 {filteredMentors.map((mentor) => (
-                  <MentorListItem key={mentor._id} mentor={mentor} />
+                  <MentorListItem key={mentor.username} mentor={mentor} />
                 ))}
               </div>
             )

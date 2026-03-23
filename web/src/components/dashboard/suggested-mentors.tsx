@@ -29,7 +29,7 @@ export function SuggestedMentors() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {(mentors ?? []).map((mentor) => (
-        <MentorCard key={mentor._id} mentor={mentor} />
+        <MentorCard key={mentor.username} mentor={mentor} />
       ))}
     </div>
   );
