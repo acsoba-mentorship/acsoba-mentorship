@@ -3,18 +3,16 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
-  Briefcase,
-  Users,
-  CircleCheck,
-  CircleX,
   Code,
   Building,
   GraduationCap,
   Pencil,
+  HandshakeIcon,
+  ArrowRight,
 } from "lucide-react";
 import { AVAILABLE, UNAVAILABLE } from "@/lib/constants";
 import type { PublicUserProfile } from "@/lib/types";
@@ -30,79 +28,89 @@ interface MentorSidebarProps {
 
 export function MentorSidebar({ user, isOwnProfile = false }: MentorSidebarProps) {
   const profile = user?.mentorProfile;
+  const firstName = user.name?.split(" ")[0] ?? user.name;
   const [mentorshipDetailsOpen, setMentorshipDetailsOpen] = useState(false);
   const [expertiseOpen, setExpertiseOpen] = useState(false);
 
   return (
     <div className="space-y-4">
-      {/* Mentor Details */}
-      <ProfileSectionCard
-        title="Mentorship Details"
-        showEdit={isOwnProfile}
-        editTrigger={
-          <ProfileEditDialog
-            open={mentorshipDetailsOpen}
-            onOpenChange={setMentorshipDetailsOpen}
-            trigger={
-              <Button variant="ghost" size="icon" className="size-8" aria-label="Edit Mentorship Details">
-                <Pencil className="size-3.5" />
-              </Button>
-            }
-            title="Edit Mentorship Details"
-            description="Update availability, max mentees, and years of experience."
-          >
-            <MentorDetailsForm
-              user={user}
-              onSuccess={() => setMentorshipDetailsOpen(false)}
-            />
-          </ProfileEditDialog>
-        }
-      >
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Briefcase className="size-3.5" />
-              Experience
-            </span>
-            <span className="text-sm font-medium">
-              {profile?.yearsOfExperience != null
-                ? `${profile.yearsOfExperience} year${profile.yearsOfExperience === 1 ? "" : "s"}`
-                : "No experience set yet"}
-            </span>
-          </div>
-          <Separator />
-          <div className="flex items-center justify-between">
-            <span className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Users className="size-3.5" />
-              Max Mentees
-            </span>
-            <span className="text-sm font-medium">
-              {profile?.maxMentees != null
-                ? `${profile.maxMentees}`
-                : "No max mentees set yet"}
-            </span>
-          </div>
-          <Separator />
-          <div className="flex items-center justify-between">
-            <span className="flex items-center gap-2 text-sm text-muted-foreground">
-              {profile?.isAvailable ? (
-                <CircleCheck className="size-3.5" />
-              ) : (
-                <CircleX className="size-3.5" />
-              )}
-              Availability
-            </span>
-            <Badge
-              variant={profile?.isAvailable ? "default" : "secondary"}
-              className="text-xs"
-            >
-              {profile?.isAvailable ? AVAILABLE : UNAVAILABLE}
-            </Badge>
-          </div>
-        </div>
-      </ProfileSectionCard>
 
-      {/* Expertise & Industries */}
+      {/* ── Unified "Connect with" card — same for own and visitor profiles ── */}
+      {profile && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="font-semibold tracking-wide">
+                Connect with {firstName}
+              </CardTitle>
+              {isOwnProfile && (
+                <ProfileEditDialog
+                  open={mentorshipDetailsOpen}
+                  onOpenChange={setMentorshipDetailsOpen}
+                  trigger={
+                    <Button variant="ghost" size="icon" className="size-8" aria-label="Edit Mentorship Details">
+                      <Pencil className="size-3.5" />
+                    </Button>
+                  }
+                  title="Edit Mentorship Details"
+                  description="Update availability, max mentees, and years of experience."
+                >
+                  <MentorDetailsForm
+                    user={user}
+                    onSuccess={() => setMentorshipDetailsOpen(false)}
+                  />
+                </ProfileEditDialog>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Stat tiles */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-lg bg-muted/60 px-3 py-2.5">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  Experience
+                </p>
+                <p className="mt-1 text-sm font-semibold">
+                  {profile.yearsOfExperience != null
+                    ? `${profile.yearsOfExperience} yr${profile.yearsOfExperience === 1 ? "" : "s"}`
+                    : "—"}
+                </p>
+              </div>
+              <div className="rounded-lg bg-muted/60 px-3 py-2.5">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  Mentees
+                </p>
+                <p className="mt-1 text-sm font-semibold">
+                  {profile.maxMentees != null ? `${profile.maxMentees} max` : "—"}
+                </p>
+              </div>
+            </div>
+
+            {/* Availability */}
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Availability</span>
+              <Badge
+                className={`text-xs border-0 ${profile.isAvailable ? "bg-emerald-50 text-emerald-700" : "bg-muted text-muted-foreground"}`}
+              >
+                {profile.isAvailable ? AVAILABLE : UNAVAILABLE}
+              </Badge>
+            </div>
+
+            {/* CTA — only for visitor */}
+            {!isOwnProfile && (
+              <>
+                <Separator />
+                <Button className="w-full" size="sm">
+                  <HandshakeIcon className="size-3.5" />
+                  Request Mentorship
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Expertise & Industries ── */}
       <ProfileSectionCard
         title="Expertise & Industries"
         showEdit={isOwnProfile}
@@ -129,7 +137,7 @@ export function MentorSidebar({ user, isOwnProfile = false }: MentorSidebarProps
           <div className="space-y-6">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Code className="size-3.5 text-muted-foreground" />
+                <Code className="size-3.5 text-primary/50" />
                 <span className="text-sm font-semibold">Expertise</span>
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -147,7 +155,7 @@ export function MentorSidebar({ user, isOwnProfile = false }: MentorSidebarProps
 
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Building className="size-3.5 text-muted-foreground" />
+                <Building className="size-3.5 text-primary/50" />
                 <span className="text-sm font-semibold">Industries</span>
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -168,20 +176,33 @@ export function MentorSidebar({ user, isOwnProfile = false }: MentorSidebarProps
         )}
       </ProfileSectionCard>
 
-      {/* CTA */}
+      {/* ── Navy Mentor Panel banner — own profile only ── */}
       {isOwnProfile && (
-        <Card>
-          <CardContent className="flex flex-col items-center py-6 text-center">
-            <GraduationCap className="size-5 text-muted-foreground" />
-            <p className="mt-2 text-sm font-medium">Mentor Panel</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Manage requests, mentorships, and your mentor profile.
-            </p>
-            <Button asChild size="sm" variant="outline" className="mt-3">
-              <Link href="/mentor">Go to Mentor Panel</Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="relative overflow-hidden rounded-xl bg-primary px-6 py-5">
+          {/* Watermark icon */}
+          <GraduationCap
+            className="absolute -right-3 -bottom-3 size-28 text-primary-foreground opacity-[0.07]"
+            aria-hidden="true"
+          />
+
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-primary-foreground/60">
+            Mentor Panel
+          </p>
+          <p className="mt-2 text-lg font-bold text-primary-foreground leading-snug">
+            Manage Your Mentorships
+          </p>
+          <p className="mt-1 text-xs text-primary-foreground/60">
+            Review requests, active mentorships, and settings.
+          </p>
+
+          <Link
+            href="/mentor"
+            className="mt-4 inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-widest text-primary-foreground/80 hover:text-primary-foreground transition-colors"
+          >
+            Go to Panel
+            <ArrowRight className="size-3.5" />
+          </Link>
+        </div>
       )}
     </div>
   );

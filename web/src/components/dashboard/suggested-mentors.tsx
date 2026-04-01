@@ -4,9 +4,11 @@ import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MentorCard } from "@/components/search/mentor-card";
+import { useCurrentUser } from "@/app/CurrentUserProvider";
 
 export function SuggestedMentors() {
   const { isAuthenticated, isLoading } = useConvexAuth();
+  const { currentUser } = useCurrentUser();
   const mentors = useQuery(api.users.listMentors, isAuthenticated ? { limit: 3 } : "skip");
 
   const loading = isLoading || (isAuthenticated && mentors === undefined);
@@ -29,7 +31,7 @@ export function SuggestedMentors() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {(mentors ?? []).map((mentor) => (
-        <MentorCard key={mentor.username} mentor={mentor} />
+        <MentorCard key={mentor.username} mentor={mentor} currentUsername={currentUser?.username} hasMenteeProfile={!!currentUser?.menteeProfile} latestRequestStatus={null} />
       ))}
     </div>
   );

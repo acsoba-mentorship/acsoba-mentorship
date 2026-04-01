@@ -33,7 +33,7 @@ function FilterGroup({
 }) {
   return (
     <div>
-      <h3 className="mb-3 text-sm font-semibold">{title}</h3>
+      <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">{title}</h3>
       <div className="space-y-2.5">
         {options.map((option) => {
           const id = sanitizeId(`${title}-${option}`)
@@ -71,14 +71,14 @@ export function FilterSidebar({ filters, onFiltersChange }: FilterSidebarProps) 
 
   return (
     <aside className="hidden w-56 shrink-0 lg:block">
-      <div className="sticky top-20 space-y-6">
+      <div className="sticky top-20 space-y-6 rounded-xl bg-card p-4">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold">Filters</h2>
           {activeCount > 0 && (
             <Button
               variant="ghost"
               size="sm"
-              className="h-auto px-2 py-1 text-xs"
+              className="h-auto px-2 py-1 text-xs text-primary"
               onClick={() =>
                 onFiltersChange({ expertise: [], availability: [] })
               }

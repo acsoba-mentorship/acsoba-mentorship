@@ -26,11 +26,11 @@ export function MentorListItem({
   if (!profile) return null;
 
   return (
-    <Card>
+    <Card className="transition-shadow hover:shadow-[0_20px_50px_rgba(0,15,51,0.05)]">
       <CardContent className="flex items-start gap-4 p-6">
         <Avatar className="size-12">
           <AvatarImage src={mentor.profilePictureUrl || undefined} />
-          <AvatarFallback>{getInitials(mentor.name)}</AvatarFallback>
+          <AvatarFallback className="bg-primary/10 text-primary">{getInitials(mentor.name)}</AvatarFallback>
         </Avatar>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
@@ -45,7 +45,7 @@ export function MentorListItem({
               </p>
               <p className="text-sm text-muted-foreground">{mentor.title}</p>
             </div>
-            <Badge variant={profile.isAvailable ? "default" : "secondary"}>
+            <Badge className={profile.isAvailable ? "border-0 bg-emerald-50 text-emerald-700" : "border-0 bg-muted text-muted-foreground"}>
               {profile.isAvailable ? AVAILABLE : UNAVAILABLE}
             </Badge>
           </div>
@@ -54,7 +54,7 @@ export function MentorListItem({
           </p>
           <div className="mt-3 flex flex-wrap gap-1.5">
             {profile.expertise.map((skill) => (
-              <Badge key={skill} variant="outline" className="text-xs">
+              <Badge key={skill} variant="secondary" className="text-xs">
                 {skill}
               </Badge>
             ))}

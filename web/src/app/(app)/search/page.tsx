@@ -118,7 +118,7 @@ export default function SearchPage() {
                 placeholder="Search by name, skill, or keyword..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="pl-9"
+                className="pl-9 bg-muted/30 border-0 focus-visible:ring-primary/30"
               />
             </div>
             <ViewToggle viewMode={viewMode} onViewModeChange={setViewMode} />
@@ -166,8 +166,8 @@ export default function SearchPage() {
               </div>
             )
           ) : (
-            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12">
-              <Search className="size-12 text-muted-foreground/30" />
+            <div className="flex flex-col items-center justify-center rounded-xl bg-muted/40 py-12">
+              <Search className="size-12 text-primary/20" />
               <h3 className="mt-4 text-lg font-medium">No mentors found</h3>
               <p className="mt-1 text-sm text-muted-foreground">
                 Try adjusting your filters or search query.
