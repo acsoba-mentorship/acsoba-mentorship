@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -35,7 +36,10 @@ type UsernameState = "idle" | "checking" | "invalid" | "taken" | "valid";
 export function AboutSectionForm({ user, onSuccess }: AboutSectionFormProps) {
   const updateUserProfileBasics = useMutation(api.users.updateUserProfileBasics);
   const updateUsername = useMutation(api.users.updateUsername);
-  const usernameChangeStatus = useQuery(api.users.getUsernameChangeStatus, {});
+  const [nowBucketMs] = useState(() => Math.floor(Date.now() / 60_000) * 60_000);
+  const usernameChangeStatus = useQuery(api.users.getUsernameChangeStatus, {
+    nowMs: nowBucketMs,
+  });
 
   const form = useForm<AboutFormInput, unknown, AboutFormValues>({
     resolver: zodResolver(aboutSchema),

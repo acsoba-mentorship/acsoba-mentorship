@@ -1,721 +1,170 @@
-import { mutation, query, type MutationCtx } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import * as UsersModel from "./model/users";
+import {
+  updateMentorProfileArgsValidator,
+  updateUserProfileArgsValidator,
+} from "./model/users/validators";
+import {
+  educationEntryValidator,
+  experienceEntryValidator,
+  menteeProfileValidator,
+  onboardingStatusValidator,
+  usersTableFields,
+} from "./model/users/fields";
 
-const USERNAME_MIN_LENGTH = 3;
-const USERNAME_MAX_LENGTH = 20;
-const USERNAME_PATTERN = /^[a-z0-9](?:[a-z0-9_]*[a-z0-9])?$/;
-const USERNAME_CHANGE_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-
-function normalizeUsername(username: string): string {
-  return username.trim().toLowerCase();
-}
-
-function isValidUsername(username: string): boolean {
-  if (
-    username.length < USERNAME_MIN_LENGTH ||
-    username.length > USERNAME_MAX_LENGTH
-  ) {
-    return false;
-  }
-  return USERNAME_PATTERN.test(username);
-}
-
-function slugifyForUsername(input: string): string {
-  const slug = input
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-    .replace(/_+/g, "_");
-
-  if (!slug) {
-    return "user";
-  }
-
-  if (slug.length < USERNAME_MIN_LENGTH) {
-    return `${slug}${"x".repeat(USERNAME_MIN_LENGTH - slug.length)}`;
-  }
-
-  return slug.slice(0, USERNAME_MAX_LENGTH);
-}
-
-function makeTemporaryCandidate(base: string): string {
-  const suffix = Math.random().toString(36).slice(2, 8);
-  const normalizedBase = slugifyForUsername(base);
-  const maxBaseLength = USERNAME_MAX_LENGTH - suffix.length - 1;
-  const trimmedBase = normalizedBase.slice(0, Math.max(maxBaseLength, 1));
-  return `${trimmedBase}_${suffix}`;
-}
-
-async function ensureUniqueTemporaryUsername(
-  ctx: MutationCtx,
-  base: string
-): Promise<string> {
-  for (let i = 0; i < 10; i += 1) {
-    const candidate = makeTemporaryCandidate(base);
-    const existing = await ctx.db
-      .query("users")
-      .withIndex("by_username", (q) => q.eq("username", candidate))
-      .unique();
-    if (!existing) {
-      return candidate;
-    }
-  }
-  throw new Error("Failed to generate a unique temporary username");
-}
-
-function buildUsernameStatus(user: {
-  usernameUpdatedAt: number;
-  isTemporaryUsername: boolean;
-}) {
-  if (user.isTemporaryUsername) {
-    return {
-      canChangeUsername: true,
-      nextUsernameChangeAt: null as number | null,
-      isTemporaryUsername: true,
-    };
-  }
-
-  const now = Date.now();
-  const nextAllowedAt = user.usernameUpdatedAt + USERNAME_CHANGE_COOLDOWN_MS;
-  const canChange = now >= nextAllowedAt;
-
-  return {
-    canChangeUsername: canChange,
-    nextUsernameChangeAt: canChange ? null : nextAllowedAt,
-    isTemporaryUsername: false,
-  };
-}
-
-const onboardingStatusValidator = v.union(
-  v.literal("new"),
-  v.literal("verified"),
-  v.literal("user_profile_complete"),
-  v.literal("mentee_profile_setup_complete")
-);
-
+/**
+ * Creates the user record for a first-time authenticated user and returns its ID.
+ */
 export const storeUser = mutation({
   args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    // 1. Look up the user by their unique Auth0 identifier
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
-
-    // 2. If they exist, return their internal Convex ID
-    if (user !== null) {
-      return user._id;
-    }
-
-    // 3. If new, create the bridge record with onboardingStatus: "new"
-    const temporaryUsername = await ensureUniqueTemporaryUsername(
-      ctx,
-      identity.name ?? "user"
-    );
-
-    return await ctx.db.insert("users", {
-      name: (() => {
-        const name = identity.name ?? "";
-        if (name.includes("@")) {
-          return name.split("@")[0];
-        }
-        return name.slice(0, 5);
-      })(),
-      username: temporaryUsername,
-      usernameUpdatedAt: Date.now(),
-      isTemporaryUsername: true,
-      dateOfBirth: 0,
-      gender: "",
-      nationality: "",
-      tokenIdentifier: identity.tokenIdentifier, // THE LINK
-      profilePictureUrl: "",
-      title: "",
-      bio: "",
-      location: "",
-      email: identity.email ?? "",
-      phoneNumber: "",
-      education: [],
-      experience: [],
-      onboardingStatus: "new",
-      // Mentee/Mentor profiles stay empty until they set them up
-      // so we omit menteeProfile and mentorProfile here on purpose.
-      createdAt: Date.now(),
-    });
-  },
+  handler: (ctx) => UsersModel.storeUser(ctx),
 });
 
+/**
+ * Returns the current authenticated user document, or null when signed out.
+ */
 export const getCurrentUser = query({
   args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-    const currentUser = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
-    return currentUser;
-  },
+  handler: (ctx) => UsersModel.getCurrentUser(ctx),
 });
 
+/**
+ * Loads a public user profile by username.
+ */
 export const getUserByUsername = query({
-  args: { username: v.string() },
-  handler: async (ctx, { username }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const normalized = normalizeUsername(username);
-    if (!isValidUsername(normalized)) {
-      return null;
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_username", (q) => q.eq("username", normalized))
-      .unique();
-
-    if (!user) return null;
-
-    return {
-      username: user.username,
-      name: user.name,
-      title: user.title,
-      bio: user.bio,
-      location: user.location,
-      profilePictureUrl: user.profilePictureUrl,
-      education: user.education,
-      experience: user.experience,
-      menteeProfile: user.menteeProfile,
-      mentorProfile: user.mentorProfile,
-    };
-  },
+  args: { username: usersTableFields.username },
+  handler: (ctx, args) => UsersModel.getUserByUsername(ctx, args),
 });
 
-/** Check whether a username is already taken. Used by the profile edit form
- *  to validate uniqueness without leaking any user data to the caller. */
+/**
+ * Checks whether a username is available for registration.
+ */
 export const checkUsernameAvailable = query({
-  args: { username: v.string() },
-  handler: async (ctx, { username }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const normalized = normalizeUsername(username);
-    if (!isValidUsername(normalized)) {
-      return { available: false };
-    }
-
-    const existing = await ctx.db
-      .query("users")
-      .withIndex("by_username", (q) => q.eq("username", normalized))
-      .unique();
-
-    return { available: existing === null };
-  },
+  args: { username: usersTableFields.username },
+  handler: (ctx, args) => UsersModel.checkUsernameAvailable(ctx, args),
 });
 
-const MENTOR_LIST_MAX = 100;
-
-function toPublicMentorDTO(user: {
-  username: string;
-  name: string;
-  title: string;
-  bio: string;
-  location: string;
-  profilePictureUrl: string;
-  mentorProfile?: {
-    yearsOfExperience: number;
-    industries: string[];
-    expertise: string[];
-    maxMentees: number;
-    isAvailable: boolean;
-  };
-}) {
-  return {
-    username: user.username,
-    name: user.name,
-    title: user.title,
-    bio: user.bio,
-    location: user.location,
-    profilePictureUrl: user.profilePictureUrl,
-    mentorProfile: user.mentorProfile,
-  };
-}
-
+/**
+ * Lists mentors, prioritizing mentors currently marked available.
+ */
 export const listMentors = query({
   args: { limit: v.optional(v.number()) },
-  handler: async (ctx, { limit }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const effectiveLimit = Math.min(
-      Math.max(limit ?? MENTOR_LIST_MAX, 1),
-      MENTOR_LIST_MAX
-    );
-
-    // Fetch available mentors first up to the limit
-    const available = await ctx.db
-      .query("users")
-      .withIndex("by_mentor_availability", (q) =>
-        q.eq("mentorProfile.isAvailable", true)
-      )
-      .take(effectiveLimit);
-
-    const remaining = effectiveLimit - available.length;
-
-    // Fill remaining slots with unavailable mentors only if needed
-    const unavailable =
-      remaining > 0
-        ? await ctx.db
-            .query("users")
-            .withIndex("by_mentor_availability", (q) =>
-              q.eq("mentorProfile.isAvailable", false)
-            )
-            .take(remaining)
-        : [];
-
-    return [...available, ...unavailable].map(toPublicMentorDTO);
-  },
+  handler: (ctx, args) => UsersModel.listMentors(ctx, args),
 });
 
+/**
+ * Returns current username change eligibility using client-provided time.
+ */
 export const getUsernameChangeStatus = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
-    if (!user) throw new Error("User not found");
-
-    return buildUsernameStatus(user);
-  },
+  args: { nowMs: v.number() },
+  handler: (ctx, args) => UsersModel.getUsernameChangeStatus(ctx, args),
 });
 
+/**
+ * Updates the caller's username if validation and cooldown checks pass.
+ */
 export const updateUsername = mutation({
-  args: { username: v.string() },
-  handler: async (ctx, { username }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const normalized = normalizeUsername(username);
-    if (!isValidUsername(normalized)) {
-      throw new Error(
-        "Invalid username. Use 3-20 lowercase letters, numbers, or underscores."
-      );
-    }
-
-    const user = await ctx.db      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
-
-    if (!user) throw new Error("User not found");
-    if (user.username === normalized) {
-      return {
-        userId: user._id,
-        username: user.username,
-        ...buildUsernameStatus(user),
-      };
-    }
-
-    const existing = await ctx.db
-      .query("users")
-      .withIndex("by_username", (q) => q.eq("username", normalized))
-      .unique();
-    if (existing) {
-      throw new Error("Username already taken");
-    }
-
-    const now = Date.now();
-    const nextAllowedAt = user.usernameUpdatedAt + USERNAME_CHANGE_COOLDOWN_MS;
-    const canBypassCooldown = user.isTemporaryUsername;
-    if (!canBypassCooldown && now < nextAllowedAt) {
-      throw new Error(
-        `Username can be changed again on ${new Date(nextAllowedAt).toISOString()}`
-      );
-    }
-
-    await ctx.db.patch(user._id, {
-      username: normalized,
-      usernameUpdatedAt: now,
-      isTemporaryUsername: false,
-    });
-
-    return {
-      userId: user._id,
-      username: normalized,
-      canChangeUsername: false,
-      nextUsernameChangeAt: now + USERNAME_CHANGE_COOLDOWN_MS,
-      isTemporaryUsername: false,
-    };
-  },
+  args: { username: usersTableFields.username },
+  handler: (ctx, args) => UsersModel.updateUsername(ctx, args),
 });
 
-// Ensures// Ensures that users can only transition to the next status in the onboarding process
-const ALLOWED_TRANSITIONS: Record<string, string[]> = {
-  new: ["verified"],
-  verified: ["user_profile_complete"],
-  user_profile_complete: ["mentee_profile_setup_complete"],
-  mentee_profile_setup_complete: ["mentee_profile_setup_complete"], // idempotent
-};
-
+/**
+ * Advances onboarding status through the allowed transition graph.
+ */
 export const setOnboardingStatus = mutation({
   args: { status: onboardingStatusValidator },
-  handler: async (ctx, { status }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
-
-    if (!user) throw new Error("User not found");
-
-    const current = user.onboardingStatus ?? "new";
-    // Updates the user's onboarding status to the next valid status in the onboarding process
-    const allowed = ALLOWED_TRANSITIONS[current];
-    if (!allowed?.includes(status)) {
-      throw new Error(`Invalid transition from ${current} to ${status}`);
-    }
-
-    await ctx.db.patch(user._id, { onboardingStatus: status });
-    return user._id;
-  },
+  handler: (ctx, args) => UsersModel.setOnboardingStatus(ctx, args),
 });
 
-// User profile fields collected during onboarding (after verification)
-const updateUserProfileArgs = v.object({
-  name: v.string(),
-  gender: v.string(),
-  nationality: v.string(),
-  phoneNumber: v.string(),
-  dateOfBirth: v.optional(v.number()),
-  bio: v.optional(v.string()),
-  location: v.optional(v.string()),
-});
-
+/**
+ * Saves required user profile details during onboarding.
+ */
 export const updateUserProfile = mutation({
-  args: updateUserProfileArgs,
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
-
-    if (!user) throw new Error("User not found");
-
-    const current = user.onboardingStatus ?? "new";
-    const allowed = ALLOWED_TRANSITIONS[current];
-    if (!allowed?.includes("user_profile_complete")) {
-      throw new Error(
-        `Cannot complete user profile from status ${current}; complete verification first.`
-      );
-    }
-
-    await ctx.db.patch(user._id, {
-      name: args.name,
-      gender: args.gender,
-      nationality: args.nationality,
-      phoneNumber: args.phoneNumber,
-      ...(args.dateOfBirth !== undefined && { dateOfBirth: args.dateOfBirth }),
-      ...(args.bio !== undefined && { bio: args.bio }),
-      ...(args.location !== undefined && { location: args.location }),
-      onboardingStatus: "user_profile_complete",
-    });
-    return user._id;
-  },
+  args: updateUserProfileArgsValidator,
+  handler: (ctx, args) => UsersModel.updateUserProfile(ctx, args),
 });
 
-const menteeProfileArgs = v.object({
-  goals: v.string(),
-  interests: v.array(v.string()),
-});
-
+/**
+ * Saves the caller's mentee profile during onboarding.
+ */
 export const updateMenteeProfile = mutation({
-  args: menteeProfileArgs,
-  handler: async (ctx, { goals, interests }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
-
-    if (!user) throw new Error("User not found");
-
-    const current = user.onboardingStatus ?? "new";
-    const allowed = ALLOWED_TRANSITIONS[current];
-    if (!allowed?.includes("mentee_profile_setup_complete")) {
-      throw new Error(
-        `Cannot complete mentee profile from status ${current}; complete user profile first.`
-      );
-    }
-
-    const menteeProfile = { goals, interests };
-    await ctx.db.patch(user._id, {
-      menteeProfile,
-      onboardingStatus: "mentee_profile_setup_complete",
-    });
-    return user._id;
-  },
+  args: menteeProfileValidator,
+  handler: (ctx, args) => UsersModel.updateMenteeProfile(ctx, args),
 });
 
-// Post-onboarding profile editing (owner-only, derived from auth identity)
-
-const updateUserProfileBasicsArgs = v.object({
-  bio: v.optional(v.string()),
-  location: v.optional(v.string()),
-  title: v.optional(v.string()),
-});
-
+/**
+ * Updates post-onboarding profile basics such as bio, title and location.
+ */
 export const updateUserProfileBasics = mutation({
-  args: updateUserProfileBasicsArgs,
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
-
-    if (!user) throw new Error("User not found");
-
-    const patch: Record<string, unknown> = {};
-    if (args.bio !== undefined) patch.bio = args.bio;
-    if (args.location !== undefined) patch.location = args.location;
-    if (args.title !== undefined) patch.title = args.title;
-
-    if (Object.keys(patch).length === 0) {
-      return user._id;
-    }
-
-    await ctx.db.patch(user._id, patch);
-    return user._id;
+  args: {
+    bio: v.optional(usersTableFields.bio),
+    location: v.optional(usersTableFields.location),
+    title: v.optional(usersTableFields.title),
   },
+  handler: (ctx, args) => UsersModel.updateUserProfileBasics(ctx, args),
 });
 
-const updateMenteeProfileDetailsArgs = v.object({
-  goals: v.optional(v.string()),
-  interests: v.optional(v.array(v.string())),
-});
-
+/**
+ * Partially updates mentee profile details.
+ */
 export const updateMenteeProfileDetails = mutation({
-  args: updateMenteeProfileDetailsArgs,
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
-
-    if (!user) throw new Error("User not found");
-
-    const previous = user.menteeProfile ?? { goals: "", interests: [] as string[] };
-
-    const menteeProfile = {
-      goals: args.goals ?? previous.goals,
-      interests: args.interests ?? previous.interests,
-    };
-
-    await ctx.db.patch(user._id, { menteeProfile });
-    return user._id;
-  },
+  args: menteeProfileValidator.partial(),
+  handler: (ctx, args) => UsersModel.updateMenteeProfileDetails(ctx, args),
 });
 
-const mentorProfileArgs = v.object({
-  yearsOfExperience: v.number(),
-  industries: v.array(v.string()),
-  expertise: v.array(v.string()),
-  maxMentees: v.number(),
-  isAvailable: v.boolean(),
-});
-
+/**
+ * Replaces mentor profile fields for the current user.
+ */
 export const updateMentorProfile = mutation({
-  args: mentorProfileArgs,
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
-
-    if (!user) throw new Error("User not found");
-
-    const mentorProfile = {
-      yearsOfExperience: args.yearsOfExperience,
-      industries: args.industries,
-      expertise: args.expertise,
-      maxMentees: args.maxMentees,
-      isAvailable: args.isAvailable,
-    };
-
-    await ctx.db.patch(user._id, { mentorProfile });
-    return user._id;
-  },
+  args: updateMentorProfileArgsValidator,
+  handler: (ctx, args) => UsersModel.updateMentorProfile(ctx, args),
 });
 
-const educationEntry = v.object({
-  institution: v.string(),
-  degree: v.optional(v.string()),
-  fieldOfStudy: v.optional(v.string()),
-  startDate: v.number(),
-  endDate: v.optional(v.number()),
-  description: v.optional(v.string()),
-});
-
+/**
+ * Adds an education entry to the caller profile.
+ */
 export const addEducation = mutation({
-  args: { entry: educationEntry },
-  handler: async (ctx, { entry }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
-
-    if (!user) throw new Error("User not found");
-
-    const education = [...user.education, entry];
-    await ctx.db.patch(user._id, { education });
-    return user._id;
-  },
+  args: { entry: educationEntryValidator },
+  handler: (ctx, args) => UsersModel.addEducation(ctx, args),
 });
 
+/**
+ * Updates one education entry by index.
+ */
 export const updateEducation = mutation({
-  args: { index: v.number(), entry: educationEntry },
-  handler: async (ctx, { index, entry }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
-
-    if (!user) throw new Error("User not found");
-
-    if (index < 0 || index >= user.education.length) {
-      throw new Error("Invalid education index");
-    }
-
-    const education = user.education.map((item, idx) =>
-      idx === index ? entry : item
-    );
-
-    await ctx.db.patch(user._id, { education });
-    return user._id;
-  },
+  args: { index: v.number(), entry: educationEntryValidator },
+  handler: (ctx, args) => UsersModel.updateEducation(ctx, args),
 });
 
+/**
+ * Removes one education entry by index.
+ */
 export const deleteEducation = mutation({
   args: { index: v.number() },
-  handler: async (ctx, { index }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
-
-    if (!user) throw new Error("User not found");
-
-    if (index < 0 || index >= user.education.length) {
-      throw new Error("Invalid education index");
-    }
-
-    const education = user.education.filter((_, idx) => idx !== index);
-    await ctx.db.patch(user._id, { education });
-    return user._id;
-  },
+  handler: (ctx, args) => UsersModel.deleteEducation(ctx, args),
 });
 
-const experienceEntry = v.object({
-  company: v.string(),
-  title: v.string(),
-  startDate: v.number(),
-  endDate: v.optional(v.number()),
-  description: v.optional(v.string()),
-});
-
+/**
+ * Adds an experience entry to the caller profile.
+ */
 export const addExperience = mutation({
-  args: { entry: experienceEntry },
-  handler: async (ctx, { entry }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
-
-    if (!user) throw new Error("User not found");
-
-    const experience = [...user.experience, entry];
-    await ctx.db.patch(user._id, { experience });
-    return user._id;
-  },
+  args: { entry: experienceEntryValidator },
+  handler: (ctx, args) => UsersModel.addExperience(ctx, args),
 });
 
+/**
+ * Updates one experience entry by index.
+ */
 export const updateExperience = mutation({
-  args: { index: v.number(), entry: experienceEntry },
-  handler: async (ctx, { index, entry }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
-
-    if (!user) throw new Error("User not found");
-
-    if (index < 0 || index >= user.experience.length) {
-      throw new Error("Invalid experience index");
-    }
-
-    const experience = user.experience.map((item, idx) =>
-      idx === index ? entry : item
-    );
-
-    await ctx.db.patch(user._id, { experience });
-    return user._id;
-  },
+  args: { index: v.number(), entry: experienceEntryValidator },
+  handler: (ctx, args) => UsersModel.updateExperience(ctx, args),
 });
 
+/**
+ * Removes one experience entry by index.
+ */
 export const deleteExperience = mutation({
   args: { index: v.number() },
-  handler: async (ctx, { index }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
-      .unique();
-
-    if (!user) throw new Error("User not found");
-
-    if (index < 0 || index >= user.experience.length) {
-      throw new Error("Invalid experience index");
-    }
-
-    const experience = user.experience.filter((_, idx) => idx !== index);
-    await ctx.db.patch(user._id, { experience });
-    return user._id;
-  },
+  handler: (ctx, args) => UsersModel.deleteExperience(ctx, args),
 });

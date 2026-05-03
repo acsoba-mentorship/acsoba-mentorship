@@ -57,7 +57,7 @@ export default function DashboardPage() {
 
       {/* Quick Actions */}
       <Card>
-        <CardHeader className="bg-muted/30">
+        <CardHeader>
           <CardTitle>Quick Actions</CardTitle>
           <CardDescription>
             Jump into common tasks to manage your mentorship journey.
