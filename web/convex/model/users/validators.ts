@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import {
+  mentorPrivacySettingsValidator,
   mentorProfileValidator,
   usersTableFields,
 } from "./fields";
@@ -25,3 +26,5 @@ export const updateUserProfileArgsValidator = userProfileFieldsValidator.pick(
   "location"
 );
 export const updateMentorProfileArgsValidator = mentorProfileValidator;
+export const updateMentorPrivacySettingsArgsValidator =
+  mentorPrivacySettingsValidator.partial();

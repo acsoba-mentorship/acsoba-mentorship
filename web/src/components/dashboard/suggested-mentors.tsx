@@ -31,7 +31,13 @@ export function SuggestedMentors() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {(mentors ?? []).map((mentor) => (
-        <MentorCard key={mentor.username} mentor={mentor} currentUsername={currentUser?.username} hasMenteeProfile={!!currentUser?.menteeProfile} latestRequestStatus={null} />
+        <MentorCard
+          key={mentor.mentorId}
+          mentor={mentor}
+          currentUserId={currentUser?._id}
+          hasMenteeProfile={!!currentUser?.menteeProfile}
+          latestRequestStatus={null}
+        />
       ))}
     </div>
   );

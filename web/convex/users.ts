@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import * as UsersModel from "./model/users";
 import {
   updateMentorProfileArgsValidator,
+  updateMentorPrivacySettingsArgsValidator,
   updateUserProfileArgsValidator,
 } from "./model/users/validators";
 import {
@@ -38,6 +39,14 @@ export const getUserByUsername = query({
 });
 
 /**
+ * Loads a privacy-safe public user profile by user ID.
+ */
+export const getUserById = query({
+  args: { userId: v.id("users") },
+  handler: (ctx, args) => UsersModel.getUserById(ctx, args),
+});
+
+/**
  * Checks whether a username is available for registration.
  */
 export const checkUsernameAvailable = query({
@@ -51,6 +60,22 @@ export const checkUsernameAvailable = query({
 export const listMentors = query({
   args: { limit: v.optional(v.number()) },
   handler: (ctx, args) => UsersModel.listMentors(ctx, args),
+});
+
+/**
+ * Returns the caller's mentor privacy settings with defaults applied.
+ */
+export const getMyMentorPrivacySettings = query({
+  args: {},
+  handler: (ctx) => UsersModel.getMyMentorPrivacySettings(ctx),
+});
+
+/**
+ * Updates mentor identity disclosure settings for the caller.
+ */
+export const updateMyMentorPrivacySettings = mutation({
+  args: updateMentorPrivacySettingsArgsValidator,
+  handler: (ctx, args) => UsersModel.updateMyMentorPrivacySettings(ctx, args),
 });
 
 /**

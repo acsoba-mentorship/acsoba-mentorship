@@ -16,12 +16,15 @@ export type UserId = Id<"users">;
  *  Excludes all sensitive/internal fields (_id, tokenIdentifier, email,
  *  phoneNumber, dateOfBirth, onboardingStatus, createdAt, etc.). */
 export type PublicUserProfile = {
-  username: string;
+  userId?: Id<"users">;
+  username: string | null;
   name: string;
   title: string;
   bio: string;
   location: string;
   profilePictureUrl: string;
+  email: string | null;
+  phoneNumber: string | null;
   education: Doc<"users">["education"];
   experience: Doc<"users">["experience"];
   menteeProfile?: Doc<"users">["menteeProfile"];
@@ -31,11 +34,14 @@ export type PublicUserProfile = {
 /** Reduced DTO returned by listMentors — safe to expose to any authenticated
  *  client. Contains only the fields needed by mentor cards and search. */
 export type PublicMentorProfile = {
-  username: string;
+  mentorId: Id<"users">;
+  username: string | null;
   name: string;
   title: string;
   bio: string;
   location: string;
   profilePictureUrl: string;
+  email: string | null;
+  phoneNumber: string | null;
   mentorProfile: Doc<"users">["mentorProfile"];
 };
