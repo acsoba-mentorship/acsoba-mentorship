@@ -8,6 +8,7 @@ import { ProfileMainContent } from "@/components/profile/profile-main-content";
 import { MentorSidebar } from "@/components/profile/mentor-sidebar";
 import { useConvexAuth } from "convex/react";
 import { useCurrentUser } from "@/app/CurrentUserProvider";
+import type { PublicUserProfile } from "@/lib/types";
 
 function ProfileContent() {
   const { isAuthenticated, isLoading } = useConvexAuth();
@@ -32,14 +33,30 @@ function ProfileContent() {
     );
   }
 
+  const publicUser: PublicUserProfile = {
+    userId: user._id,
+    username: user.username,
+    name: user.name,
+    title: user.title,
+    bio: user.bio,
+    location: user.location,
+    profilePictureUrl: user.profilePictureUrl,
+    email: user.email,
+    phoneNumber: user.phoneNumber,
+    education: user.education,
+    experience: user.experience,
+    menteeProfile: user.menteeProfile,
+    mentorProfile: user.mentorProfile,
+  };
+
   return (
     <div className="space-y-6">
-      <ProfileHeader user={user} />
+      <ProfileHeader user={publicUser} />
       <Separator />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <ProfileMainContent user={user} isOwnProfile={true} />
-        <MentorSidebar user={user} isOwnProfile={true} />
+        <ProfileMainContent user={publicUser} isOwnProfile={true} />
+        <MentorSidebar user={publicUser} isOwnProfile={true} />
       </div>
     </div>
   );

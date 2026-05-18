@@ -2,6 +2,7 @@ import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import type { Infer } from "convex/values";
 import {
+  ANONYMOUS_MENTOR_NAME,
   buildUsernameStatus,
   DEFAULT_MENTOR_PRIVACY_SETTINGS,
   isValidUsername,
@@ -36,6 +37,8 @@ const ALLOWED_TRANSITIONS: Record<string, string[]> = {
   user_profile_complete: ["mentee_profile_setup_complete"],
   mentee_profile_setup_complete: ["mentee_profile_setup_complete"],
 };
+
+const CONVEX_ID_PATTERN = /^[a-z0-9]{16,64}$/i;
 
 async function hasAcceptedMentorship(
   ctx: QueryCtx,
@@ -85,7 +88,7 @@ async function toPublicUserProfile(
     username: shouldApplyMentorPrivacy && !mentorVisibility.username ? null : user.username,
     name:
       shouldApplyMentorPrivacy && !mentorVisibility.name
-        ? "Anonymous Mentor"
+        ? ANONYMOUS_MENTOR_NAME
         : user.name,
     title: user.title,
     bio: user.bio,
@@ -217,10 +220,19 @@ export async function getUserByUsername(
  */
 export async function getUserById(
   ctx: QueryCtx,
-  { userId }: { userId: Id<"users"> }
+  { userId }: { userId: string }
 ) {
   const currentUser = await getAuthenticatedUser(ctx);
-  const user = await ctx.db.get("users", userId);
+  if (!CONVEX_ID_PATTERN.test(userId)) {
+    return null;
+  }
+
+  let user: Doc<"users"> | null;
+  try {
+    user = await ctx.db.get("users", userId as Id<"users">);
+  } catch {
+    return null;
+  }
 
   if (!user) {
     return null;

@@ -12,11 +12,12 @@ export type User = Doc<"users">;
 /** Id for a user document. */
 export type UserId = Id<"users">;
 
-/** Sanitized public profile returned by getUserByUsername.
- *  Excludes all sensitive/internal fields (_id, tokenIdentifier, email,
- *  phoneNumber, dateOfBirth, onboardingStatus, createdAt, etc.). */
+/** Privacy-safe public profile returned by getUserByUsername/getUserById.
+ *  Excludes internal fields (_id, tokenIdentifier, dateOfBirth, onboardingStatus,
+ *  createdAt, etc.). Sensitive contact fields are present but nullable, and are
+ *  null when redacted by mentor privacy settings. */
 export type PublicUserProfile = {
-  userId?: Id<"users">;
+  userId: Id<"users">;
   username: string | null;
   name: string;
   title: string;

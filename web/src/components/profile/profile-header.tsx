@@ -29,7 +29,6 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
       <div className="pt-16 text-center">
         <h1 className="text-2xl font-bold">{user.name}</h1>
         <p className="mt-1 text-muted-foreground">{user.title}</p>
-        <p className="mt-1 text-muted-foreground">{user.phoneNumber}</p>
         {user.location && (
           <p className="mt-1 flex items-center justify-center gap-1 text-sm text-muted-foreground">
             <MapPin className="size-3.5" />

@@ -42,7 +42,7 @@ export const getUserByUsername = query({
  * Loads a privacy-safe public user profile by user ID.
  */
 export const getUserById = query({
-  args: { userId: v.id("users") },
+  args: { userId: v.string() },
   handler: (ctx, args) => UsersModel.getUserById(ctx, args),
 });
 

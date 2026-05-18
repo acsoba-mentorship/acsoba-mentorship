@@ -12,9 +12,14 @@ import { ProfileHeader } from "@/components/profile/profile-header";
 import { ProfileMainContent } from "@/components/profile/profile-main-content";
 import { MentorSidebar } from "@/components/profile/mentor-sidebar";
 
+const CONVEX_ID_PATTERN = /^[a-z0-9]{16,64}$/i;
+
 function ProfileByIdContent() {
   const params = useParams<{ userId?: string }>();
-  const userId = params?.userId as Id<"users"> | undefined;
+  const rawUserId = params?.userId ?? "";
+  const userId = CONVEX_ID_PATTERN.test(rawUserId)
+    ? (rawUserId as Id<"users">)
+    : null;
   const { isAuthenticated, isLoading } = useConvexAuth();
   const { currentUser } = useCurrentUser();
 
@@ -26,7 +31,7 @@ function ProfileByIdContent() {
   const loading =
     isLoading ||
     (isAuthenticated && currentUser === undefined) ||
-    (isAuthenticated && userId && viewedUser === undefined);
+    (isAuthenticated && userId !== null && viewedUser === undefined);
 
   if (loading) {
     return <ProfileSkeleton />;
