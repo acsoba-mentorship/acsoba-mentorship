@@ -112,6 +112,16 @@ export default internalMutation({
         maxMentees: number;
         isAvailable: boolean;
       };
+      mentorSettings?: {
+        privacy: {
+          masterIdentityDisclosure: boolean;
+          overrides?: {
+            name?: boolean;
+            email?: boolean;
+            phoneNumber?: boolean;
+          };
+        };
+      };
     }> = [];
 
     for (let i = 0; i < 15; i++) {
@@ -136,7 +146,7 @@ export default internalMutation({
         gender: "",
         nationality: "",
         profilePictureUrl: "",
-        phoneNumber: "",
+        phoneNumber: `+155501${idx}`,
         mentorProfile: {
           yearsOfExperience: 6 + i,
           industries: [...industryPair],
@@ -144,6 +154,48 @@ export default internalMutation({
           maxMentees: 2 + (i % 3),
           isAvailable: i % 2 === 0,
         },
+        ...(i < 3
+          ? {
+              mentorSettings: {
+                privacy: {
+                  masterIdentityDisclosure: false,
+                  overrides: {
+                    name: false,
+                    email: false,
+                    phoneNumber: false,
+                  },
+                },
+              },
+            }
+          : {}),
+        ...(i === 3
+          ? {
+              mentorSettings: {
+                privacy: {
+                  masterIdentityDisclosure: true,
+                  overrides: {
+                    name: false,
+                    email: false,
+                    phoneNumber: false,
+                  },
+                },
+              },
+            }
+          : {}),
+        ...(i === 4
+          ? {
+              mentorSettings: {
+                privacy: {
+                  masterIdentityDisclosure: true,
+                  overrides: {
+                    name: true,
+                    email: true,
+                    phoneNumber: false,
+                  },
+                },
+              },
+            }
+          : {}),
       });
     }
 
@@ -174,25 +226,11 @@ export default internalMutation({
       });
     }
 
-    // If the deterministic seed data already exists, skip seeding.
-    // We check fixed/unique fields (`username`)
-    const seedMentor01 = await ctx.db
-      .query("users")
-      .withIndex("by_username", (q) => q.eq("username", "sample_mentor_01"))
-      .unique();
-    const seedMentee01 = await ctx.db
-      .query("users")
-      .withIndex("by_username", (q) => q.eq("username", "sample_mentee_01"))
-      .unique();
-
-    const allSeedPresent = Boolean(seedMentor01 && seedMentee01);
-    if (allSeedPresent) {
-      return { inserted: 0, skipped: 30 };
-    }
-
-    // Otherwise, insert missing seeded users idempotently.
+    // Insert missing seeded users and patch deterministic mentor privacy settings
+    // so existing local databases can be refreshed without deleting data.
     let inserted = 0;
     let skipped = 0;
+    let updated = 0;
 
     for (const u of usersToInsert) {
       const existing = await ctx.db
@@ -202,6 +240,13 @@ export default internalMutation({
 
       if (existing) {
         skipped += 1;
+        if (u.mentorSettings) {
+          await ctx.db.patch("users", existing._id, {
+            phoneNumber: u.phoneNumber,
+            mentorSettings: u.mentorSettings,
+          });
+          updated += 1;
+        }
         continue;
       }
 
@@ -224,6 +269,7 @@ export default internalMutation({
         experience: [],
         ...(u.menteeProfile ? { menteeProfile: u.menteeProfile } : {}),
         ...(u.mentorProfile ? { mentorProfile: u.mentorProfile } : {}),
+        ...(u.mentorSettings ? { mentorSettings: u.mentorSettings } : {}),
         onboardingStatus: "mentee_profile_setup_complete",
         createdAt: now,
       });
@@ -231,7 +277,7 @@ export default internalMutation({
       inserted += 1;
     }
 
-    return { inserted, skipped };
+    return { inserted, skipped, updated };
   },
 });
 

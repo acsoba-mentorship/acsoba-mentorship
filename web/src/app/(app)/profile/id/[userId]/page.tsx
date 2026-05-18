@@ -1,62 +1,61 @@
 "use client";
 
 import { Suspense } from "react";
+import { useParams } from "next/navigation";
+import { useConvexAuth, useQuery } from "convex/react";
+import { api } from "../../../../../../convex/_generated/api";
+import type { Id } from "../../../../../../convex/_generated/dataModel";
+import { useCurrentUser } from "@/app/CurrentUserProvider";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProfileHeader } from "@/components/profile/profile-header";
 import { ProfileMainContent } from "@/components/profile/profile-main-content";
 import { MentorSidebar } from "@/components/profile/mentor-sidebar";
-import { useConvexAuth } from "convex/react";
-import { useCurrentUser } from "@/app/CurrentUserProvider";
-import type { PublicUserProfile } from "@/lib/types";
 
-function ProfileContent() {
+const CONVEX_ID_PATTERN = /^[a-z0-9]{16,64}$/i;
+
+function ProfileByIdContent() {
+  const params = useParams<{ userId?: string }>();
+  const rawUserId = params?.userId ?? "";
+  const userId = CONVEX_ID_PATTERN.test(rawUserId)
+    ? (rawUserId as Id<"users">)
+    : null;
   const { isAuthenticated, isLoading } = useConvexAuth();
   const { currentUser } = useCurrentUser();
 
-  const loading = isLoading || (isAuthenticated && currentUser === undefined);
+  const viewedUser = useQuery(
+    api.users.getUserById,
+    isAuthenticated && userId ? { userId } : "skip"
+  );
+
+  const loading =
+    isLoading ||
+    (isAuthenticated && currentUser === undefined) ||
+    (isAuthenticated && userId !== null && viewedUser === undefined);
 
   if (loading) {
     return <ProfileSkeleton />;
   }
 
-  const user = currentUser ?? null;
-
-  if (!user) {
+  if (!viewedUser) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-7 w-48" />
-        <p className="text-sm text-muted-foreground">
-          No profile available. Please sign in to view your profile.
-        </p>
+        <p className="text-sm text-muted-foreground">Profile not found.</p>
       </div>
     );
   }
 
-  const publicUser: PublicUserProfile = {
-    userId: user._id,
-    username: user.username,
-    name: user.name,
-    title: user.title,
-    bio: user.bio,
-    location: user.location,
-    profilePictureUrl: user.profilePictureUrl,
-    email: user.email,
-    phoneNumber: user.phoneNumber,
-    education: user.education,
-    experience: user.experience,
-    menteeProfile: user.menteeProfile,
-    mentorProfile: user.mentorProfile,
-  };
+  const isOwnProfile = currentUser?._id === viewedUser.userId;
 
   return (
     <div className="space-y-6">
-      <ProfileHeader user={publicUser} />
+      <ProfileHeader user={viewedUser} />
       <Separator />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <ProfileMainContent user={publicUser} isOwnProfile={true} />
-        <MentorSidebar user={publicUser} isOwnProfile={true} />
+        <ProfileMainContent user={viewedUser} isOwnProfile={isOwnProfile} />
+        <MentorSidebar user={viewedUser} isOwnProfile={isOwnProfile} />
       </div>
     </div>
   );
@@ -89,10 +88,10 @@ function ProfileSkeleton() {
   );
 }
 
-export default function ProfilePage() {
+export default function ProfileByIdPage() {
   return (
     <Suspense fallback={<ProfileSkeleton />}>
-      <ProfileContent />
+      <ProfileByIdContent />
     </Suspense>
   );
 }

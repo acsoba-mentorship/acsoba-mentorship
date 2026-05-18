@@ -43,7 +43,7 @@ function ProfileByUsernameContent() {
     );
   }
 
-  const isOwnProfile = currentUser?.username === viewedUser.username;
+  const isOwnProfile = currentUser?._id === viewedUser.userId;
 
   return (
     <div className="space-y-6">

@@ -48,14 +48,14 @@ export function AboutSectionForm({ user, onSuccess }: AboutSectionFormProps) {
       bio: user.bio ?? "",
       location: user.location ?? "",
       title: user.title ?? "",
-      username: user.username,
+      username: user.username ?? "",
     },
   });
 
   const watchedUsername = useWatch({ control: form.control, name: "username" });
 
   const normalizedUsername = (watchedUsername ?? "").trim().toLowerCase();
-  const usernameChanged = normalizedUsername !== user.username;
+  const usernameChanged = normalizedUsername !== (user.username ?? "");
   const usernameFormatValid = usernameChanged && !form.formState.errors.username;
 
   const usernameAvailability = useQuery(

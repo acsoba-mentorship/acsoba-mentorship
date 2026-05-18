@@ -43,8 +43,8 @@ export default function SearchPage() {
     const requestsByMentor = new Map<string, MenteeRequest>();
 
     for (const request of sentRequests ?? []) {
-      const mentorKey = request.mentorUsername;
-      if (mentorKey && !requestsByMentor.has(mentorKey)) {
+      const mentorKey = request.mentorId;
+      if (!requestsByMentor.has(mentorKey)) {
         requestsByMentor.set(mentorKey, request);
       }
     }
@@ -140,12 +140,12 @@ export default function SearchPage() {
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {filteredMentors.map((mentor) => (
                   <MentorCard
-                    key={mentor.username}
+                    key={mentor.mentorId}
                     mentor={mentor}
-                    currentUsername={currentUser?.username}
+                    currentUserId={currentUser?._id}
                     hasMenteeProfile={!!currentUser?.menteeProfile}
                     latestRequestStatus={
-                      latestRequestByMentor.get(mentor.username)?.status ?? null
+                      latestRequestByMentor.get(mentor.mentorId)?.status ?? null
                     }
                   />
                 ))}
@@ -154,12 +154,12 @@ export default function SearchPage() {
               <div className="space-y-4">
                 {filteredMentors.map((mentor) => (
                   <MentorListItem
-                    key={mentor.username}
+                    key={mentor.mentorId}
                     mentor={mentor}
-                    currentUsername={currentUser?.username}
+                    currentUserId={currentUser?._id}
                     hasMenteeProfile={!!currentUser?.menteeProfile}
                     latestRequestStatus={
-                      latestRequestByMentor.get(mentor.username)?.status ?? null
+                      latestRequestByMentor.get(mentor.mentorId)?.status ?? null
                     }
                   />
                 ))}

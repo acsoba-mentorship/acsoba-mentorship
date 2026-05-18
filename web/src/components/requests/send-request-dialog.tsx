@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useMutation } from "convex/react";
 import { AlertCircle } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
 import type { PublicMentorProfile } from "@/lib/types";
 import type { RequestStatus } from "./types";
 import { Button } from "@/components/ui/button";
@@ -21,12 +22,12 @@ import {
 
 function getRequestButtonState({
   mentor,
-  currentUsername,
+  currentUserId,
   hasMenteeProfile,
   latestStatus,
 }: {
   mentor: PublicMentorProfile;
-  currentUsername?: string;
+  currentUserId?: Id<"users">;
   hasMenteeProfile: boolean;
   latestStatus: RequestStatus | null;
 }) {
@@ -34,11 +35,11 @@ function getRequestButtonState({
     return { label: "Not Available", disabled: true };
   }
 
-  if (!currentUsername) {
+  if (!currentUserId) {
     return { label: "Loading...", disabled: true };
   }
 
-  if (mentor.username === currentUsername) {
+  if (mentor.mentorId === currentUserId) {
     return { label: "Your Profile", disabled: true };
   }
 
@@ -63,18 +64,18 @@ function getRequestButtonState({
 
 export function SendRequestDialog({
   mentor,
-  currentUsername,
+  currentUserId,
   hasMenteeProfile,
   latestStatus,
   buttonClassName,
 }: {
   mentor: PublicMentorProfile;
-  currentUsername?: string;
+  currentUserId?: Id<"users">;
   hasMenteeProfile: boolean;
   latestStatus: RequestStatus | null;
   buttonClassName?: string;
 }) {
-  const createRequest = useMutation(api.mentorRequests.createRequest);
+  const createRequest = useMutation(api.mentorRequests.createRequestByMentorId);
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -84,15 +85,15 @@ export function SendRequestDialog({
     () =>
       getRequestButtonState({
         mentor,
-        currentUsername,
+          currentUserId,
         hasMenteeProfile,
         latestStatus,
       }),
-    [currentUsername, hasMenteeProfile, latestStatus, mentor]
+    [currentUserId, hasMenteeProfile, latestStatus, mentor]
   );
 
   const handleSubmit = async () => {
-    if (!currentUsername) {
+    if (!currentUserId) {
       setError("Your account is still loading. Please try again.");
       return;
     }
@@ -102,7 +103,7 @@ export function SendRequestDialog({
 
     try {
       await createRequest({
-        mentorUsername: mentor.username,
+        mentorId: mentor.mentorId,
         message,
       });
       setMessage("");

@@ -32,6 +32,17 @@ export const createRequest = mutation({
 });
 
 /**
+ * Creates a new mentorship request from the current mentee to a mentor by user ID.
+ */
+export const createRequestByMentorId = mutation({
+  args: {
+    mentorId: v.id("users"),
+    message: mentorshipRequestsTableFields.message,
+  },
+  handler: (ctx, args) => MentorRequestsModel.createRequestByMentorId(ctx, args),
+});
+
+/**
  * Accepts a pending mentorship request as the targeted mentor.
  */
 export const acceptRequest = mutation({

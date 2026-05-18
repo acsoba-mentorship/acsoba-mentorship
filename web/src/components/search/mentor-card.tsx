@@ -12,24 +12,28 @@ import { MapPin, Briefcase } from "lucide-react";
 import { AVAILABLE, UNAVAILABLE } from "@/lib/constants";
 import { getInitials } from "@/lib/utils";
 import type { PublicMentorProfile } from "@/lib/types";
+import type { Id } from "../../../convex/_generated/dataModel";
 import type { RequestStatus } from "@/components/requests/types";
 import { SendRequestDialog } from "@/components/requests/send-request-dialog";
 
 interface MentorCardProps {
   mentor: PublicMentorProfile;
-  currentUsername?: string;
+  currentUserId?: Id<"users">;
   hasMenteeProfile: boolean;
   latestRequestStatus: RequestStatus | null;
 }
 
 export function MentorCard({
   mentor,
-  currentUsername,
+  currentUserId,
   hasMenteeProfile,
   latestRequestStatus,
 }: MentorCardProps) {
   const profile = mentor.mentorProfile;
   if (!profile) return null;
+  const profileHref = mentor.username
+    ? `/profile/${mentor.username}`
+    : `/profile/id/${mentor.mentorId}`;
 
   return (
     <Card className="flex flex-col transition-shadow hover:shadow-[0_20px_50px_rgba(0,15,51,0.05)]">
@@ -42,7 +46,7 @@ export function MentorCard({
           <div className="min-w-0 flex-1">
             <CardTitle className="text-base">
               <Link
-                href={`/profile/${mentor.username}`}
+                href={profileHref}
                 className="hover:underline focus-visible:underline line-clamp-1"
               >
                 {mentor.name}
@@ -87,7 +91,7 @@ export function MentorCard({
         </div>
         <SendRequestDialog
           mentor={mentor}
-          currentUsername={currentUsername}
+          currentUserId={currentUserId}
           hasMenteeProfile={hasMenteeProfile}
           latestStatus={latestRequestStatus}
           buttonClassName="mt-2 w-full"

@@ -1,17 +1,20 @@
-import type { Doc } from "../_generated/dataModel";
+import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import type { Infer } from "convex/values";
 import {
+  ANONYMOUS_MENTOR_NAME,
   buildUsernameStatus,
+  DEFAULT_MENTOR_PRIVACY_SETTINGS,
   isValidUsername,
   makeTemporaryCandidate,
   MENTOR_LIST_MAX,
   normalizeUsername,
+  resolveMentorIdentityVisibility,
   toPublicMentorDTO,
   USERNAME_CHANGE_COOLDOWN_MS,
 } from "../helper";
 import {
-  updateMentorProfileArgsValidator,
+  updateMentorPrivacySettingsArgsValidator,
   updateUserProfileArgsValidator,
 } from "./users/validators";
 import {
@@ -20,6 +23,7 @@ import {
   menteeProfileValidator,
   mentorProfileValidator,
   onboardingStatusValidator,
+  mentorPrivacySettingsValidator,
   usersTableFields,
 } from "./users/fields";
 import { getAuthenticatedUser } from "./auth";
@@ -33,6 +37,72 @@ const ALLOWED_TRANSITIONS: Record<string, string[]> = {
   user_profile_complete: ["mentee_profile_setup_complete"],
   mentee_profile_setup_complete: ["mentee_profile_setup_complete"],
 };
+
+const CONVEX_ID_PATTERN = /^[a-z0-9]{16,64}$/i;
+
+async function hasAcceptedMentorship(
+  ctx: QueryCtx,
+  viewerId: Id<"users">,
+  mentorId: Id<"users">
+) {
+  if (viewerId === mentorId) {
+    return true;
+  }
+
+  const requests = await ctx.db
+    .query("mentorshipRequests")
+    .withIndex("by_mentorId_menteeId", (q) =>
+      q.eq("mentorId", mentorId).eq("menteeId", viewerId)
+    )
+    .collect();
+
+  return requests.some((request) => request.status === "accepted");
+}
+
+async function getAcceptedMentorIdsForMentee(ctx: QueryCtx, menteeId: Id<"users">) {
+  const requests = await ctx.db
+    .query("mentorshipRequests")
+    .withIndex("by_menteeId_status", (q) =>
+      q.eq("menteeId", menteeId).eq("status", "accepted")
+    )
+    .collect();
+
+  return new Set(requests.map((request) => request.mentorId));
+}
+
+async function toPublicUserProfile(
+  ctx: QueryCtx,
+  currentUser: Doc<"users">,
+  user: Doc<"users">
+) {
+  const forceRevealIdentity =
+    !!user.mentorProfile && (await hasAcceptedMentorship(ctx, currentUser._id, user._id));
+  const mentorVisibility = resolveMentorIdentityVisibility(
+    user.mentorSettings?.privacy,
+    forceRevealIdentity
+  );
+  const shouldApplyMentorPrivacy = !!user.mentorProfile;
+
+  return {
+    userId: user._id,
+    username: shouldApplyMentorPrivacy && !mentorVisibility.username ? null : user.username,
+    name:
+      shouldApplyMentorPrivacy && !mentorVisibility.name
+        ? ANONYMOUS_MENTOR_NAME
+        : user.name,
+    title: user.title,
+    bio: user.bio,
+    location: user.location,
+    profilePictureUrl: user.profilePictureUrl,
+    email: shouldApplyMentorPrivacy && mentorVisibility.email ? user.email : null,
+    phoneNumber:
+      shouldApplyMentorPrivacy && mentorVisibility.phoneNumber ? user.phoneNumber : null,
+    education: user.education,
+    experience: user.experience,
+    menteeProfile: user.menteeProfile,
+    mentorProfile: user.mentorProfile,
+  };
+}
 
 /**
  * Generates a unique temporary username for newly created users.
@@ -126,7 +196,7 @@ export async function getUserByUsername(
   ctx: QueryCtx,
   { username }: { username: Infer<typeof usersTableFields.username> }
 ) {
-  await getAuthenticatedUser(ctx);
+  const currentUser = await getAuthenticatedUser(ctx);
 
   const normalized = normalizeUsername(username);
   if (!isValidUsername(normalized)) {
@@ -142,18 +212,33 @@ export async function getUserByUsername(
     return null;
   }
 
-  return {
-    username: user.username,
-    name: user.name,
-    title: user.title,
-    bio: user.bio,
-    location: user.location,
-    profilePictureUrl: user.profilePictureUrl,
-    education: user.education,
-    experience: user.experience,
-    menteeProfile: user.menteeProfile,
-    mentorProfile: user.mentorProfile,
-  };
+  return toPublicUserProfile(ctx, currentUser, user);
+}
+
+/**
+ * Loads a privacy-safe public user profile by user ID.
+ */
+export async function getUserById(
+  ctx: QueryCtx,
+  { userId }: { userId: string }
+) {
+  const currentUser = await getAuthenticatedUser(ctx);
+  if (!CONVEX_ID_PATTERN.test(userId)) {
+    return null;
+  }
+
+  let user: Doc<"users"> | null;
+  try {
+    user = await ctx.db.get("users", userId as Id<"users">);
+  } catch {
+    return null;
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  return toPublicUserProfile(ctx, currentUser, user);
 }
 
 /**
@@ -185,7 +270,7 @@ export async function listMentors(
   ctx: QueryCtx,
   { limit }: { limit?: number }
 ) {
-  await getAuthenticatedUser(ctx);
+  const currentUser = await getAuthenticatedUser(ctx);
 
   const effectiveLimit = Math.min(Math.max(limit ?? MENTOR_LIST_MAX, 1), MENTOR_LIST_MAX);
 
@@ -203,7 +288,61 @@ export async function listMentors(
           .take(remaining)
       : [];
 
-  return [...available, ...unavailable].map(toPublicMentorDTO);
+  const acceptedMentorIds = await getAcceptedMentorIdsForMentee(ctx, currentUser._id);
+
+  return [...available, ...unavailable].map((mentor) =>
+    toPublicMentorDTO(mentor, {
+      forceRevealIdentity:
+        mentor._id === currentUser._id || acceptedMentorIds.has(mentor._id),
+    })
+  );
+}
+
+/**
+ * Returns the caller's mentor privacy settings with defaults filled in.
+ */
+export async function getMyMentorPrivacySettings(ctx: QueryCtx) {
+  const user = await getAuthenticatedUser(ctx);
+  return user.mentorSettings?.privacy ?? DEFAULT_MENTOR_PRIVACY_SETTINGS;
+}
+
+/**
+ * Updates the caller's mentor privacy settings while preserving omitted fields.
+ */
+export async function updateMyMentorPrivacySettings(
+  ctx: MutationCtx,
+  args: Infer<typeof updateMentorPrivacySettingsArgsValidator>
+) {
+  const user = await getAuthenticatedUser(ctx);
+  const previous = user.mentorSettings?.privacy ?? DEFAULT_MENTOR_PRIVACY_SETTINGS;
+
+  const privacy: Infer<typeof mentorPrivacySettingsValidator> = {
+    masterIdentityDisclosure:
+      args.masterIdentityDisclosure ?? previous.masterIdentityDisclosure,
+    overrides: {
+      name:
+        args.overrides?.name ??
+        previous.overrides?.name ??
+        DEFAULT_MENTOR_PRIVACY_SETTINGS.overrides.name,
+      email:
+        args.overrides?.email ??
+        previous.overrides?.email ??
+        DEFAULT_MENTOR_PRIVACY_SETTINGS.overrides.email,
+      phoneNumber:
+        args.overrides?.phoneNumber ??
+        previous.overrides?.phoneNumber ??
+        DEFAULT_MENTOR_PRIVACY_SETTINGS.overrides.phoneNumber,
+    },
+  };
+
+  await ctx.db.patch("users", user._id, {
+    mentorSettings: {
+      ...(user.mentorSettings ?? {}),
+      privacy,
+    },
+  });
+
+  return privacy;
 }
 
 /**

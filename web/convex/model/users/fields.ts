@@ -37,6 +37,21 @@ export const mentorProfileValidator = v.object({
   isAvailable: v.boolean(),
 });
 
+export const mentorPrivacyOverridesValidator = v.object({
+  name: v.optional(v.boolean()),
+  email: v.optional(v.boolean()),
+  phoneNumber: v.optional(v.boolean()),
+});
+
+export const mentorPrivacySettingsValidator = v.object({
+  masterIdentityDisclosure: v.boolean(),
+  overrides: v.optional(mentorPrivacyOverridesValidator),
+});
+
+export const mentorSettingsValidator = v.object({
+  privacy: mentorPrivacySettingsValidator,
+});
+
 export const usersTableFields = {
   name: v.string(),
   username: v.string(),
@@ -56,6 +71,7 @@ export const usersTableFields = {
   experience: v.array(experienceEntryValidator),
   menteeProfile: v.optional(menteeProfileValidator),
   mentorProfile: v.optional(mentorProfileValidator),
+  mentorSettings: v.optional(mentorSettingsValidator),
   onboardingStatus: onboardingStatusValidator,
   createdAt: v.number(),
 };

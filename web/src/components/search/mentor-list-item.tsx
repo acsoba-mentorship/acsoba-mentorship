@@ -6,24 +6,28 @@ import { MapPin, Briefcase } from "lucide-react";
 import { AVAILABLE, UNAVAILABLE } from "@/lib/constants";
 import { getInitials } from "@/lib/utils";
 import type { PublicMentorProfile } from "@/lib/types";
+import type { Id } from "../../../convex/_generated/dataModel";
 import type { RequestStatus } from "@/components/requests/types";
 import { SendRequestDialog } from "@/components/requests/send-request-dialog";
 
 interface MentorListItemProps {
   mentor: PublicMentorProfile;
-  currentUsername?: string;
+  currentUserId?: Id<"users">;
   hasMenteeProfile: boolean;
   latestRequestStatus: RequestStatus | null;
 }
 
 export function MentorListItem({
   mentor,
-  currentUsername,
+  currentUserId,
   hasMenteeProfile,
   latestRequestStatus,
 }: MentorListItemProps) {
   const profile = mentor.mentorProfile;
   if (!profile) return null;
+  const profileHref = mentor.username
+    ? `/profile/${mentor.username}`
+    : `/profile/id/${mentor.mentorId}`;
 
   return (
     <Card className="transition-shadow hover:shadow-[0_20px_50px_rgba(0,15,51,0.05)]">
@@ -37,7 +41,7 @@ export function MentorListItem({
             <div>
               <p className="font-medium">
                 <Link
-                  href={`/profile/${mentor.username}`}
+                  href={profileHref}
                   className="hover:underline focus-visible:underline"
                 >
                   {mentor.name}
@@ -74,7 +78,7 @@ export function MentorListItem({
             </div>
             <SendRequestDialog
               mentor={mentor}
-              currentUsername={currentUsername}
+              currentUserId={currentUserId}
               hasMenteeProfile={hasMenteeProfile}
               latestStatus={latestRequestStatus}
             />

@@ -1,7 +1,7 @@
 import { Infer } from "convex/values";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
-import { getInitials } from "../helper";
+import { getInitials, toPublicMentorDTO } from "../helper";
 import { getAuthenticatedUser, requireMenteeProfile, requireMentorProfile } from "./auth";
 import { usersTableFields } from "./users/fields";
 import { mentorshipRequestsTableFields } from "./mentorRequests/fields";
@@ -30,14 +30,19 @@ function buildMenteeRequestView(
   request: Doc<"mentorshipRequests">,
   mentor: Doc<"users"> | null
 ) {
-  const name = mentor?.name?.trim() || "Unknown user";
+  const mentorView = mentor
+    ? toPublicMentorDTO(mentor, { forceRevealIdentity: request.status === "accepted" })
+    : null;
+  const name = mentorView?.name?.trim() || "Unknown user";
   return {
     ...request,
     mentorName: name,
     mentorInitials: getInitials(name),
-    mentorTitle: mentor?.title?.trim() || "Community member",
-    mentorUsername: mentor?.username ?? null,
-    expertise: mentor?.mentorProfile?.expertise ?? [],
+    mentorTitle: mentorView?.title?.trim() || "Community member",
+    mentorUsername: mentorView?.username ?? null,
+    mentorEmail: mentorView?.email ?? null,
+    mentorPhoneNumber: mentorView?.phoneNumber ?? null,
+    expertise: mentorView?.mentorProfile?.expertise ?? [],
   };
 }
 
@@ -113,9 +118,6 @@ export async function createRequest(
     message: Infer<typeof mentorshipRequestsTableFields.message>;
   }
 ) {
-  const currentUser = requireMenteeProfile(await getAuthenticatedUser(ctx));
-  const trimmedMessage = message.trim();
-
   const mentor = await ctx.db
     .query("users")
     .withIndex("by_username", (q) => q.eq("username", mentorUsername))
@@ -125,6 +127,49 @@ export async function createRequest(
     throw new Error("Mentor not found");
   }
 
+  return createRequestForMentor(ctx, {
+    mentor,
+    message,
+  });
+}
+
+/**
+ * Creates a new mentorship request from the current mentee to a mentor by user ID.
+ */
+export async function createRequestByMentorId(
+  ctx: MutationCtx,
+  {
+    mentorId,
+    message,
+  }: {
+    mentorId: Id<"users">;
+    message: Infer<typeof mentorshipRequestsTableFields.message>;
+  }
+) {
+  const mentor = await ctx.db.get("users", mentorId);
+
+  if (!mentor) {
+    throw new Error("Mentor not found");
+  }
+
+  return createRequestForMentor(ctx, {
+    mentor,
+    message,
+  });
+}
+
+async function createRequestForMentor(
+  ctx: MutationCtx,
+  {
+    mentor,
+    message,
+  }: {
+    mentor: Doc<"users">;
+    message: Infer<typeof mentorshipRequestsTableFields.message>;
+  }
+) {
+  const currentUser = requireMenteeProfile(await getAuthenticatedUser(ctx));
+  const trimmedMessage = message.trim();
   const mentorId = mentor._id;
   const menteeId = currentUser._id;
 

@@ -11,12 +11,11 @@ interface ProfileHeaderProps {
 export function ProfileHeader({ user }: ProfileHeaderProps) {
   const hasMentor = !!user.mentorProfile;
   const hasMentee = !!user.menteeProfile;
-  const username = user.username;
   const isAvailable = user.mentorProfile?.isAvailable;
 
   return (
     <div>
-      <div className="relative -mx-4 sm:-mx-6 lg:-mx-8 -mt-8 h-48 bg-gradient-to-br from-primary to-[#001A4D]">
+      <div className="relative -mx-4 sm:-mx-6 lg:-mx-8 -mt-8 h-48 bg-linear-to-br from-primary to-[#001A4D]">
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2">
           <Avatar className="size-24 ring-4 ring-background bg-background">
             <AvatarImage src={user.profilePictureUrl || undefined} />
