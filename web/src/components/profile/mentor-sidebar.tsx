@@ -15,7 +15,9 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { AVAILABLE, UNAVAILABLE } from "@/lib/constants";
-import type { PublicUserProfile } from "@/lib/types";
+import { publicUserToMentorProfileDto, type PublicUserProfile } from "@/lib/types";
+import { SendRequestDialog } from "@/components/requests/send-request-dialog";
+import { useLatestRequestStatusByMentor } from "@/hooks/use-latest-request-status-by-mentor";
 import { ProfileSectionCard } from "./profile-section-card";
 import { ProfileEditDialog } from "./profile-edit-dialog";
 import { MentorDetailsForm } from "./forms/mentor-details-form";
@@ -31,6 +33,9 @@ export function MentorSidebar({ user, isOwnProfile = false }: MentorSidebarProps
   const firstName = user.name?.split(" ")[0] ?? user.name;
   const [mentorshipDetailsOpen, setMentorshipDetailsOpen] = useState(false);
   const [expertiseOpen, setExpertiseOpen] = useState(false);
+  const { currentUserId, hasMenteeProfile, getLatestStatus, latestRequestStatusLoading } =
+    useLatestRequestStatusByMentor();
+  const mentorForRequest = publicUserToMentorProfileDto(user);
 
   return (
     <div className="space-y-4">
@@ -97,13 +102,19 @@ export function MentorSidebar({ user, isOwnProfile = false }: MentorSidebarProps
             </div>
 
             {/* CTA — only for visitor */}
-            {!isOwnProfile && (
+            {!isOwnProfile && mentorForRequest && (
               <>
                 <Separator />
-                <Button className="w-full" size="sm">
-                  <HandshakeIcon className="size-3.5" />
-                  Request Mentorship
-                </Button>
+                <SendRequestDialog
+                  mentor={mentorForRequest}
+                  currentUserId={currentUserId}
+                  hasMenteeProfile={hasMenteeProfile}
+                  latestStatus={getLatestStatus(user.userId)}
+                  latestStatusLoading={latestRequestStatusLoading}
+                  buttonClassName="w-full"
+                  sendRequestLabel="Request Mentorship"
+                  triggerStart={<HandshakeIcon className="size-3.5" />}
+                />
               </>
             )}
           </CardContent>

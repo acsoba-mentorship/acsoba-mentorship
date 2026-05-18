@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useMutation } from "convex/react";
 import { AlertCircle } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import type { PublicMentorProfile } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import type { RequestStatus } from "./types";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,11 +26,13 @@ function getRequestButtonState({
   currentUserId,
   hasMenteeProfile,
   latestStatus,
+  latestStatusLoading,
 }: {
   mentor: PublicMentorProfile;
   currentUserId?: Id<"users">;
   hasMenteeProfile: boolean;
   latestStatus: RequestStatus | null;
+  latestStatusLoading: boolean;
 }) {
   if (!mentor.mentorProfile?.isAvailable) {
     return { label: "Not Available", disabled: true };
@@ -45,6 +48,10 @@ function getRequestButtonState({
 
   if (!hasMenteeProfile) {
     return { label: "Mentee Profile Required", disabled: true };
+  }
+
+  if (latestStatusLoading) {
+    return { label: "Loading...", disabled: true };
   }
 
   if (latestStatus === "pending") {
@@ -67,13 +74,21 @@ export function SendRequestDialog({
   currentUserId,
   hasMenteeProfile,
   latestStatus,
+  latestStatusLoading = false,
   buttonClassName,
+  sendRequestLabel,
+  triggerStart,
 }: {
   mentor: PublicMentorProfile;
   currentUserId?: Id<"users">;
   hasMenteeProfile: boolean;
   latestStatus: RequestStatus | null;
+  /** When true, `latestStatus` is not known yet (Convex query still loading). */
+  latestStatusLoading?: boolean;
   buttonClassName?: string;
+  /** Replaces the default "Send Request" label when that action is available. */
+  sendRequestLabel?: string;
+  triggerStart?: ReactNode;
 }) {
   const createRequest = useMutation(api.mentorRequests.createRequestByMentorId);
   const [open, setOpen] = useState(false);
@@ -81,16 +96,26 @@ export function SendRequestDialog({
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const buttonState = useMemo(
-    () =>
-      getRequestButtonState({
-        mentor,
-          currentUserId,
-        hasMenteeProfile,
-        latestStatus,
-      }),
-    [currentUserId, hasMenteeProfile, latestStatus, mentor]
-  );
+  const buttonState = useMemo(() => {
+    const state = getRequestButtonState({
+      mentor,
+      currentUserId,
+      hasMenteeProfile,
+      latestStatus,
+      latestStatusLoading,
+    });
+    if (sendRequestLabel && state.label === "Send Request") {
+      return { ...state, label: sendRequestLabel };
+    }
+    return state;
+  }, [
+    currentUserId,
+    hasMenteeProfile,
+    latestStatus,
+    latestStatusLoading,
+    mentor,
+    sendRequestLabel,
+  ]);
 
   const handleSubmit = async () => {
     if (!currentUserId) {
@@ -133,9 +158,13 @@ export function SendRequestDialog({
       <DialogTrigger asChild>
         <Button
           size="sm"
-          className={buttonClassName}
+          className={cn(
+            triggerStart && "inline-flex items-center gap-1.5",
+            buttonClassName
+          )}
           disabled={buttonState.disabled}
         >
+          {triggerStart}
           {buttonState.label}
         </Button>
       </DialogTrigger>

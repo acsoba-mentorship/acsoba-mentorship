@@ -21,6 +21,7 @@ interface MentorCardProps {
   currentUserId?: Id<"users">;
   hasMenteeProfile: boolean;
   latestRequestStatus: RequestStatus | null;
+  latestRequestStatusLoading?: boolean;
 }
 
 export function MentorCard({
@@ -28,6 +29,7 @@ export function MentorCard({
   currentUserId,
   hasMenteeProfile,
   latestRequestStatus,
+  latestRequestStatusLoading = false,
 }: MentorCardProps) {
   const profile = mentor.mentorProfile;
   if (!profile) return null;
@@ -94,6 +96,7 @@ export function MentorCard({
           currentUserId={currentUserId}
           hasMenteeProfile={hasMenteeProfile}
           latestStatus={latestRequestStatus}
+          latestStatusLoading={latestRequestStatusLoading}
           buttonClassName="mt-2 w-full"
         />
       </CardContent>

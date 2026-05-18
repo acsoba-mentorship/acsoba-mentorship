@@ -15,6 +15,7 @@ interface MentorListItemProps {
   currentUserId?: Id<"users">;
   hasMenteeProfile: boolean;
   latestRequestStatus: RequestStatus | null;
+  latestRequestStatusLoading?: boolean;
 }
 
 export function MentorListItem({
@@ -22,6 +23,7 @@ export function MentorListItem({
   currentUserId,
   hasMenteeProfile,
   latestRequestStatus,
+  latestRequestStatusLoading = false,
 }: MentorListItemProps) {
   const profile = mentor.mentorProfile;
   if (!profile) return null;
@@ -81,6 +83,7 @@ export function MentorListItem({
               currentUserId={currentUserId}
               hasMenteeProfile={hasMenteeProfile}
               latestStatus={latestRequestStatus}
+              latestStatusLoading={latestRequestStatusLoading}
             />
           </div>
         </div>

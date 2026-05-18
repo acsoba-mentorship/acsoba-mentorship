@@ -1,9 +1,8 @@
+import type { Doc, Id } from "../../convex/_generated/dataModel";
+
 export type ViewMode = "grid" | "list";
 
 export type UserRole = "mentee" | "mentor";
-
-// Convex user types — single source of truth for user/profile data
-import type { Doc, Id } from "../../convex/_generated/dataModel";
 
 /** Full user document — only available to the authenticated user themselves
  *  (via getCurrentUser). Never expose this shape to other clients. */
@@ -46,3 +45,25 @@ export type PublicMentorProfile = {
   phoneNumber: string | null;
   mentorProfile: Doc<"users">["mentorProfile"];
 };
+
+/** Maps a public user profile to the mentor list/card DTO when they have a mentor profile. */
+export function publicUserToMentorProfileDto(
+  user: PublicUserProfile
+): PublicMentorProfile | null {
+  if (!user.mentorProfile) {
+    return null;
+  }
+
+  return {
+    mentorId: user.userId,
+    username: user.username,
+    name: user.name,
+    title: user.title,
+    bio: user.bio,
+    location: user.location,
+    profilePictureUrl: user.profilePictureUrl,
+    email: user.email,
+    phoneNumber: user.phoneNumber,
+    mentorProfile: user.mentorProfile,
+  };
+}
