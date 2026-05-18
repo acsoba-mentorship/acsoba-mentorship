@@ -33,7 +33,7 @@ const mentorNavLinks = [
   { href: "/mentor", label: "Dashboard", icon: LayoutDashboard },
   { href: "/mentor/requests", label: "Requests", icon: Inbox },
   { href: "/mentor/mentorships", label: "Mentorships", icon: Users },
-  { href: "/mentor/profile", label: "Mentor Profile", icon: UserCog },
+  { href: "/profile", label: "Mentor Profile", icon: UserCog },
   { href: "/mentor/settings", label: "Settings", icon: Settings },
 ] as const;
 

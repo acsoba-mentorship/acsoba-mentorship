@@ -8,7 +8,7 @@ const quickLinks = [
   {
     title: "Mentor Profile",
     description: "Set up your mentor profile, expertise, and mentee limits.",
-    href: "/mentor/profile",
+    href: "/profile",
     icon: UserCog,
   },
   {
@@ -49,7 +49,7 @@ export default function MentorDashboardPage() {
         <CardContent>
           <div className="flex flex-wrap gap-3">
             <Button asChild>
-              <Link href="/mentor/profile">Manage Mentor Profile</Link>
+              <Link href="/profile">Manage Mentor Profile</Link>
             </Button>
             <Button asChild variant="outline">
               <Link href="/mentor/requests">View Requests</Link>
