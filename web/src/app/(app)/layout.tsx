@@ -26,8 +26,6 @@ function AppLoadingSkeleton() {
           <Skeleton className="h-32 rounded-xl" />
           <Skeleton className="h-32 rounded-xl" />
           <Skeleton className="h-32 rounded-xl" />
-          App loading skeleton
-          
         </div>
       </main>
     </div>
