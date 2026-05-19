@@ -14,29 +14,23 @@ import {
   USERNAME_CHANGE_COOLDOWN_MS,
 } from "../helper";
 import {
+  setUserOnboardingCompleteArgsValidator,
   updateMentorPrivacySettingsArgsValidator,
   updateUserProfileArgsValidator,
 } from "./users/validators";
 import {
+  CAREER_STAGE,
+  COMMITMENT_LEVEL,
   educationEntryValidator,
   experienceEntryValidator,
   menteeProfileValidator,
   mentorProfileValidator,
   onboardingStatusValidator,
+  ONBOARDING_STATUS,
   mentorPrivacySettingsValidator,
   usersTableFields,
 } from "./users/fields";
 import { getAuthenticatedUser } from "./auth";
-
-/**
- * Allowed onboarding status transitions.
- */
-const ALLOWED_TRANSITIONS: Record<string, string[]> = {
-  new: ["verified"],
-  verified: ["user_profile_complete"],
-  user_profile_complete: ["mentee_profile_setup_complete"],
-  mentee_profile_setup_complete: ["mentee_profile_setup_complete"],
-};
 
 const CONVEX_ID_PATTERN = /^[a-z0-9]{16,64}$/i;
 
@@ -142,21 +136,22 @@ export async function storeUser(ctx: MutationCtx) {
     return user._id;
   }
 
+  const now = Date.now();
+  const identityName = identity.name?.trim();
+  const identityEmail = identity.email?.trim() ?? "";
+  const displayName =
+    identityName && !identityName.includes("@")
+      ? identityName
+      : identityEmail.split("@")[0] || "";
   const temporaryUsername = await ensureUniqueTemporaryUsername(
     ctx,
-    identity.name ?? "user"
+    displayName || "user"
   );
 
   return await ctx.db.insert("users", {
-    name: (() => {
-      const name = identity.name ?? "";
-      if (name.includes("@")) {
-        return name.split("@")[0];
-      }
-      return name.slice(0, 5);
-    })(),
+    name: displayName,
     username: temporaryUsername,
-    usernameUpdatedAt: Date.now(),
+    usernameUpdatedAt: now,
     isTemporaryUsername: true,
     dateOfBirth: 0,
     gender: "",
@@ -166,12 +161,12 @@ export async function storeUser(ctx: MutationCtx) {
     title: "",
     bio: "",
     location: "",
-    email: identity.email ?? "",
+    email: identityEmail,
     phoneNumber: "",
     education: [],
     experience: [],
-    onboardingStatus: "new",
-    createdAt: Date.now(),
+    onboardingStatus: ONBOARDING_STATUS.INCOMPLETE,
+    createdAt: now,
   });
 }
 
@@ -413,40 +408,26 @@ export async function updateUsername(
 }
 
 /**
- * Advances onboarding status according to allowed transitions.
+ * Sets onboarding status directly. New onboarding writes should use
+ * setUserOnboardingComplete so profile data and status change together.
  */
 export async function setOnboardingStatus(
   ctx: MutationCtx,
   { status }: { status: Infer<typeof onboardingStatusValidator> }
 ) {
   const user = await getAuthenticatedUser(ctx);
-
-  const current = user.onboardingStatus ?? "new";
-  const allowed = ALLOWED_TRANSITIONS[current];
-  if (!allowed?.includes(status)) {
-    throw new Error(`Invalid transition from ${current} to ${status}`);
-  }
-
   await ctx.db.patch("users", user._id, { onboardingStatus: status });
   return user._id;
 }
 
 /**
- * Saves required onboarding profile details and transitions status.
+ * Saves required user profile details without changing onboarding status.
  */
 export async function updateUserProfile(
   ctx: MutationCtx,
   args: Infer<typeof updateUserProfileArgsValidator>
 ) {
   const user = await getAuthenticatedUser(ctx);
-
-  const current = user.onboardingStatus ?? "new";
-  const allowed = ALLOWED_TRANSITIONS[current];
-  if (!allowed?.includes("user_profile_complete")) {
-    throw new Error(
-      `Cannot complete user profile from status ${current}; complete verification first.`
-    );
-  }
 
   await ctx.db.patch("users", user._id, {
     name: args.name,
@@ -456,32 +437,70 @@ export async function updateUserProfile(
     ...(args.dateOfBirth !== undefined && { dateOfBirth: args.dateOfBirth }),
     ...(args.bio !== undefined && { bio: args.bio }),
     ...(args.location !== undefined && { location: args.location }),
-    onboardingStatus: "user_profile_complete",
   });
   return user._id;
 }
 
 /**
- * Creates or replaces the mentee profile and transitions onboarding status.
+ * Creates or replaces the mentee profile without changing onboarding status.
  */
 export async function updateMenteeProfile(
   ctx: MutationCtx,
-  { goals, interests }: Infer<typeof menteeProfileValidator>
+  args: Infer<typeof menteeProfileValidator>
 ) {
   const user = await getAuthenticatedUser(ctx);
 
-  const current = user.onboardingStatus ?? "new";
-  const allowed = ALLOWED_TRANSITIONS[current];
-  if (!allowed?.includes("mentee_profile_setup_complete")) {
-    throw new Error(
-      `Cannot complete mentee profile from status ${current}; complete user profile first.`
-    );
+  await ctx.db.patch("users", user._id, {
+    menteeProfile: args,
+  });
+  return user._id;
+}
+
+/**
+ * Writes the complete mentee onboarding payload and marks onboarding complete.
+ */
+export async function setUserOnboardingComplete(
+  ctx: MutationCtx,
+  args: Infer<typeof setUserOnboardingCompleteArgsValidator>
+) {
+  const user = await getAuthenticatedUser(ctx);
+
+  if (args.careerStage === CAREER_STAGE.STUDENT && args.education.length === 0) {
+    throw new Error("At least one education entry is required for students");
+  }
+
+  if (
+    args.careerStage === CAREER_STAGE.PROFESSIONAL &&
+    args.experience.length === 0
+  ) {
+    throw new Error("At least one experience entry is required");
   }
 
   await ctx.db.patch("users", user._id, {
-    menteeProfile: { goals, interests },
-    onboardingStatus: "mentee_profile_setup_complete",
+    name: args.personalDetails.name,
+    email: args.personalDetails.email,
+    gender: args.personalDetails.gender,
+    nationality: args.personalDetails.nationality,
+    phoneNumber: args.personalDetails.phoneNumber,
+    careerStage: args.careerStage,
+    education: args.education,
+    experience: args.experience,
+    menteeProfile: args.menteeProfile,
+    onboardingStatus: ONBOARDING_STATUS.COMPLETE,
+    ...(args.personalDetails.dateOfBirth !== undefined && {
+      dateOfBirth: args.personalDetails.dateOfBirth,
+    }),
+    ...(args.personalDetails.bio !== undefined && {
+      bio: args.personalDetails.bio,
+    }),
+    ...(args.personalDetails.location !== undefined && {
+      location: args.personalDetails.location,
+    }),
+    ...(args.personalDetails.title !== undefined && {
+      title: args.personalDetails.title,
+    }),
   });
+
   return user._id;
 }
 
@@ -525,14 +544,30 @@ export async function updateMenteeProfileDetails(
   args: {
     goals?: Infer<typeof menteeProfileValidator.fields.goals>;
     interests?: Infer<typeof menteeProfileValidator.fields.interests>;
+    commitmentLevel?: Infer<typeof menteeProfileValidator.fields.commitmentLevel>;
+    preferredCommunicationModes?: Infer<
+      typeof menteeProfileValidator.fields.preferredCommunicationModes
+    >;
   }
 ) {
   const user = await getAuthenticatedUser(ctx);
-  const previous = user.menteeProfile ?? { goals: "", interests: [] as string[] };
+  const previous =
+    user.menteeProfile ??
+    {
+      goals: "",
+      interests: [] as string[],
+      commitmentLevel: COMMITMENT_LEVEL.MONTHLY,
+      preferredCommunicationModes: [] as Infer<
+        typeof menteeProfileValidator.fields.preferredCommunicationModes
+      >,
+    };
 
   const menteeProfile = {
     goals: args.goals ?? previous.goals,
     interests: args.interests ?? previous.interests,
+    commitmentLevel: args.commitmentLevel ?? previous.commitmentLevel,
+    preferredCommunicationModes:
+      args.preferredCommunicationModes ?? previous.preferredCommunicationModes,
   };
 
   await ctx.db.patch("users", user._id, { menteeProfile });

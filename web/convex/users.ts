@@ -2,6 +2,7 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import * as UsersModel from "./model/users";
 import {
+  setUserOnboardingCompleteArgsValidator,
   updateMentorProfileArgsValidator,
   updateMentorPrivacySettingsArgsValidator,
   updateUserProfileArgsValidator,
@@ -19,6 +20,7 @@ import {
  */
 export const storeUser = mutation({
   args: {},
+  returns: v.id("users"),
   handler: (ctx) => UsersModel.storeUser(ctx),
 });
 
@@ -95,15 +97,26 @@ export const updateUsername = mutation({
 });
 
 /**
- * Advances onboarding status through the allowed transition graph.
+ * Sets onboarding status directly. New onboarding writes should use
+ * setUserOnboardingComplete so profile data and status change together.
  */
 export const setOnboardingStatus = mutation({
   args: { status: onboardingStatusValidator },
+  returns: v.id("users"),
   handler: (ctx, args) => UsersModel.setOnboardingStatus(ctx, args),
 });
 
 /**
- * Saves required user profile details during onboarding.
+ * Writes the complete mentee onboarding payload and marks the user complete.
+ */
+export const setUserOnboardingComplete = mutation({
+  args: setUserOnboardingCompleteArgsValidator,
+  returns: v.id("users"),
+  handler: (ctx, args) => UsersModel.setUserOnboardingComplete(ctx, args),
+});
+
+/**
+ * Saves required user profile details without changing onboarding status.
  */
 export const updateUserProfile = mutation({
   args: updateUserProfileArgsValidator,
@@ -111,7 +124,7 @@ export const updateUserProfile = mutation({
 });
 
 /**
- * Saves the caller's mentee profile during onboarding.
+ * Saves the caller's mentee profile without changing onboarding status.
  */
 export const updateMenteeProfile = mutation({
   args: menteeProfileValidator,

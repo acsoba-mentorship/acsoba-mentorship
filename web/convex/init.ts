@@ -1,4 +1,16 @@
 import { internalMutation, type MutationCtx } from "./_generated/server";
+import {
+  CAREER_STAGE,
+  COMMITMENT_LEVEL,
+  ONBOARDING_STATUS,
+  PREFERRED_COMMUNICATION_MODE,
+} from "./model/users/fields";
+
+type CareerStage = (typeof CAREER_STAGE)[keyof typeof CAREER_STAGE];
+type CommitmentLevel =
+  (typeof COMMITMENT_LEVEL)[keyof typeof COMMITMENT_LEVEL];
+type PreferredCommunicationMode =
+  (typeof PREFERRED_COMMUNICATION_MODE)[keyof typeof PREFERRED_COMMUNICATION_MODE];
 
 export default internalMutation({
   handler: async (ctx: MutationCtx) => {
@@ -104,7 +116,13 @@ export default internalMutation({
       nationality: string;
       profilePictureUrl: string;
       phoneNumber: string;
-      menteeProfile?: { goals: string; interests: string[] };
+      careerStage?: CareerStage;
+      menteeProfile?: {
+        goals: string;
+        interests: string[];
+        commitmentLevel: CommitmentLevel;
+        preferredCommunicationModes: PreferredCommunicationMode[];
+      };
       mentorProfile?: {
         yearsOfExperience: number;
         industries: string[];
@@ -219,9 +237,15 @@ export default internalMutation({
         nationality: "",
         profilePictureUrl: "",
         phoneNumber: "",
+        careerStage: CAREER_STAGE.STUDENT,
         menteeProfile: {
           goals: menteeGoals[i % menteeGoals.length],
           interests: [...interests],
+          commitmentLevel: COMMITMENT_LEVEL.MONTHLY,
+          preferredCommunicationModes: [
+            PREFERRED_COMMUNICATION_MODE.VIDEO_CALL,
+            PREFERRED_COMMUNICATION_MODE.EMAIL,
+          ],
         },
       });
     }
@@ -240,13 +264,14 @@ export default internalMutation({
 
       if (existing) {
         skipped += 1;
-        if (u.mentorSettings) {
-          await ctx.db.patch("users", existing._id, {
-            phoneNumber: u.phoneNumber,
-            mentorSettings: u.mentorSettings,
-          });
-          updated += 1;
-        }
+        await ctx.db.patch("users", existing._id, {
+          phoneNumber: u.phoneNumber,
+          ...(u.careerStage ? { careerStage: u.careerStage } : {}),
+          ...(u.menteeProfile ? { menteeProfile: u.menteeProfile } : {}),
+          ...(u.mentorSettings ? { mentorSettings: u.mentorSettings } : {}),
+          onboardingStatus: ONBOARDING_STATUS.COMPLETE,
+        });
+        updated += 1;
         continue;
       }
 
@@ -265,12 +290,13 @@ export default internalMutation({
         location: u.location,
         email: u.email,
         phoneNumber: u.phoneNumber,
+        ...(u.careerStage ? { careerStage: u.careerStage } : {}),
         education: [],
         experience: [],
         ...(u.menteeProfile ? { menteeProfile: u.menteeProfile } : {}),
         ...(u.mentorProfile ? { mentorProfile: u.mentorProfile } : {}),
         ...(u.mentorSettings ? { mentorSettings: u.mentorSettings } : {}),
-        onboardingStatus: "mentee_profile_setup_complete",
+        onboardingStatus: ONBOARDING_STATUS.COMPLETE,
         createdAt: now,
       });
 
