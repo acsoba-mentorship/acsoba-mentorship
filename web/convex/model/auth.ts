@@ -1,5 +1,6 @@
 import type { Doc } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
+import { ONBOARDING_STATUS } from "./users/fields";
 
 type AuthCtx = QueryCtx | MutationCtx;
 
@@ -30,6 +31,16 @@ export async function getAuthenticatedUser(ctx: AuthCtx): Promise<Doc<"users">> 
 export function requireMentorProfile(user: Doc<"users">): Doc<"users"> {
   if (!user.mentorProfile) {
     throw new Error("Only mentors can perform this action");
+  }
+  return user;
+}
+
+/**
+ * Ensures the authenticated user has completed onboarding before accessing app data.
+ */
+export function requireOnboardingComplete(user: Doc<"users">): Doc<"users"> {
+  if (user.onboardingStatus !== ONBOARDING_STATUS.COMPLETE) {
+    throw new Error("Onboarding is not complete");
   }
   return user;
 }

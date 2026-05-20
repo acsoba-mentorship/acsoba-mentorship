@@ -25,12 +25,11 @@ import {
   experienceEntryValidator,
   menteeProfileValidator,
   mentorProfileValidator,
-  onboardingStatusValidator,
   ONBOARDING_STATUS,
   mentorPrivacySettingsValidator,
   usersTableFields,
 } from "./users/fields";
-import { getAuthenticatedUser } from "./auth";
+import { getAuthenticatedUser, requireOnboardingComplete } from "./auth";
 
 const CONVEX_ID_PATTERN = /^[a-z0-9]{16,64}$/i;
 
@@ -191,7 +190,7 @@ export async function getUserByUsername(
   ctx: QueryCtx,
   { username }: { username: Infer<typeof usersTableFields.username> }
 ) {
-  const currentUser = await getAuthenticatedUser(ctx);
+  const currentUser = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   const normalized = normalizeUsername(username);
   if (!isValidUsername(normalized)) {
@@ -217,7 +216,7 @@ export async function getUserById(
   ctx: QueryCtx,
   { userId }: { userId: string }
 ) {
-  const currentUser = await getAuthenticatedUser(ctx);
+  const currentUser = requireOnboardingComplete(await getAuthenticatedUser(ctx));
   if (!CONVEX_ID_PATTERN.test(userId)) {
     return null;
   }
@@ -243,7 +242,7 @@ export async function checkUsernameAvailable(
   ctx: QueryCtx,
   { username }: { username: Infer<typeof usersTableFields.username> }
 ) {
-  await getAuthenticatedUser(ctx);
+  requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   const normalized = normalizeUsername(username);
   if (!isValidUsername(normalized)) {
@@ -265,7 +264,7 @@ export async function listMentors(
   ctx: QueryCtx,
   { limit }: { limit?: number }
 ) {
-  const currentUser = await getAuthenticatedUser(ctx);
+  const currentUser = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   const effectiveLimit = Math.min(Math.max(limit ?? MENTOR_LIST_MAX, 1), MENTOR_LIST_MAX);
 
@@ -297,7 +296,7 @@ export async function listMentors(
  * Returns the caller's mentor privacy settings with defaults filled in.
  */
 export async function getMyMentorPrivacySettings(ctx: QueryCtx) {
-  const user = await getAuthenticatedUser(ctx);
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
   return user.mentorSettings?.privacy ?? DEFAULT_MENTOR_PRIVACY_SETTINGS;
 }
 
@@ -308,7 +307,7 @@ export async function updateMyMentorPrivacySettings(
   ctx: MutationCtx,
   args: Infer<typeof updateMentorPrivacySettingsArgsValidator>
 ) {
-  const user = await getAuthenticatedUser(ctx);
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
   const previous = user.mentorSettings?.privacy ?? DEFAULT_MENTOR_PRIVACY_SETTINGS;
 
   const privacy: Infer<typeof mentorPrivacySettingsValidator> = {
@@ -358,7 +357,7 @@ export async function updateUsername(
   ctx: MutationCtx,
   { username }: { username: Infer<typeof usersTableFields.username> }
 ) {
-  const user = await getAuthenticatedUser(ctx);
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   const normalized = normalizeUsername(username);
   if (!isValidUsername(normalized)) {
@@ -408,26 +407,13 @@ export async function updateUsername(
 }
 
 /**
- * Sets onboarding status directly. New onboarding writes should use
- * setUserOnboardingComplete so profile data and status change together.
- */
-export async function setOnboardingStatus(
-  ctx: MutationCtx,
-  { status }: { status: Infer<typeof onboardingStatusValidator> }
-) {
-  const user = await getAuthenticatedUser(ctx);
-  await ctx.db.patch("users", user._id, { onboardingStatus: status });
-  return user._id;
-}
-
-/**
  * Saves required user profile details without changing onboarding status.
  */
 export async function updateUserProfile(
   ctx: MutationCtx,
   args: Infer<typeof updateUserProfileArgsValidator>
 ) {
-  const user = await getAuthenticatedUser(ctx);
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   await ctx.db.patch("users", user._id, {
     name: args.name,
@@ -448,7 +434,7 @@ export async function updateMenteeProfile(
   ctx: MutationCtx,
   args: Infer<typeof menteeProfileValidator>
 ) {
-  const user = await getAuthenticatedUser(ctx);
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   await ctx.db.patch("users", user._id, {
     menteeProfile: args,
@@ -515,7 +501,7 @@ export async function updateUserProfileBasics(
     title?: Infer<typeof usersTableFields.title>;
   }
 ) {
-  const user = await getAuthenticatedUser(ctx);
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   const patch: Partial<Pick<Doc<"users">, "bio" | "location" | "title">> = {};
   if (args.bio !== undefined) {
@@ -550,7 +536,7 @@ export async function updateMenteeProfileDetails(
     >;
   }
 ) {
-  const user = await getAuthenticatedUser(ctx);
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
   const previous =
     user.menteeProfile ??
     {
@@ -581,7 +567,7 @@ export async function updateMentorProfile(
   ctx: MutationCtx,
   args: Infer<typeof mentorProfileValidator>
 ) {
-  const user = await getAuthenticatedUser(ctx);
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   await ctx.db.patch("users", user._id, {
     mentorProfile: {
@@ -602,7 +588,7 @@ export async function addEducation(
   ctx: MutationCtx,
   { entry }: { entry: Infer<typeof educationEntryValidator> }
 ) {
-  const user = await getAuthenticatedUser(ctx);
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
   await ctx.db.patch("users", user._id, { education: [...user.education, entry] });
   return user._id;
 }
@@ -620,7 +606,7 @@ export async function updateEducation(
     entry: Infer<typeof educationEntryValidator>;
   }
 ) {
-  const user = await getAuthenticatedUser(ctx);
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   if (index < 0 || index >= user.education.length) {
     throw new Error("Invalid education index");
@@ -639,7 +625,7 @@ export async function deleteEducation(
   ctx: MutationCtx,
   { index }: { index: number }
 ) {
-  const user = await getAuthenticatedUser(ctx);
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   if (index < 0 || index >= user.education.length) {
     throw new Error("Invalid education index");
@@ -658,7 +644,7 @@ export async function addExperience(
   ctx: MutationCtx,
   { entry }: { entry: Infer<typeof experienceEntryValidator> }
 ) {
-  const user = await getAuthenticatedUser(ctx);
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
   await ctx.db.patch("users", user._id, { experience: [...user.experience, entry] });
   return user._id;
 }
@@ -676,7 +662,7 @@ export async function updateExperience(
     entry: Infer<typeof experienceEntryValidator>;
   }
 ) {
-  const user = await getAuthenticatedUser(ctx);
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   if (index < 0 || index >= user.experience.length) {
     throw new Error("Invalid experience index");
@@ -695,7 +681,7 @@ export async function deleteExperience(
   ctx: MutationCtx,
   { index }: { index: number }
 ) {
-  const user = await getAuthenticatedUser(ctx);
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   if (index < 0 || index >= user.experience.length) {
     throw new Error("Invalid experience index");
