@@ -134,11 +134,11 @@ Because step state is not in the URL, users cannot jump to arbitrary onboarding 
 
 | Auth | Behavior |
 |------|----------|
-| `AuthLoading` | `MentorLoadingSkeleton` |
 | Unauthenticated | `RedirectToLanding` to `/` |
-| Authenticated | `ProtectedMentorShell` only |
+| Authenticated with incomplete onboarding | `RequireOnboardingGuard` redirects to `/onboarding` |
+| Authenticated with complete onboarding | `RequireOnboardingGuard` allows render, then `ProtectedMentorShell` requires `mentorProfile` or redirects to `/dashboard` |
 
-There is no `RequireOnboardingGuard` on mentor routes. `ProtectedMentorShell` only checks for `mentorProfile` and redirects to `/dashboard` if missing. Onboarding enforcement for mentors is backend-only unless they hit `(app)` routes.
+Mentor routes are wrapped in `RequireOnboardingGuard`, so incomplete users are redirected to `/onboarding` before mentor content renders. After onboarding is complete, `ProtectedMentorShell` checks for `mentorProfile` and redirects to `/dashboard` if it is missing.
 
 ### Role-specific shells
 
