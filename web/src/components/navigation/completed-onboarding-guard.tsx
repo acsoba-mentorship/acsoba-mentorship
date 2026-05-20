@@ -1,26 +1,34 @@
-import React from 'react'
-import { useCurrentUser } from '../../app/CurrentUserProvider';
-import { ONBOARDING_STATUS, POST_ONBOARDING_PATH } from '@/lib/onboarding';
-import { redirect } from 'next/navigation';
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useCurrentUser } from "@/app/CurrentUserProvider";
+import { ONBOARDING_STATUS, POST_ONBOARDING_PATH } from "@/lib/onboarding";
 
 export default function CompletedOnboardingGuard({
-    children,
+  children,
 }: {
-    children: React.ReactNode;
+  children: React.ReactNode;
 }) {
-    const { currentUser, isLoading } = useCurrentUser();
+  const router = useRouter();
+  const { currentUser, isLoading } = useCurrentUser();
 
-    if (isLoading || currentUser === undefined || currentUser === null) {
-        return null;
+  const isComplete = currentUser?.onboardingStatus === ONBOARDING_STATUS.COMPLETE;
+  const needsRedirect = !isLoading && currentUser && isComplete;
+
+  useEffect(() => {
+    if (needsRedirect) {
+      router.replace(POST_ONBOARDING_PATH);
     }
+  }, [needsRedirect, router]);
 
-    const isComplete = currentUser.onboardingStatus === ONBOARDING_STATUS.COMPLETE;
+  if (isLoading || currentUser === undefined || currentUser === null) {
+    return null;
+  }
 
-    if (isComplete) {
-        redirect(POST_ONBOARDING_PATH);
-    }
+  if (isComplete) {
+    return null;
+  }
 
-    return (
-        <>{children}</>
-    );
+  return <>{children}</>;
 }

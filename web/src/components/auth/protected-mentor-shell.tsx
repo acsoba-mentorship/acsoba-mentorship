@@ -1,6 +1,7 @@
 "use client";
 
-import { redirect } from "next/navigation";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useCurrentUser } from "@/app/CurrentUserProvider";
 
 export function ProtectedMentorShell({
@@ -8,14 +9,23 @@ export function ProtectedMentorShell({
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
   const { currentUser, isLoading } = useCurrentUser();
+
+  const needsRedirect = !isLoading && currentUser && !currentUser.mentorProfile;
+
+  useEffect(() => {
+    if (needsRedirect) {
+      router.replace("/dashboard");
+    }
+  }, [needsRedirect, router]);
 
   if (isLoading || currentUser === undefined || currentUser === null) {
     return null;
   }
 
   if (!currentUser.mentorProfile) {
-    redirect("/dashboard");
+    return null;
   }
 
   return <>{children}</>;

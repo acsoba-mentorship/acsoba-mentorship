@@ -1,13 +1,24 @@
 "use client";
 
-import { redirect } from "next/navigation";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-export function RedirectToLanding(): React.ReactNode {
-  redirect("/");
+export function RedirectToLanding() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace("/");
+  }, [router]);
+
   return null;
 }
 
-export function RedirectToDashboard(): React.ReactNode {
-  redirect("/dashboard");
+export function RedirectToDashboard() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace("/dashboard");
+  }, [router]);
+
   return null;
 }

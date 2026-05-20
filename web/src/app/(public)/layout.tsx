@@ -4,6 +4,7 @@ import { SiteNav } from "@/components/navigation/site-nav";
 import { SiteFooter } from "@/components/landing/site-footer";
 import { Authenticated, Unauthenticated } from "convex/react";
 import { RedirectToDashboard } from "@/components/auth/redirects";
+import { RequireOnboardingGuard } from "@/components/navigation/onboarding-guard";
 
 export default function PublicLayout({
   children,
@@ -20,7 +21,9 @@ export default function PublicLayout({
         </div>
         </Unauthenticated>
       <Authenticated>
-        <RedirectToDashboard /> ``
+        <RequireOnboardingGuard>
+          <RedirectToDashboard /> ``
+        </RequireOnboardingGuard>
       </Authenticated>
     </>
   );
