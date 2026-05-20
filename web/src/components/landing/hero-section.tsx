@@ -1,11 +1,8 @@
 "use client";
 
 import { useAuth0 } from "@auth0/auth0-react";
-import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
-import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "../ui/skeleton";
 
 function UnauthenticatedCTA() {
   const { loginWithRedirect, isLoading } = useAuth0();
