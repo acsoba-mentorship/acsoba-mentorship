@@ -26,7 +26,7 @@ export function ProtectedMenteeShell({
       <Skeleton className="mb-4 h-8 w-48" />
       <Skeleton className="mb-8 h-4 w-72" />
       <div className="space-y-4">
-        <Skeleton className="h-40 rounded-x " />
+        <Skeleton className="h-40 rounded-xl" />
         <Skeleton className="h-40 rounded-xl" />
       </div>
     </div>
