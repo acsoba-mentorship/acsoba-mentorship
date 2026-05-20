@@ -3,5 +3,8 @@ export const ONBOARDING_STATUS = {
   COMPLETE: "complete",
 } as const;
 
-export const ONBOARDING_START_PATH = "/onboarding/profile"; // Path to redirect after login if onboarding is incomplete
-export const POST_ONBOARDING_PATH = "/dashboard"; // Path to redirect after onboarding is complete
+export const ONBOARDING_START_PATH = "/onboarding";
+export const POST_ONBOARDING_PATH = "/dashboard";
+
+export { ONBOARDING_STEPS } from "./onboarding/steps";
+export type { OnboardingStepId } from "./onboarding/steps";
