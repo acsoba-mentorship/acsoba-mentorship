@@ -1,0 +1,25 @@
+"use client";
+
+import { Authenticated, Unauthenticated } from "convex/react";
+import { RedirectToLanding } from "@/components/auth/redirects";
+import CompletedOnboardingGuard from "@/components/navigation/completed-onboarding-guard";
+
+export default function OnboardingLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <>
+      <Unauthenticated>
+        <RedirectToLanding />
+      </Unauthenticated>
+
+      <Authenticated>
+        <CompletedOnboardingGuard>
+          {children}
+        </CompletedOnboardingGuard>
+      </Authenticated>
+    </>
+  );
+}

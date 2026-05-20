@@ -11,7 +11,6 @@ import {
   educationEntryValidator,
   experienceEntryValidator,
   menteeProfileValidator,
-  onboardingStatusValidator,
   usersTableFields,
 } from "./model/users/fields";
 
@@ -94,16 +93,6 @@ export const getUsernameChangeStatus = query({
 export const updateUsername = mutation({
   args: { username: usersTableFields.username },
   handler: (ctx, args) => UsersModel.updateUsername(ctx, args),
-});
-
-/**
- * Sets onboarding status directly. New onboarding writes should use
- * setUserOnboardingComplete so profile data and status change together.
- */
-export const setOnboardingStatus = mutation({
-  args: { status: onboardingStatusValidator },
-  returns: v.id("users"),
-  handler: (ctx, args) => UsersModel.setOnboardingStatus(ctx, args),
 });
 
 /**

@@ -10,14 +10,12 @@ export const metadata: Metadata = {
     "Connect with experienced mentors and accelerate your career through structured mentorship.",
 };
 
-export default function MarketingHomePage() {
+export default function PublicHomePage() {
   return (
     <>
       <HeroSection />
       <Separator />
       <SolutionsSection />
-      {/* TODO: FeaturedMentorsSection removed — listMentors requires auth and returns
-          sensitive fields. Re-add once a public/sanitized mentor endpoint exists. */}
       <Separator />
       <TestimonialsSection />
     </>

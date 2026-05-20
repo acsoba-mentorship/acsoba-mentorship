@@ -6,3 +6,8 @@ export function RedirectToLanding(): React.ReactNode {
   redirect("/");
   return null;
 }
+
+export function RedirectToDashboard(): React.ReactNode {
+  redirect("/dashboard");
+  return null;
+}

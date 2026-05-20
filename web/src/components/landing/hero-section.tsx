@@ -1,10 +1,11 @@
 "use client";
 
 import { useAuth0 } from "@auth0/auth0-react";
-import { Authenticated, Unauthenticated } from "convex/react";
+import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "../ui/skeleton";
 
 function UnauthenticatedCTA() {
   const { loginWithRedirect, isLoading } = useAuth0();
@@ -38,23 +39,6 @@ function UnauthenticatedCTA() {
   );
 }
 
-function AuthenticatedCTA() {
-  return (
-    <div className="flex flex-wrap gap-4">
-      <Button
-        size="lg"
-        variant="destructive"
-        asChild
-      >
-        <Link href="/dashboard">
-          Go to Dashboard
-          <ArrowRight />
-        </Link>
-      </Button>
-    </div>
-  );
-}
-
 export function HeroSection() {
   return (
     <section className="bg-gradient-to-br from-primary via-[#001A4D] to-[#002F6C] py-32 sm:py-40">
@@ -68,12 +52,7 @@ export function HeroSection() {
           shared wisdom. Your experience can shape the next generation.
         </p>
         <div className="mt-10">
-          <Authenticated>
-            <AuthenticatedCTA />
-          </Authenticated>
-          <Unauthenticated>
-            <UnauthenticatedCTA />
-          </Unauthenticated>
+          <UnauthenticatedCTA />
         </div>
         </div>
       </div>

@@ -10,6 +10,7 @@ type CurrentUser = Doc<"users"> | null;
 type CurrentUserContextValue = {
   currentUser: CurrentUser | undefined;
   isAuthenticated: boolean;
+  isLoading: boolean;
   isOwnProfile: (viewedUserId: string | null | undefined) => boolean;
 };
 
@@ -18,7 +19,7 @@ const CurrentUserContext = createContext<CurrentUserContextValue | undefined>(
 );
 
 export function CurrentUserProvider({ children }: { children: ReactNode }) {
-  const { isAuthenticated } = useConvexAuth();
+  const { isAuthenticated, isLoading } = useConvexAuth();
 
   // When not authenticated, skip the query entirely
   const currentUser = useQuery(
@@ -37,9 +38,10 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
     return {
       currentUser,
       isAuthenticated,
+      isLoading,
       isOwnProfile,
     };
-  }, [isAuthenticated, currentUser]);
+  }, [isAuthenticated, isLoading, currentUser]);
 
   return (
     <CurrentUserContext.Provider value={value}>

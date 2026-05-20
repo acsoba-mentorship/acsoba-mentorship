@@ -1,7 +1,7 @@
 "use client";
 
 import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
-import { RedirectToLanding } from "@/components/auth/redirect-to-landing";
+import { RedirectToLanding } from "@/components/auth/redirects";
 import { ProtectedMentorShell } from "@/components/auth/protected-mentor-shell";
 import { MentorNav } from "@/components/navigation/mentor-nav";
 import { MentorBreadcrumb } from "@/components/navigation/mentor-breadcrumb";
