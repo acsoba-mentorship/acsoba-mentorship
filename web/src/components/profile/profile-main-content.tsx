@@ -160,9 +160,9 @@ export function ProfileMainContent({
           </ProfileEditDialog>
         }
       >
-        {mentee && mentee.interests.length > 0 ? (
+        {user.interests.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
-            {mentee.interests.map((interest) => (
+            {user.interests.map((interest) => (
               <Badge key={interest} variant="secondary" className="text-xs">
                 {interest}
               </Badge>

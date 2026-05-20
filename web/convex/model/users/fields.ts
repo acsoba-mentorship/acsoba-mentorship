@@ -84,14 +84,12 @@ export const experienceEntryValidator = v.object({
 
 export const menteeProfileValidator = v.object({
   goals: v.string(),
-  interests: v.array(v.string()),
   commitmentLevel: commitmentLevelValidator,
-  preferredCommunicationModes: v.array(preferredCommunicationModeValidator),
+  preferredCommunicationModes: v.array(preferredCommunicationModeValidator)
 });
 
 export const mentorProfileValidator = v.object({
   yearsOfExperience: v.number(),
-  industries: v.array(v.string()),
   expertise: v.array(v.string()),
   maxMentees: v.number(),
   isAvailable: v.boolean(),
@@ -128,6 +126,8 @@ export const usersTableFields = {
   email: v.string(),
   phoneNumber: v.string(),
   careerStage: v.optional(careerStageValidator),
+  interests: v.optional(v.array(v.string())),
+  industries: v.optional(v.array(v.string())),
   education: v.array(educationEntryValidator),
   experience: v.array(experienceEntryValidator),
   menteeProfile: v.optional(menteeProfileValidator),

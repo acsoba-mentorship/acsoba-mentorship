@@ -29,23 +29,17 @@ export function InterestsSectionForm({
   user,
   onSuccess,
 }: InterestsSectionFormProps) {
-  const updateMenteeProfileDetails = useMutation(
-    api.users.updateMenteeProfileDetails
-  );
+  const updateUserInterests = useMutation(api.users.updateUserInterests);
 
   const form = useForm<InterestsFormValues>({
     resolver: zodResolver(interestsSchema),
     defaultValues: {
-      interests: user.menteeProfile?.interests ?? [],
+      interests: user.interests ?? [],
     },
   });
 
   const onSubmit = async (values: InterestsFormValues) => {
-    const goals = user.menteeProfile?.goals ?? "";
-    await updateMenteeProfileDetails({
-      goals,
-      interests: values.interests,
-    });
+    await updateUserInterests({ interests: values.interests });
     onSuccess?.();
   };
 

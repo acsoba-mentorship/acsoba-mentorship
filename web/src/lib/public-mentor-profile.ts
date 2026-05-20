@@ -18,6 +18,7 @@ export function publicUserToMentorProfileDto(
     profilePictureUrl: user.profilePictureUrl,
     email: user.email,
     phoneNumber: user.phoneNumber,
+    industries: user.industries ?? [],
     mentorProfile: user.mentorProfile,
   };
 }

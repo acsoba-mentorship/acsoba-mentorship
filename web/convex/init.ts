@@ -117,15 +117,15 @@ export default internalMutation({
       profilePictureUrl: string;
       phoneNumber: string;
       careerStage?: CareerStage;
+      interests?: string[];
+      industries?: string[];
       menteeProfile?: {
         goals: string;
-        interests: string[];
         commitmentLevel: CommitmentLevel;
         preferredCommunicationModes: PreferredCommunicationMode[];
       };
       mentorProfile?: {
         yearsOfExperience: number;
-        industries: string[];
         expertise: string[];
         maxMentees: number;
         isAvailable: boolean;
@@ -165,9 +165,9 @@ export default internalMutation({
         nationality: "",
         profilePictureUrl: "",
         phoneNumber: `+155501${idx}`,
+        industries: [...industryPair],
         mentorProfile: {
           yearsOfExperience: 6 + i,
-          industries: [...industryPair],
           expertise: [...expertiseSet],
           maxMentees: 2 + (i % 3),
           isAvailable: i % 2 === 0,
@@ -238,9 +238,9 @@ export default internalMutation({
         profilePictureUrl: "",
         phoneNumber: "",
         careerStage: CAREER_STAGE.STUDENT,
+        interests: [...interests],
         menteeProfile: {
           goals: menteeGoals[i % menteeGoals.length],
-          interests: [...interests],
           commitmentLevel: COMMITMENT_LEVEL.MONTHLY,
           preferredCommunicationModes: [
             PREFERRED_COMMUNICATION_MODE.VIDEO_CALL,
@@ -267,6 +267,8 @@ export default internalMutation({
         await ctx.db.patch("users", existing._id, {
           phoneNumber: u.phoneNumber,
           ...(u.careerStage ? { careerStage: u.careerStage } : {}),
+          ...(u.interests ? { interests: u.interests } : {}),
+          ...(u.industries ? { industries: u.industries } : {}),
           ...(u.menteeProfile ? { menteeProfile: u.menteeProfile } : {}),
           ...(u.mentorSettings ? { mentorSettings: u.mentorSettings } : {}),
           onboardingStatus: ONBOARDING_STATUS.COMPLETE,
@@ -291,6 +293,8 @@ export default internalMutation({
         email: u.email,
         phoneNumber: u.phoneNumber,
         ...(u.careerStage ? { careerStage: u.careerStage } : {}),
+        interests: u.interests ?? [],
+        industries: u.industries ?? [],
         education: [],
         experience: [],
         ...(u.menteeProfile ? { menteeProfile: u.menteeProfile } : {}),

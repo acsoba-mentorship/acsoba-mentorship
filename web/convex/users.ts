@@ -5,6 +5,8 @@ import {
   setUserOnboardingCompleteArgsValidator,
   updateMentorProfileArgsValidator,
   updateMentorPrivacySettingsArgsValidator,
+  updateUserIndustriesArgsValidator,
+  updateUserInterestsArgsValidator,
   updateUserProfileArgsValidator,
 } from "./model/users/validators";
 import {
@@ -138,6 +140,24 @@ export const updateUserProfileBasics = mutation({
 export const updateMenteeProfileDetails = mutation({
   args: menteeProfileValidator.partial(),
   handler: (ctx, args) => UsersModel.updateMenteeProfileDetails(ctx, args),
+});
+
+/**
+ * Replaces the caller's interest tags.
+ */
+export const updateUserInterests = mutation({
+  args: updateUserInterestsArgsValidator,
+  returns: v.id("users"),
+  handler: (ctx, args) => UsersModel.updateUserInterests(ctx, args),
+});
+
+/**
+ * Replaces the caller's industry tags.
+ */
+export const updateUserIndustries = mutation({
+  args: updateUserIndustriesArgsValidator,
+  returns: v.id("users"),
+  handler: (ctx, args) => UsersModel.updateUserIndustries(ctx, args),
 });
 
 /**

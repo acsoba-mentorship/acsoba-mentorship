@@ -92,6 +92,8 @@ async function toPublicUserProfile(
       shouldApplyMentorPrivacy && mentorVisibility.phoneNumber ? user.phoneNumber : null,
     education: user.education,
     experience: user.experience,
+    interests: user.interests ?? [],
+    industries: user.industries ?? [],
     menteeProfile: user.menteeProfile,
     mentorProfile: user.mentorProfile,
   };
@@ -162,6 +164,8 @@ export async function storeUser(ctx: MutationCtx) {
     location: "",
     email: identityEmail,
     phoneNumber: "",
+    interests: [],
+    industries: [],
     education: [],
     experience: [],
     onboardingStatus: ONBOARDING_STATUS.INCOMPLETE,
@@ -462,29 +466,35 @@ export async function setUserOnboardingComplete(
     throw new Error("At least one experience entry is required");
   }
 
+  const wordCount = args.menteeProfile.goals.trim().split(/\s+/).filter(Boolean).length;
+  if (wordCount > 50) {
+    throw new Error("Goals must be at most 50 words");
+  }
+  if (args.interests.length < 1 || args.interests.length > 3) {
+    throw new Error("Select between 1 and 3 interests");
+  }
+  if (args.industries.length < 1 || args.industries.length > 3) {
+    throw new Error("Select between 1 and 3 industries");
+  }
+
   await ctx.db.patch("users", user._id, {
     name: args.personalDetails.name,
     email: args.personalDetails.email,
     gender: args.personalDetails.gender,
     nationality: args.personalDetails.nationality,
     phoneNumber: args.personalDetails.phoneNumber,
+    dateOfBirth: args.personalDetails.dateOfBirth,
     careerStage: args.careerStage,
     education: args.education,
     experience: args.experience,
-    menteeProfile: args.menteeProfile,
+    interests: args.interests,
+    industries: args.industries,
+    menteeProfile: {
+      goals: args.menteeProfile.goals,
+      commitmentLevel: args.menteeProfile.commitmentLevel,
+      preferredCommunicationModes: args.menteeProfile.preferredCommunicationModes,
+    },
     onboardingStatus: ONBOARDING_STATUS.COMPLETE,
-    ...(args.personalDetails.dateOfBirth !== undefined && {
-      dateOfBirth: args.personalDetails.dateOfBirth,
-    }),
-    ...(args.personalDetails.bio !== undefined && {
-      bio: args.personalDetails.bio,
-    }),
-    ...(args.personalDetails.location !== undefined && {
-      location: args.personalDetails.location,
-    }),
-    ...(args.personalDetails.title !== undefined && {
-      title: args.personalDetails.title,
-    }),
   });
 
   return user._id;
@@ -529,7 +539,6 @@ export async function updateMenteeProfileDetails(
   ctx: MutationCtx,
   args: {
     goals?: Infer<typeof menteeProfileValidator.fields.goals>;
-    interests?: Infer<typeof menteeProfileValidator.fields.interests>;
     commitmentLevel?: Infer<typeof menteeProfileValidator.fields.commitmentLevel>;
     preferredCommunicationModes?: Infer<
       typeof menteeProfileValidator.fields.preferredCommunicationModes
@@ -541,22 +550,51 @@ export async function updateMenteeProfileDetails(
     user.menteeProfile ??
     {
       goals: "",
-      interests: [] as string[],
       commitmentLevel: COMMITMENT_LEVEL.MONTHLY,
       preferredCommunicationModes: [] as Infer<
         typeof menteeProfileValidator.fields.preferredCommunicationModes
       >,
     };
 
+  if (args.goals !== undefined) {
+    const wordCount = args.goals.trim().split(/\s+/).filter(Boolean).length;
+    if (wordCount > 50) {
+      throw new Error("Goals must be at most 50 words");
+    }
+  }
+
   const menteeProfile = {
     goals: args.goals ?? previous.goals,
-    interests: args.interests ?? previous.interests,
     commitmentLevel: args.commitmentLevel ?? previous.commitmentLevel,
     preferredCommunicationModes:
       args.preferredCommunicationModes ?? previous.preferredCommunicationModes,
   };
 
   await ctx.db.patch("users", user._id, { menteeProfile });
+  return user._id;
+}
+
+/**
+ * Replaces the caller's interest tags.
+ */
+export async function updateUserInterests(
+  ctx: MutationCtx,
+  args: { interests: Infer<typeof usersTableFields.interests> }
+) {
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
+  await ctx.db.patch("users", user._id, { interests: args.interests });
+  return user._id;
+}
+
+/**
+ * Replaces the caller's industry tags.
+ */
+export async function updateUserIndustries(
+  ctx: MutationCtx,
+  args: { industries: Infer<typeof usersTableFields.industries> }
+) {
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
+  await ctx.db.patch("users", user._id, { industries: args.industries });
   return user._id;
 }
 
@@ -572,7 +610,6 @@ export async function updateMentorProfile(
   await ctx.db.patch("users", user._id, {
     mentorProfile: {
       yearsOfExperience: args.yearsOfExperience,
-      industries: args.industries,
       expertise: args.expertise,
       maxMentees: args.maxMentees,
       isAvailable: args.isAvailable,

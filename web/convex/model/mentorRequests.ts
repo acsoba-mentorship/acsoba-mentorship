@@ -24,7 +24,7 @@ function buildMentorRequestView(
     menteeName: name,
     menteeInitials: getInitials(name),
     menteeTitle: mentee?.title?.trim() || "Community member",
-    interests: mentee?.menteeProfile?.interests ?? [],
+    interests: mentee?.interests ?? [],
   };
 }
 

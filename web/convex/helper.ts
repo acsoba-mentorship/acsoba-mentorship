@@ -174,6 +174,7 @@ export function toPublicMentorDTO(
     profilePictureUrl: user.profilePictureUrl,
     email: visibility.email ? user.email : null,
     phoneNumber: visibility.phoneNumber ? user.phoneNumber : null,
+    industries: user.industries ?? [],
     mentorProfile: user.mentorProfile,
   };
 }

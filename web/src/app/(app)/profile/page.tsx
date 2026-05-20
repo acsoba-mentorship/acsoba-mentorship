@@ -45,6 +45,8 @@ function ProfileContent() {
     phoneNumber: user.phoneNumber,
     education: user.education,
     experience: user.experience,
+    interests: user.interests ?? [],
+    industries: user.industries ?? [],
     menteeProfile: user.menteeProfile,
     mentorProfile: user.mentorProfile,
   };

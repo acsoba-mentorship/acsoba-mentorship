@@ -41,7 +41,7 @@ export default function SearchPage() {
           mentor.title,
           mentor.bio,
           ...profile.expertise,
-          ...profile.industries,
+          ...mentor.industries,
         ]
           .join(" ")
           .toLowerCase();
