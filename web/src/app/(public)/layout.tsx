@@ -19,10 +19,10 @@ export default function PublicLayout({
           <main>{children}</main>
           <SiteFooter />
         </div>
-        </Unauthenticated>
+      </Unauthenticated>
       <Authenticated>
         <RequireOnboardingGuard>
-          <RedirectToDashboard /> ``
+          <RedirectToDashboard />
         </RequireOnboardingGuard>
       </Authenticated>
     </>
