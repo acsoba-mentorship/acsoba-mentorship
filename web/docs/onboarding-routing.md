@@ -41,13 +41,16 @@ Routing uses layout-level guards and Convex `<Authenticated>` / `<Unauthenticate
 flowchart TB
   subgraph public ["(public) /"]
     PU["Unauthenticated landing page"]
+    PAG[RequireOnboardingGuard]
     PA["Authenticated RedirectToDashboard"]
+    PAG -->|incomplete| OB["/onboarding"]
+    PAG -->|complete| PA
   end
 
   subgraph app ["(app) routes"]
     AU["Unauthenticated RedirectToLanding"]
     AG[RequireOnboardingGuard]
-    AG -->|incomplete| OB["/onboarding"]
+    AG -->|incomplete| OB
     AG -->|complete| APP[App pages]
   end
 
@@ -71,9 +74,10 @@ flowchart TB
 | Auth | Behavior |
 |------|----------|
 | Unauthenticated | Renders marketing home (`SiteNav`, page, `SiteFooter`) |
-| Authenticated | `RedirectToDashboard` to `/dashboard` |
+| Authenticated, incomplete onboarding | `RequireOnboardingGuard` redirects to `/onboarding` |
+| Authenticated, complete onboarding | `RequireOnboardingGuard` allows render, then `RedirectToDashboard` to `/dashboard` |
 
-Authenticated users never stay on `/`; they are sent to the app shell first. Incomplete users are then handled by `RequireOnboardingGuard` on `(app)` routes.
+Authenticated users never stay on `/`. The authenticated branch is wrapped in `RequireOnboardingGuard`, so incomplete users go directly to `/onboarding`; complete users are redirected to `/dashboard`.
 
 ### `(app)/` mentee app (`/dashboard`, `/search`, `/profile`, `/requests`, ...)
 
@@ -165,16 +169,15 @@ Used inside Convex auth boundary components.
 ### New user after Auth0 login
 
 1. Redirect to `/`.
-2. `(public)` sees authenticated user and redirects to `/dashboard`.
-3. `(app)` `RequireOnboardingGuard` sees incomplete onboarding and redirects to `/onboarding`.
-4. User completes the single-route wizard.
-5. Wizard calls `setUserOnboardingComplete`, then sends the user to `/dashboard`.
-6. Later navigations pass the guard and show the app.
+2. `(public)` authenticated branch: `RequireOnboardingGuard` sees incomplete onboarding and redirects to `/onboarding`.
+3. User completes the single-route wizard.
+4. Wizard calls `setUserOnboardingComplete`, then sends the user to `/dashboard`.
+5. Later navigations pass the guard and show the app.
 
 ### Onboarded user opens `/` in a new tab
 
-1. `(public)` authenticated user redirects to `/dashboard`.
-2. Guard sees `complete` and app renders.
+1. `(public)` authenticated branch: `RequireOnboardingGuard` sees `complete` and allows render.
+2. `RedirectToDashboard` sends the user to `/dashboard`.
 
 ### Incomplete user bookmarks `/dashboard` or `/profile`
 
@@ -196,7 +199,7 @@ Guards return `null` until both Convex auth and `getCurrentUser` have settled.
 | `src/lib/onboarding/steps.ts` | Step ordering, branch navigation, and progress helpers |
 | `src/app/CurrentUserProvider.tsx` | Single `getCurrentUser` subscription |
 | `src/components/auth/SyncUser.tsx` | First-login `storeUser` |
-| `src/components/navigation/onboarding-guard.tsx` | Block incomplete users from `(app)` |
+| `src/components/navigation/onboarding-guard.tsx` | Block incomplete users from authenticated `(public)`, `(app)`, and `(mentor)` routes |
 | `src/components/navigation/completed-onboarding-guard.tsx` | Block complete users from `/onboarding` |
 | `src/components/onboarding/onboarding-provider.tsx` | Client-only wizard draft and step state |
 | `src/components/onboarding/steps/*` | Individual onboarding form steps |
