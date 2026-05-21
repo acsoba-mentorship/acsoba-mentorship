@@ -69,5 +69,4 @@ export const NATIONALITY_OPTIONS = [
 
 export const ONBOARDING_TAG_MIN = 1;
 export const ONBOARDING_TAG_MAX = 3;
-export const GOALS_MAX_WORDS = 50;
-export const GOALS_MAX_CHARACTERS = 350;
+export const GOALS_MAX_CHARACTERS = 250;

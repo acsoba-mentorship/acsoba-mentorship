@@ -1,9 +1,6 @@
 import { z } from "zod";
-import {
-  GOALS_MAX_CHARACTERS,
-  GOALS_MAX_WORDS,
-} from "@/lib/onboarding/constants";
-import { countWords, toStartOfMonth } from "@/lib/utils";
+import { GOALS_MAX_CHARACTERS } from "@/lib/onboarding/constants";
+import { toStartOfMonth } from "@/lib/utils";
 
 const usernameRegex = /^[a-z0-9](?:[a-z0-9_]*[a-z0-9])?$/;
 
@@ -29,16 +26,9 @@ export type AboutFormInput = z.input<typeof aboutSchema>;
 export const goalsSchema = z.object({
   goals: z
     .string()
+    .trim()
     .min(1, "Goals are required")
-    .max(GOALS_MAX_CHARACTERS, `Maximum ${GOALS_MAX_CHARACTERS} characters`)
-    .superRefine((value, ctx) => {
-      if (countWords(value) > GOALS_MAX_WORDS) {
-        ctx.addIssue({
-          code: "custom",
-          message: `Maximum ${GOALS_MAX_WORDS} words`,
-        });
-      }
-    }),
+    .max(GOALS_MAX_CHARACTERS, `Maximum ${GOALS_MAX_CHARACTERS} characters`),
 });
 
 export type GoalsFormValues = z.infer<typeof goalsSchema>;

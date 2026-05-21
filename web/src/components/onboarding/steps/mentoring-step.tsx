@@ -14,10 +14,10 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
-import { cn, countWords } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import {
   COMMITMENT_LEVEL_OPTIONS,
-  GOALS_MAX_WORDS,
+  GOALS_MAX_CHARACTERS,
   PREFERRED_COMMUNICATION_MODE_OPTIONS,
 } from "@/lib/onboarding/constants";
 import {
@@ -38,7 +38,7 @@ export function MentoringStep() {
   });
 
   const goalsValue = useWatch({ control: form.control, name: "goals" });
-  const wordCount = countWords(goalsValue ?? "");
+  const characterCount = (goalsValue ?? "").trim().length;
 
   const onSubmit = (values: MentoringChapterFormValues) => {
     const nextDraft = { ...draft, mentoring: values };
@@ -150,7 +150,8 @@ export function MentoringStep() {
           <section className="space-y-3">
             <h2 className="text-lg font-semibold">Goals</h2>
             <p className="text-sm text-muted-foreground">
-              What do you hope to get from mentorship? ({GOALS_MAX_WORDS} words max)
+              What do you hope to get from mentorship? ({GOALS_MAX_CHARACTERS}{" "}
+              characters max)
             </p>
             <FormField
               control={form.control}
@@ -167,10 +168,10 @@ export function MentoringStep() {
                   <p
                     className={cn(
                       "text-xs text-muted-foreground text-right",
-                      wordCount > GOALS_MAX_WORDS && "text-destructive"
+                      characterCount > GOALS_MAX_CHARACTERS && "text-destructive"
                     )}
                   >
-                    {wordCount} / {GOALS_MAX_WORDS} words
+                    {characterCount} / {GOALS_MAX_CHARACTERS} characters
                   </p>
                   <FormMessage />
                 </FormItem>

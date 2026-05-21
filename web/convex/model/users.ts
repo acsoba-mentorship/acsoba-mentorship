@@ -5,6 +5,7 @@ import {
   ANONYMOUS_MENTOR_NAME,
   buildUsernameStatus,
   DEFAULT_MENTOR_PRIVACY_SETTINGS,
+  GOALS_MAX_CHARACTERS,
   isValidUsername,
   makeTemporaryCandidate,
   MENTOR_LIST_MAX,
@@ -466,9 +467,8 @@ export async function setUserOnboardingComplete(
     throw new Error("At least one experience entry is required");
   }
 
-  const wordCount = args.menteeProfile.goals.trim().split(/\s+/).filter(Boolean).length;
-  if (wordCount > 50) {
-    throw new Error("Goals must be at most 50 words");
+  if (args.menteeProfile.goals.trim().length > GOALS_MAX_CHARACTERS) {
+    throw new Error(`Goals must be at most ${GOALS_MAX_CHARACTERS} characters`);
   }
   if (args.interests.length < 1 || args.interests.length > 3) {
     throw new Error("Select between 1 and 3 interests");
@@ -556,11 +556,11 @@ export async function updateMenteeProfileDetails(
       >,
     };
 
-  if (args.goals !== undefined) {
-    const wordCount = args.goals.trim().split(/\s+/).filter(Boolean).length;
-    if (wordCount > 50) {
-      throw new Error("Goals must be at most 50 words");
-    }
+  if (
+    args.goals !== undefined &&
+    args.goals.trim().length > GOALS_MAX_CHARACTERS
+  ) {
+    throw new Error(`Goals must be at most ${GOALS_MAX_CHARACTERS} characters`);
   }
 
   const menteeProfile = {

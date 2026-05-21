@@ -3,7 +3,6 @@ import {
   COMMITMENT_LEVEL_OPTIONS,
   GENDER_OPTIONS,
   GOALS_MAX_CHARACTERS,
-  GOALS_MAX_WORDS,
   NATIONALITY_OPTIONS,
   ONBOARDING_TAG_MAX,
   ONBOARDING_TAG_MIN,
@@ -11,7 +10,6 @@ import {
   PRESET_INDUSTRIES,
   PRESET_INTERESTS,
 } from "@/lib/onboarding/constants";
-import { countWords } from "@/lib/utils";
 import { experienceEntryFieldsSchema } from "@/lib/validation/profile";
 
 const genderValues = GENDER_OPTIONS.map((o) => o.value) as [string, ...string[]];
@@ -85,15 +83,7 @@ export const mentoringChapterSchema = z.object({
     .string()
     .trim()
     .min(1, "Tell us a little about your goals")
-    .max(GOALS_MAX_CHARACTERS, `Maximum ${GOALS_MAX_CHARACTERS} characters`)
-    .superRefine((value, ctx) => {
-      if (countWords(value) > GOALS_MAX_WORDS) {
-        ctx.addIssue({
-          code: "custom",
-          message: `Maximum ${GOALS_MAX_WORDS} words`,
-        });
-      }
-    }),
+    .max(GOALS_MAX_CHARACTERS, `Maximum ${GOALS_MAX_CHARACTERS} characters`),
 });
 
 export type MentoringChapterFormValues = z.infer<typeof mentoringChapterSchema>;
