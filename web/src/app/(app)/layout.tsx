@@ -1,6 +1,6 @@
 "use client";
 
-import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
+import { Authenticated, Unauthenticated } from "convex/react";
 import { SiteNav } from "@/components/navigation/site-nav";
 import { SiteFooter } from "@/components/landing/site-footer";
 import { RedirectToLanding } from "@/components/auth/redirects";
