@@ -5,6 +5,7 @@ import {
   ANONYMOUS_MENTOR_NAME,
   buildUsernameStatus,
   DEFAULT_MENTOR_PRIVACY_SETTINGS,
+  GOALS_MAX_CHARACTERS,
   isValidUsername,
   makeTemporaryCandidate,
   MENTOR_LIST_MAX,
@@ -14,29 +15,22 @@ import {
   USERNAME_CHANGE_COOLDOWN_MS,
 } from "../helper";
 import {
+  setUserOnboardingCompleteArgsValidator,
   updateMentorPrivacySettingsArgsValidator,
   updateUserProfileArgsValidator,
 } from "./users/validators";
 import {
+  CAREER_STAGE,
+  COMMITMENT_LEVEL,
   educationEntryValidator,
   experienceEntryValidator,
   menteeProfileValidator,
   mentorProfileValidator,
-  onboardingStatusValidator,
+  ONBOARDING_STATUS,
   mentorPrivacySettingsValidator,
   usersTableFields,
 } from "./users/fields";
-import { getAuthenticatedUser } from "./auth";
-
-/**
- * Allowed onboarding status transitions.
- */
-const ALLOWED_TRANSITIONS: Record<string, string[]> = {
-  new: ["verified"],
-  verified: ["user_profile_complete"],
-  user_profile_complete: ["mentee_profile_setup_complete"],
-  mentee_profile_setup_complete: ["mentee_profile_setup_complete"],
-};
+import { getAuthenticatedUser, requireOnboardingComplete } from "./auth";
 
 const CONVEX_ID_PATTERN = /^[a-z0-9]{16,64}$/i;
 
@@ -99,6 +93,8 @@ async function toPublicUserProfile(
       shouldApplyMentorPrivacy && mentorVisibility.phoneNumber ? user.phoneNumber : null,
     education: user.education,
     experience: user.experience,
+    interests: user.interests ?? [],
+    industries: user.industries ?? [],
     menteeProfile: user.menteeProfile,
     mentorProfile: user.mentorProfile,
   };
@@ -142,21 +138,22 @@ export async function storeUser(ctx: MutationCtx) {
     return user._id;
   }
 
+  const now = Date.now();
+  const identityName = identity.name?.trim();
+  const identityEmail = identity.email?.trim() ?? "";
+  const displayName =
+    identityName && !identityName.includes("@")
+      ? identityName
+      : identityEmail.split("@")[0] || "";
   const temporaryUsername = await ensureUniqueTemporaryUsername(
     ctx,
-    identity.name ?? "user"
+    displayName || "user"
   );
 
   return await ctx.db.insert("users", {
-    name: (() => {
-      const name = identity.name ?? "";
-      if (name.includes("@")) {
-        return name.split("@")[0];
-      }
-      return name.slice(0, 5);
-    })(),
+    name: displayName,
     username: temporaryUsername,
-    usernameUpdatedAt: Date.now(),
+    usernameUpdatedAt: now,
     isTemporaryUsername: true,
     dateOfBirth: 0,
     gender: "",
@@ -166,12 +163,14 @@ export async function storeUser(ctx: MutationCtx) {
     title: "",
     bio: "",
     location: "",
-    email: identity.email ?? "",
+    email: identityEmail,
     phoneNumber: "",
+    interests: [],
+    industries: [],
     education: [],
     experience: [],
-    onboardingStatus: "new",
-    createdAt: Date.now(),
+    onboardingStatus: ONBOARDING_STATUS.INCOMPLETE,
+    createdAt: now,
   });
 }
 
@@ -196,7 +195,7 @@ export async function getUserByUsername(
   ctx: QueryCtx,
   { username }: { username: Infer<typeof usersTableFields.username> }
 ) {
-  const currentUser = await getAuthenticatedUser(ctx);
+  const currentUser = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   const normalized = normalizeUsername(username);
   if (!isValidUsername(normalized)) {
@@ -222,7 +221,7 @@ export async function getUserById(
   ctx: QueryCtx,
   { userId }: { userId: string }
 ) {
-  const currentUser = await getAuthenticatedUser(ctx);
+  const currentUser = requireOnboardingComplete(await getAuthenticatedUser(ctx));
   if (!CONVEX_ID_PATTERN.test(userId)) {
     return null;
   }
@@ -248,7 +247,7 @@ export async function checkUsernameAvailable(
   ctx: QueryCtx,
   { username }: { username: Infer<typeof usersTableFields.username> }
 ) {
-  await getAuthenticatedUser(ctx);
+  requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   const normalized = normalizeUsername(username);
   if (!isValidUsername(normalized)) {
@@ -270,7 +269,7 @@ export async function listMentors(
   ctx: QueryCtx,
   { limit }: { limit?: number }
 ) {
-  const currentUser = await getAuthenticatedUser(ctx);
+  const currentUser = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   const effectiveLimit = Math.min(Math.max(limit ?? MENTOR_LIST_MAX, 1), MENTOR_LIST_MAX);
 
@@ -302,7 +301,7 @@ export async function listMentors(
  * Returns the caller's mentor privacy settings with defaults filled in.
  */
 export async function getMyMentorPrivacySettings(ctx: QueryCtx) {
-  const user = await getAuthenticatedUser(ctx);
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
   return user.mentorSettings?.privacy ?? DEFAULT_MENTOR_PRIVACY_SETTINGS;
 }
 
@@ -313,7 +312,7 @@ export async function updateMyMentorPrivacySettings(
   ctx: MutationCtx,
   args: Infer<typeof updateMentorPrivacySettingsArgsValidator>
 ) {
-  const user = await getAuthenticatedUser(ctx);
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
   const previous = user.mentorSettings?.privacy ?? DEFAULT_MENTOR_PRIVACY_SETTINGS;
 
   const privacy: Infer<typeof mentorPrivacySettingsValidator> = {
@@ -363,7 +362,7 @@ export async function updateUsername(
   ctx: MutationCtx,
   { username }: { username: Infer<typeof usersTableFields.username> }
 ) {
-  const user = await getAuthenticatedUser(ctx);
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   const normalized = normalizeUsername(username);
   if (!isValidUsername(normalized)) {
@@ -413,40 +412,13 @@ export async function updateUsername(
 }
 
 /**
- * Advances onboarding status according to allowed transitions.
- */
-export async function setOnboardingStatus(
-  ctx: MutationCtx,
-  { status }: { status: Infer<typeof onboardingStatusValidator> }
-) {
-  const user = await getAuthenticatedUser(ctx);
-
-  const current = user.onboardingStatus ?? "new";
-  const allowed = ALLOWED_TRANSITIONS[current];
-  if (!allowed?.includes(status)) {
-    throw new Error(`Invalid transition from ${current} to ${status}`);
-  }
-
-  await ctx.db.patch("users", user._id, { onboardingStatus: status });
-  return user._id;
-}
-
-/**
- * Saves required onboarding profile details and transitions status.
+ * Saves required user profile details without changing onboarding status.
  */
 export async function updateUserProfile(
   ctx: MutationCtx,
   args: Infer<typeof updateUserProfileArgsValidator>
 ) {
-  const user = await getAuthenticatedUser(ctx);
-
-  const current = user.onboardingStatus ?? "new";
-  const allowed = ALLOWED_TRANSITIONS[current];
-  if (!allowed?.includes("user_profile_complete")) {
-    throw new Error(
-      `Cannot complete user profile from status ${current}; complete verification first.`
-    );
-  }
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   await ctx.db.patch("users", user._id, {
     name: args.name,
@@ -456,32 +428,75 @@ export async function updateUserProfile(
     ...(args.dateOfBirth !== undefined && { dateOfBirth: args.dateOfBirth }),
     ...(args.bio !== undefined && { bio: args.bio }),
     ...(args.location !== undefined && { location: args.location }),
-    onboardingStatus: "user_profile_complete",
   });
   return user._id;
 }
 
 /**
- * Creates or replaces the mentee profile and transitions onboarding status.
+ * Creates or replaces the mentee profile without changing onboarding status.
  */
 export async function updateMenteeProfile(
   ctx: MutationCtx,
-  { goals, interests }: Infer<typeof menteeProfileValidator>
+  args: Infer<typeof menteeProfileValidator>
+) {
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
+
+  await ctx.db.patch("users", user._id, {
+    menteeProfile: args,
+  });
+  return user._id;
+}
+
+/**
+ * Writes the complete mentee onboarding payload and marks onboarding complete.
+ */
+export async function setUserOnboardingComplete(
+  ctx: MutationCtx,
+  args: Infer<typeof setUserOnboardingCompleteArgsValidator>
 ) {
   const user = await getAuthenticatedUser(ctx);
 
-  const current = user.onboardingStatus ?? "new";
-  const allowed = ALLOWED_TRANSITIONS[current];
-  if (!allowed?.includes("mentee_profile_setup_complete")) {
-    throw new Error(
-      `Cannot complete mentee profile from status ${current}; complete user profile first.`
-    );
+  if (args.careerStage === CAREER_STAGE.STUDENT && args.education.length === 0) {
+    throw new Error("At least one education entry is required for students");
+  }
+
+  if (
+    args.careerStage === CAREER_STAGE.PROFESSIONAL &&
+    args.experience.length === 0
+  ) {
+    throw new Error("At least one experience entry is required");
+  }
+
+  if (args.menteeProfile.goals.trim().length > GOALS_MAX_CHARACTERS) {
+    throw new Error(`Goals must be at most ${GOALS_MAX_CHARACTERS} characters`);
+  }
+  if (args.interests.length < 1 || args.interests.length > 3) {
+    throw new Error("Select between 1 and 3 interests");
+  }
+  if (args.industries.length < 1 || args.industries.length > 3) {
+    throw new Error("Select between 1 and 3 industries");
   }
 
   await ctx.db.patch("users", user._id, {
-    menteeProfile: { goals, interests },
-    onboardingStatus: "mentee_profile_setup_complete",
+    name: args.personalDetails.name,
+    email: args.personalDetails.email,
+    gender: args.personalDetails.gender,
+    nationality: args.personalDetails.nationality,
+    phoneNumber: args.personalDetails.phoneNumber,
+    dateOfBirth: args.personalDetails.dateOfBirth,
+    careerStage: args.careerStage,
+    education: args.education,
+    experience: args.experience,
+    interests: args.interests,
+    industries: args.industries,
+    menteeProfile: {
+      goals: args.menteeProfile.goals,
+      commitmentLevel: args.menteeProfile.commitmentLevel,
+      preferredCommunicationModes: args.menteeProfile.preferredCommunicationModes,
+    },
+    onboardingStatus: ONBOARDING_STATUS.COMPLETE,
   });
+
   return user._id;
 }
 
@@ -496,7 +511,7 @@ export async function updateUserProfileBasics(
     title?: Infer<typeof usersTableFields.title>;
   }
 ) {
-  const user = await getAuthenticatedUser(ctx);
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   const patch: Partial<Pick<Doc<"users">, "bio" | "location" | "title">> = {};
   if (args.bio !== undefined) {
@@ -524,18 +539,62 @@ export async function updateMenteeProfileDetails(
   ctx: MutationCtx,
   args: {
     goals?: Infer<typeof menteeProfileValidator.fields.goals>;
-    interests?: Infer<typeof menteeProfileValidator.fields.interests>;
+    commitmentLevel?: Infer<typeof menteeProfileValidator.fields.commitmentLevel>;
+    preferredCommunicationModes?: Infer<
+      typeof menteeProfileValidator.fields.preferredCommunicationModes
+    >;
   }
 ) {
-  const user = await getAuthenticatedUser(ctx);
-  const previous = user.menteeProfile ?? { goals: "", interests: [] as string[] };
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
+  const previous =
+    user.menteeProfile ??
+    {
+      goals: "",
+      commitmentLevel: COMMITMENT_LEVEL.MONTHLY,
+      preferredCommunicationModes: [] as Infer<
+        typeof menteeProfileValidator.fields.preferredCommunicationModes
+      >,
+    };
+
+  if (
+    args.goals !== undefined &&
+    args.goals.trim().length > GOALS_MAX_CHARACTERS
+  ) {
+    throw new Error(`Goals must be at most ${GOALS_MAX_CHARACTERS} characters`);
+  }
 
   const menteeProfile = {
     goals: args.goals ?? previous.goals,
-    interests: args.interests ?? previous.interests,
+    commitmentLevel: args.commitmentLevel ?? previous.commitmentLevel,
+    preferredCommunicationModes:
+      args.preferredCommunicationModes ?? previous.preferredCommunicationModes,
   };
 
   await ctx.db.patch("users", user._id, { menteeProfile });
+  return user._id;
+}
+
+/**
+ * Replaces the caller's interest tags.
+ */
+export async function updateUserInterests(
+  ctx: MutationCtx,
+  args: { interests: Infer<typeof usersTableFields.interests> }
+) {
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
+  await ctx.db.patch("users", user._id, { interests: args.interests });
+  return user._id;
+}
+
+/**
+ * Replaces the caller's industry tags.
+ */
+export async function updateUserIndustries(
+  ctx: MutationCtx,
+  args: { industries: Infer<typeof usersTableFields.industries> }
+) {
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
+  await ctx.db.patch("users", user._id, { industries: args.industries });
   return user._id;
 }
 
@@ -546,12 +605,11 @@ export async function updateMentorProfile(
   ctx: MutationCtx,
   args: Infer<typeof mentorProfileValidator>
 ) {
-  const user = await getAuthenticatedUser(ctx);
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   await ctx.db.patch("users", user._id, {
     mentorProfile: {
       yearsOfExperience: args.yearsOfExperience,
-      industries: args.industries,
       expertise: args.expertise,
       maxMentees: args.maxMentees,
       isAvailable: args.isAvailable,
@@ -567,7 +625,7 @@ export async function addEducation(
   ctx: MutationCtx,
   { entry }: { entry: Infer<typeof educationEntryValidator> }
 ) {
-  const user = await getAuthenticatedUser(ctx);
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
   await ctx.db.patch("users", user._id, { education: [...user.education, entry] });
   return user._id;
 }
@@ -585,7 +643,7 @@ export async function updateEducation(
     entry: Infer<typeof educationEntryValidator>;
   }
 ) {
-  const user = await getAuthenticatedUser(ctx);
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   if (index < 0 || index >= user.education.length) {
     throw new Error("Invalid education index");
@@ -604,7 +662,7 @@ export async function deleteEducation(
   ctx: MutationCtx,
   { index }: { index: number }
 ) {
-  const user = await getAuthenticatedUser(ctx);
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   if (index < 0 || index >= user.education.length) {
     throw new Error("Invalid education index");
@@ -623,7 +681,7 @@ export async function addExperience(
   ctx: MutationCtx,
   { entry }: { entry: Infer<typeof experienceEntryValidator> }
 ) {
-  const user = await getAuthenticatedUser(ctx);
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
   await ctx.db.patch("users", user._id, { experience: [...user.experience, entry] });
   return user._id;
 }
@@ -641,7 +699,7 @@ export async function updateExperience(
     entry: Infer<typeof experienceEntryValidator>;
   }
 ) {
-  const user = await getAuthenticatedUser(ctx);
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   if (index < 0 || index >= user.experience.length) {
     throw new Error("Invalid experience index");
@@ -660,7 +718,7 @@ export async function deleteExperience(
   ctx: MutationCtx,
   { index }: { index: number }
 ) {
-  const user = await getAuthenticatedUser(ctx);
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   if (index < 0 || index >= user.experience.length) {
     throw new Error("Invalid experience index");

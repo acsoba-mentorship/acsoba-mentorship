@@ -15,11 +15,11 @@ import { useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import {
   mentorExpertiseSchema,
+  userIndustriesSchema,
   type MentorExpertiseFormValues,
 } from "@/lib/validation/profile";
 import { TagInput } from "./tag-input";
 import type { PublicUserProfile } from "@/lib/types";
-
 interface MentorExpertiseFormProps {
   user: PublicUserProfile;
   onSuccess?: () => void;
@@ -29,33 +29,43 @@ const defaultMentor = {
   yearsOfExperience: 0,
   maxMentees: 1,
   isAvailable: false,
-  industries: [] as string[],
   expertise: [] as string[],
 };
+
+type MentorExpertiseFormInput = MentorExpertiseFormValues & {
+  industries: string[];
+};
+
+const mentorExpertiseWithIndustriesSchema = mentorExpertiseSchema.extend({
+  industries: userIndustriesSchema.shape.industries,
+});
 
 export function MentorExpertiseForm({
   user,
   onSuccess,
 }: MentorExpertiseFormProps) {
   const updateMentorProfile = useMutation(api.users.updateMentorProfile);
+  const updateUserIndustries = useMutation(api.users.updateUserIndustries);
   const profile = user.mentorProfile ?? defaultMentor;
 
-  const form = useForm<MentorExpertiseFormValues>({
-    resolver: zodResolver(mentorExpertiseSchema),
+  const form = useForm<MentorExpertiseFormInput>({
+    resolver: zodResolver(mentorExpertiseWithIndustriesSchema),
     defaultValues: {
-      industries: profile.industries,
+      industries: user.industries ?? [],
       expertise: profile.expertise,
     },
   });
 
-  const onSubmit = async (values: MentorExpertiseFormValues) => {
-    await updateMentorProfile({
-      yearsOfExperience: profile.yearsOfExperience,
-      maxMentees: profile.maxMentees,
-      isAvailable: profile.isAvailable,
-      industries: values.industries,
-      expertise: values.expertise,
-    });
+  const onSubmit = async (values: MentorExpertiseFormInput) => {
+    await Promise.all([
+      updateUserIndustries({ industries: values.industries }),
+      updateMentorProfile({
+        yearsOfExperience: profile.yearsOfExperience,
+        maxMentees: profile.maxMentees,
+        isAvailable: profile.isAvailable,
+        expertise: values.expertise,
+      }),
+    ]);
     onSuccess?.();
   };
 

@@ -27,6 +27,8 @@ export type PublicUserProfile = {
   phoneNumber: string | null;
   education: Doc<"users">["education"];
   experience: Doc<"users">["experience"];
+  interests: string[];
+  industries: string[];
   menteeProfile?: Doc<"users">["menteeProfile"];
   mentorProfile?: Doc<"users">["mentorProfile"];
 };
@@ -43,6 +45,7 @@ export type PublicMentorProfile = {
   profilePictureUrl: string;
   email: string | null;
   phoneNumber: string | null;
+  industries: Doc<"users">["industries"];
   mentorProfile: Doc<"users">["mentorProfile"];
 };
 
@@ -64,6 +67,7 @@ export function publicUserToMentorProfileDto(
     profilePictureUrl: user.profilePictureUrl,
     email: user.email,
     phoneNumber: user.phoneNumber,
+    industries: user.industries,
     mentorProfile: user.mentorProfile,
   };
 }

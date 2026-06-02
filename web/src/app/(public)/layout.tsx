@@ -1,12 +1,12 @@
 "use client";
 
-import { Authenticated, Unauthenticated } from "convex/react";
 import { SiteNav } from "@/components/navigation/site-nav";
 import { SiteFooter } from "@/components/landing/site-footer";
-import { RedirectToLanding } from "@/components/auth/redirects";
+import { Authenticated, Unauthenticated } from "convex/react";
+import { RedirectToDashboard } from "@/components/auth/redirects";
 import { RequireOnboardingGuard } from "@/components/navigation/onboarding-guard";
 
-export default function AppLayout({
+export default function PublicLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -14,18 +14,15 @@ export default function AppLayout({
   return (
     <>
       <Unauthenticated>
-        <RedirectToLanding />
+        <div className="min-h-screen">
+          <SiteNav />
+          <main>{children}</main>
+          <SiteFooter />
+        </div>
       </Unauthenticated>
-
       <Authenticated>
         <RequireOnboardingGuard>
-          <div className="min-h-screen">
-            <SiteNav />
-            <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-              {children}
-            </main>
-            <SiteFooter />
-          </div>
+          <RedirectToDashboard />
         </RequireOnboardingGuard>
       </Authenticated>
     </>

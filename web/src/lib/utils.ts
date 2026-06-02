@@ -42,6 +42,15 @@ export function toStartOfMonth(year: number, month: number): number {
   return Date.UTC(year, month - 1, 1);
 }
 
+/** Convert calendar date to midnight UTC timestamp. */
+export function toStartOfDay(year: number, month: number, day: number): number {
+  return Date.UTC(year, month - 1, day);
+}
+
+export function countWords(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
+
 export function formatDate(date: Date | number | string): string {
   const d = new Date(date)
   if (!isValidDate(d)) return "Invalid date"

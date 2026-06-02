@@ -207,7 +207,7 @@ function AuthButtons() {
 
 export function SiteNav() {
   const pathname = usePathname();
-  const { currentUser } = useCurrentUser();
+  const { currentUser, isAuthenticated } = useCurrentUser();
 
   const appNavLinks = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -217,6 +217,8 @@ export function SiteNav() {
       : []),
     { href: "/profile", label: "Profile", icon: User },
   ];
+
+  const logoNavLink = isAuthenticated ? "/dashboard" : "/";
 
   const isAppRoute =
     pathname.startsWith("/dashboard") ||
@@ -253,7 +255,7 @@ export function SiteNav() {
         </Sheet>
 
         {/* Logo */}
-        <Link href="/" className="mr-6 flex items-center gap-2 font-bold text-primary-foreground">
+        <Link href={logoNavLink} className="mr-6 flex items-center gap-2 font-bold text-primary-foreground">
           ACS OBA Shepherds
         </Link>
 

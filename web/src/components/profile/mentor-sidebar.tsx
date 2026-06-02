@@ -144,7 +144,8 @@ export function MentorSidebar({ user, isOwnProfile = false }: MentorSidebarProps
           </ProfileEditDialog>
         }
       >
-        {profile && (profile.expertise.length > 0 || profile.industries.length > 0) ? (
+        {profile &&
+        (profile.expertise.length > 0 || (user.industries?.length ?? 0) > 0) ? (
           <div className="space-y-6">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
@@ -170,8 +171,8 @@ export function MentorSidebar({ user, isOwnProfile = false }: MentorSidebarProps
                 <span className="text-sm font-semibold">Industries</span>
               </div>
               <div className="flex flex-wrap gap-1.5">
-                {profile.industries.length > 0 ? (
-                  profile.industries.map((industry) => (
+                {(user.industries?.length ?? 0) > 0 ? (
+                  user.industries.map((industry) => (
                     <Badge key={industry} variant="secondary" className="text-xs">
                       {industry}
                     </Badge>

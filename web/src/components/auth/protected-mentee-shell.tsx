@@ -1,17 +1,25 @@
 "use client";
 
-import { redirect } from "next/navigation";
-import { useConvexAuth, useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useCurrentUser } from "@/app/CurrentUserProvider";
 
 export function ProtectedMenteeShell({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { isAuthenticated } = useConvexAuth();
-  const currentUser = useQuery(api.users.getCurrentUser);
+  const router = useRouter();
+  const { currentUser, isLoading } = useCurrentUser();
+
+  const needsRedirect = !isLoading && currentUser && !currentUser.menteeProfile;
+
+  useEffect(() => {
+    if (needsRedirect) {
+      router.replace("/dashboard");
+    }
+  }, [needsRedirect, router]);
 
   const skeleton = (
     <div className="min-h-screen p-8">
@@ -24,21 +32,12 @@ export function ProtectedMenteeShell({
     </div>
   );
 
-  if (currentUser === undefined) {
+  if (isLoading || currentUser === undefined || currentUser === null) {
     return skeleton;
-  }
-
-  // Authenticated but user record not yet written by SyncUser — wait for it.
-  if (isAuthenticated && currentUser === null) {
-    return skeleton;
-  }
-
-  if (currentUser === null) {
-    redirect("/");
   }
 
   if (!currentUser.menteeProfile) {
-    redirect("/dashboard");
+    return null;
   }
 
   return <>{children}</>;

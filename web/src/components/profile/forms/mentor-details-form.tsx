@@ -30,7 +30,6 @@ const defaultMentor = {
   yearsOfExperience: 0,
   maxMentees: 1,
   isAvailable: false,
-  industries: [] as string[],
   expertise: [] as string[],
 };
 
@@ -55,7 +54,6 @@ export function MentorDetailsForm({
       yearsOfExperience: values.yearsOfExperience,
       maxMentees: values.maxMentees,
       isAvailable: values.isAvailable,
-      industries: profile.industries,
       expertise: profile.expertise,
     });
     onSuccess?.();

@@ -4,7 +4,7 @@ import { v } from "convex/values";
 /**
  * Verifies that the given email is an ACSOBA member by calling the external
  * ACSOBA API. Set Convex env vars ACSOBA_VERIFY_URL and ACSOBA_API_KEY.
- * Client should call setOnboardingStatus({ status: "verified" }) after success.
+ * Verification should be right after authentication before onboarding
  */
 export const verifyAcsobaMember = action({
   args: {

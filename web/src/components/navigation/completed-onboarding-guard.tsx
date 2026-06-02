@@ -3,8 +3,9 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCurrentUser } from "@/app/CurrentUserProvider";
+import { ONBOARDING_STATUS, POST_ONBOARDING_PATH } from "@/lib/onboarding";
 
-export function ProtectedMentorShell({
+export default function CompletedOnboardingGuard({
   children,
 }: {
   children: React.ReactNode;
@@ -12,11 +13,12 @@ export function ProtectedMentorShell({
   const router = useRouter();
   const { currentUser, isLoading } = useCurrentUser();
 
-  const needsRedirect = !isLoading && currentUser && !currentUser.mentorProfile;
+  const isComplete = currentUser?.onboardingStatus === ONBOARDING_STATUS.COMPLETE;
+  const needsRedirect = !isLoading && currentUser && isComplete;
 
   useEffect(() => {
     if (needsRedirect) {
-      router.replace("/dashboard");
+      router.replace(POST_ONBOARDING_PATH);
     }
   }, [needsRedirect, router]);
 
@@ -24,7 +26,7 @@ export function ProtectedMentorShell({
     return null;
   }
 
-  if (!currentUser.mentorProfile) {
+  if (isComplete) {
     return null;
   }
 

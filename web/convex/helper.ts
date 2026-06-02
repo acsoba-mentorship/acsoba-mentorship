@@ -2,6 +2,7 @@ import type { Doc } from "./_generated/dataModel";
 
 export const USERNAME_MIN_LENGTH = 3;
 export const USERNAME_MAX_LENGTH = 20;
+export const GOALS_MAX_CHARACTERS = 250;
 export const USERNAME_PATTERN = /^[a-z0-9](?:[a-z0-9_]*[a-z0-9])?$/;
 export const USERNAME_CHANGE_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
 export const MENTOR_LIST_MAX = 100;
@@ -174,6 +175,7 @@ export function toPublicMentorDTO(
     profilePictureUrl: user.profilePictureUrl,
     email: visibility.email ? user.email : null,
     phoneNumber: visibility.phoneNumber ? user.phoneNumber : null,
+    industries: user.industries ?? [],
     mentorProfile: user.mentorProfile,
   };
 }

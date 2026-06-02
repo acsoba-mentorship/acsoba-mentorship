@@ -2,7 +2,12 @@ import { Infer } from "convex/values";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { getInitials, toPublicMentorDTO } from "../helper";
-import { getAuthenticatedUser, requireMenteeProfile, requireMentorProfile } from "./auth";
+import {
+  getAuthenticatedUser,
+  requireMenteeProfile,
+  requireMentorProfile,
+  requireOnboardingComplete,
+} from "./auth";
 import { usersTableFields } from "./users/fields";
 import { mentorshipRequestsTableFields } from "./mentorRequests/fields";
 
@@ -19,7 +24,7 @@ function buildMentorRequestView(
     menteeName: name,
     menteeInitials: getInitials(name),
     menteeTitle: mentee?.title?.trim() || "Community member",
-    interests: mentee?.menteeProfile?.interests ?? [],
+    interests: mentee?.interests ?? [],
   };
 }
 
@@ -65,7 +70,9 @@ export async function requestsByMentor(
   ctx: QueryCtx,
   { mentorId }: { mentorId: Id<"users"> }
 ) {
-  const currentUser = requireMentorProfile(await getAuthenticatedUser(ctx));
+  const currentUser = requireMentorProfile(
+    requireOnboardingComplete(await getAuthenticatedUser(ctx))
+  );
 
   if (currentUser._id !== mentorId) {
     throw new Error("Unauthorized to view this mentor's requests");
@@ -90,7 +97,9 @@ export async function requestsByMentee(
   ctx: QueryCtx,
   { menteeId }: { menteeId: Id<"users"> }
 ) {
-  const currentUser = requireMenteeProfile(await getAuthenticatedUser(ctx));
+  const currentUser = requireMenteeProfile(
+    requireOnboardingComplete(await getAuthenticatedUser(ctx))
+  );
 
   if (currentUser._id !== menteeId) {
     throw new Error("Unauthorized to view this mentee's requests");
@@ -168,7 +177,9 @@ async function createRequestForMentor(
     message: Infer<typeof mentorshipRequestsTableFields.message>;
   }
 ) {
-  const currentUser = requireMenteeProfile(await getAuthenticatedUser(ctx));
+  const currentUser = requireMenteeProfile(
+    requireOnboardingComplete(await getAuthenticatedUser(ctx))
+  );
   const trimmedMessage = message.trim();
   const mentorId = mentor._id;
   const menteeId = currentUser._id;
@@ -229,7 +240,9 @@ export async function acceptRequest(
   ctx: MutationCtx,
   { requestId }: { requestId: Id<"mentorshipRequests"> }
 ) {
-  const currentUser = requireMentorProfile(await getAuthenticatedUser(ctx));
+  const currentUser = requireMentorProfile(
+    requireOnboardingComplete(await getAuthenticatedUser(ctx))
+  );
   const request = await ctx.db.get("mentorshipRequests", requestId);
 
   if (!request) {
@@ -258,7 +271,9 @@ export async function rejectRequest(
   ctx: MutationCtx,
   { requestId }: { requestId: Id<"mentorshipRequests"> }
 ) {
-  const currentUser = requireMentorProfile(await getAuthenticatedUser(ctx));
+  const currentUser = requireMentorProfile(
+    requireOnboardingComplete(await getAuthenticatedUser(ctx))
+  );
   const request = await ctx.db.get("mentorshipRequests", requestId);
 
   if (!request) {

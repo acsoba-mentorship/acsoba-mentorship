@@ -35,10 +35,8 @@ export function GoalsSectionForm({ user, onSuccess }: GoalsSectionFormProps) {
   });
 
   const onSubmit = async (values: GoalsFormValues) => {
-    const interests = user.menteeProfile?.interests ?? [];
     await updateMenteeProfileDetails({
       goals: values.goals,
-      interests,
     });
     onSuccess?.();
   };
