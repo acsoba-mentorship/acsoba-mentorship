@@ -77,6 +77,12 @@ export default function DashboardPage() {
                 Update Profile
               </Link>
             </Button>
+            <Button asChild variant="outline">
+              <Link href="/mentorships">
+                <Users className="mr-2 size-4" />
+                View Mentorships
+              </Link>
+            </Button>
           </div>
         </CardContent>
       </Card>

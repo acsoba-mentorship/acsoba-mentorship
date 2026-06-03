@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { ActiveMentorshipsForMentor } from "@/components/mentorships/active-mentorships";
 
 export const metadata: Metadata = {
   title: "Manage Mentorships — ACS OBA Shepherds",
@@ -18,26 +24,18 @@ export default function MentorMentorshipsPage() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Active Mentorships</CardTitle>
-          <CardDescription>
-            Your active mentorships and their status will be displayed here.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center justify-center py-8">
-            <div className="rounded-full bg-muted p-4">
-              <Users className="size-8 text-muted-foreground/50" />
-            </div>
-            <p className="mt-4 font-medium">No active mentorships</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Your active mentorships will appear here once requests are
-              accepted.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-xl font-semibold tracking-tight">
+            Active Mentorships
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            These are mentorships created from accepted mentee requests.
+          </p>
+        </div>
+
+        <ActiveMentorshipsForMentor />
+      </section>
 
       <Card>
         <CardHeader>

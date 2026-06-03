@@ -10,6 +10,7 @@ import {
 } from "./auth";
 import { usersTableFields } from "./users/fields";
 import { mentorshipRequestsTableFields } from "./mentorRequests/fields";
+import { createMentorshipFromAcceptedRequest } from "./mentorships";
 
 /**
  * Builds mentor-facing request view data.
@@ -261,6 +262,9 @@ export async function acceptRequest(
     status: "accepted",
     updatedAt: Date.now(),
   });
+
+  await createMentorshipFromAcceptedRequest(ctx, { requestId });
+
   return requestId;
 }
 

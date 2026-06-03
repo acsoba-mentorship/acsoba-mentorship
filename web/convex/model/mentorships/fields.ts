@@ -9,8 +9,9 @@ export const mentorshipStatusValidator = v.union(
 export const mentorshipsTableFields = {
   mentorId: v.id("users"),
   menteeId: v.id("users"),
+  requestId: v.optional(v.id("mentorshipRequests")),
   startDate: v.number(),
-  endDate: v.number(),
+  endDate: v.optional(v.number()),
   status: mentorshipStatusValidator,
   createdAt: v.number(),
   updatedAt: v.number(),
