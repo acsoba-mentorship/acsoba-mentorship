@@ -232,7 +232,13 @@ export async function deleteGoal(
   ctx: MutationCtx,
   { goalId }: { goalId: Id<"mentorshipGoals"> }
 ) {
-  const { goal } = await getGoalAndAuthorize(ctx, goalId);
+  const goal = await ctx.db.get("mentorshipGoals", goalId);
+
+  if (!goal) {
+    return goalId;
+  }
+
+  await getAuthorizedMentorship(ctx, goal.mentorshipId);
 
   const todosForGoal = await ctx.db
     .query("mentorshipTodos")
@@ -381,7 +387,13 @@ export async function deleteTodo(
   ctx: MutationCtx,
   { todoId }: { todoId: Id<"mentorshipTodos"> }
 ) {
-  const { todo } = await getTodoAndAuthorize(ctx, todoId);
+  const todo = await ctx.db.get("mentorshipTodos", todoId);
+
+  if (!todo) {
+    return todoId;
+  }
+
+  await getAuthorizedMentorship(ctx, todo.mentorshipId);
 
   await ctx.db.delete("mentorshipTodos", todo._id);
 
