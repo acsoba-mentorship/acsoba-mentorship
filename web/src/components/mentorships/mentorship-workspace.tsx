@@ -283,7 +283,7 @@ export function MentorshipWorkspace({
   }
 
   function getLinkedGoalTitle(goalId?: Id<"mentorshipGoals">) {
-    if (!goalId) {
+    if (!goalId || !workspace) {
       return null;
     }
 
