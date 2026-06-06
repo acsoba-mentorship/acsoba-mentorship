@@ -13,6 +13,7 @@ import {
   Search,
   Shield,
   User,
+  Users,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -213,7 +214,10 @@ export function SiteNav() {
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/search", label: "Find Mentors", icon: Search },
     ...(currentUser?.menteeProfile
-      ? [{ href: "/requests", label: "My Requests", icon: Inbox }]
+      ? [
+          { href: "/mentorships", label: "My Mentorships", icon: Users },
+          { href: "/requests", label: "My Requests", icon: Inbox },
+        ]
       : []),
     { href: "/profile", label: "Profile", icon: User },
   ];
@@ -222,6 +226,7 @@ export function SiteNav() {
 
   const isAppRoute =
     pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/mentorships") ||
     pathname.startsWith("/requests") ||
     pathname.startsWith("/search") ||
     pathname.startsWith("/profile");
