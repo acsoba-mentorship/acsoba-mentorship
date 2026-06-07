@@ -15,6 +15,13 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20 # Matches Next.js recommended Node version
+          cache: 'npm'     # Optional: enables faster builds by caching node_modules
+          cache-dependency-path: './web/package-lock.json'
+
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
 
