@@ -2,7 +2,7 @@ name: Vercel Preview Deployment
 
 on:
   pull_request:
-    branches: [ main, dev ]
+    branches: [ dev ]
 
 permissions:
   pull-requests: write
