@@ -20,7 +20,8 @@ const mentorships = defineTable(mentorshipsTableFields)
   .index("by_menteeId", ["menteeId"])
   .index("by_mentorId_status", ["mentorId", "status"])
   .index("by_menteeId_status", ["menteeId", "status"])
-  .index("by_mentorId_menteeId", ["mentorId", "menteeId"]);
+  .index("by_mentorId_menteeId", ["mentorId", "menteeId"])
+  .index("by_requestId", ["requestId"]);
 
 export default defineSchema({
   users,
