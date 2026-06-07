@@ -13,6 +13,7 @@ import type * as init from "../init.js";
 import type * as mentorRequests from "../mentorRequests.js";
 import type * as mentorships from "../mentorships.js";
 import type * as model_auth from "../model/auth.js";
+import type * as model_helper from "../model/helper.js";
 import type * as model_mentorRequests from "../model/mentorRequests.js";
 import type * as model_mentorRequests_fields from "../model/mentorRequests/fields.js";
 import type * as model_mentorships from "../model/mentorships.js";
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   mentorRequests: typeof mentorRequests;
   mentorships: typeof mentorships;
   "model/auth": typeof model_auth;
+  "model/helper": typeof model_helper;
   "model/mentorRequests": typeof model_mentorRequests;
   "model/mentorRequests/fields": typeof model_mentorRequests_fields;
   "model/mentorships": typeof model_mentorships;

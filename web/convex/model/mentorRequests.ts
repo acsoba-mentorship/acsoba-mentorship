@@ -11,6 +11,7 @@ import {
 import { usersTableFields } from "./users/fields";
 import { mentorshipRequestsTableFields } from "./mentorRequests/fields";
 import { createMentorshipFromAcceptedRequest } from "./mentorships";
+import { fetchUsersById } from "./helper";
 
 /**
  * Builds mentor-facing request view data.
@@ -50,18 +51,6 @@ function buildMenteeRequestView(
     mentorPhoneNumber: mentorView?.phoneNumber ?? null,
     expertise: mentorView?.mentorProfile?.expertise ?? [],
   };
-}
-
-/**
- * Loads a set of users by ID.
- */
-async function fetchUsersById(
-  ctx: QueryCtx | MutationCtx,
-  ids: Id<"users">[]
-): Promise<Map<Id<"users">, Doc<"users"> | null>> {
-  const unique = [...new Set(ids)];
-  const docs = await Promise.all(unique.map((id) => ctx.db.get("users", id)));
-  return new Map(unique.map((id, i) => [id, docs[i] ?? null]));
 }
 
 /**
