@@ -7,22 +7,7 @@ import {
   requireMentorProfile,
   requireOnboardingComplete,
 } from "./auth";
-
-/**
- * Loads a set of users by ID.
- *
- * We use this because mentorship documents only store mentorId and menteeId.
- * The UI needs display data too, such as name, title, interests, etc.
- */
-async function fetchUsersById(
-  ctx: QueryCtx | MutationCtx,
-  ids: Id<"users">[]
-): Promise<Map<Id<"users">, Doc<"users"> | null>> {
-  const unique = [...new Set(ids)];
-  const docs = await Promise.all(unique.map((id) => ctx.db.get("users", id)));
-
-  return new Map(unique.map((id, index) => [id, docs[index] ?? null]));
-}
+import { fetchUsersById } from "./helper";
 
 /**
  * Builds the mentorship data shown to a mentor.
@@ -138,18 +123,9 @@ export async function createMentorshipFromAcceptedRequest(
   );
 
   if (existingActiveMentorship) {
-    /**
-     * If the existing active mentorship was created before requestId existed,
-     * attach this requestId to it.
-     */
-    if (!existingActiveMentorship.requestId) {
-      await ctx.db.patch(existingActiveMentorship._id, {
-        requestId,
-        updatedAt: now,
-      });
-    }
-
-    return existingActiveMentorship._id;
+    throw new Error(
+      "An active mentorship already exists between this mentor and mentee"
+    );
   }
 
   return ctx.db.insert("mentorships", {
