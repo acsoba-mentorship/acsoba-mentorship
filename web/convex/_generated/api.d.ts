@@ -11,6 +11,7 @@
 import type * as helper from "../helper.js";
 import type * as init from "../init.js";
 import type * as mentorRequests from "../mentorRequests.js";
+import type * as mentorshipMeetings from "../mentorshipMeetings.js";
 import type * as mentorshipWorkspace from "../mentorshipWorkspace.js";
 import type * as mentorships from "../mentorships.js";
 import type * as model_auth from "../model/auth.js";
@@ -18,6 +19,8 @@ import type * as model_helper from "../model/helper.js";
 import type * as model_mentorRequests from "../model/mentorRequests.js";
 import type * as model_mentorRequests_fields from "../model/mentorRequests/fields.js";
 import type * as model_mentorshipGoals_fields from "../model/mentorshipGoals/fields.js";
+import type * as model_mentorshipMeetings from "../model/mentorshipMeetings.js";
+import type * as model_mentorshipMeetings_fields from "../model/mentorshipMeetings.ts/fields.js";
 import type * as model_mentorshipTodos_fields from "../model/mentorshipTodos/fields.js";
 import type * as model_mentorshipWorkspace from "../model/mentorshipWorkspace.js";
 import type * as model_mentorships from "../model/mentorships.js";
@@ -38,6 +41,7 @@ declare const fullApi: ApiFromModules<{
   helper: typeof helper;
   init: typeof init;
   mentorRequests: typeof mentorRequests;
+  mentorshipMeetings: typeof mentorshipMeetings;
   mentorshipWorkspace: typeof mentorshipWorkspace;
   mentorships: typeof mentorships;
   "model/auth": typeof model_auth;
@@ -45,6 +49,8 @@ declare const fullApi: ApiFromModules<{
   "model/mentorRequests": typeof model_mentorRequests;
   "model/mentorRequests/fields": typeof model_mentorRequests_fields;
   "model/mentorshipGoals/fields": typeof model_mentorshipGoals_fields;
+  "model/mentorshipMeetings": typeof model_mentorshipMeetings;
+  "model/mentorshipMeetings/fields": typeof model_mentorshipMeetings_fields;
   "model/mentorshipTodos/fields": typeof model_mentorshipTodos_fields;
   "model/mentorshipWorkspace": typeof model_mentorshipWorkspace;
   "model/mentorships": typeof model_mentorships;

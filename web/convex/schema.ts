@@ -4,6 +4,7 @@ import { usersTableFields } from "./model/users/fields";
 import { mentorshipsTableFields } from "./model/mentorships/fields";
 import { mentorshipGoalsTableFields } from "./model/mentorshipGoals/fields";
 import { mentorshipTodosTableFields } from "./model/mentorshipTodos/fields";
+import { mentorshipMeetingsTableFields } from "./model/mentorshipMeetings/fields";
 
 const users = defineTable(usersTableFields)
   .index("by_token", ["tokenIdentifier"])
@@ -36,10 +37,16 @@ const mentorshipTodos = defineTable(mentorshipTodosTableFields)
   .index("by_assignedTo", ["assignedTo"])
   .index("by_mentorshipId_completed", ["mentorshipId", "completed"]);
 
+const mentorshipMeetings = defineTable(mentorshipMeetingsTableFields)
+  .index("by_mentorshipId", ["mentorshipId"])
+  .index("by_mentorshipId_startAt", ["mentorshipId", "startAt"])
+  .index("by_mentorshipId_status", ["mentorshipId", "status"]);
+
 export default defineSchema({
   users,
   mentorshipRequests,
   mentorships,
   mentorshipGoals,
   mentorshipTodos,
+  mentorshipMeetings,
 });
