@@ -20,7 +20,7 @@ import type * as model_mentorRequests from "../model/mentorRequests.js";
 import type * as model_mentorRequests_fields from "../model/mentorRequests/fields.js";
 import type * as model_mentorshipGoals_fields from "../model/mentorshipGoals/fields.js";
 import type * as model_mentorshipMeetings from "../model/mentorshipMeetings.js";
-import type * as model_mentorshipMeetings_fields from "../model/mentorshipMeetings.ts/fields.js";
+import type * as model_mentorshipMeetings_fields from "../model/mentorshipMeetings/fields.js";
 import type * as model_mentorshipTodos_fields from "../model/mentorshipTodos/fields.js";
 import type * as model_mentorshipWorkspace from "../model/mentorshipWorkspace.js";
 import type * as model_mentorships from "../model/mentorships.js";

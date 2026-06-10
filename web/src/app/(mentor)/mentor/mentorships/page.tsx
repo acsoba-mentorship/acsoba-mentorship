@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -41,21 +40,15 @@ export default function MentorMentorshipsPage() {
         <CardHeader>
           <CardTitle>Mentorship Actions</CardTitle>
           <CardDescription>
-            Quick actions for managing your mentorships.
+            Use each active mentorship card to open the workspace, schedule
+            meetings, add goals, and track progress.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-3">
-            <Button variant="outline" disabled>
-              Schedule Meeting (Coming Soon)
-            </Button>
-            <Button variant="outline" disabled>
-              Add Goal (Coming Soon)
-            </Button>
-            <Button variant="outline" disabled>
-              Track Progress (Coming Soon)
-            </Button>
-          </div>
+          <p className="text-sm text-muted-foreground">
+            Scheduling is now available from every active mentorship card and
+            inside the mentorship workspace.
+          </p>
         </CardContent>
       </Card>
     </div>

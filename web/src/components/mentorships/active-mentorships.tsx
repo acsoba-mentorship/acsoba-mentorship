@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { FunctionReturnType } from "convex/server";
 import { useQuery } from "convex/react";
-import { Calendar, Mail, Phone, Users } from "lucide-react";
+import { Calendar, CalendarPlus, Mail, Phone, Users } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import { useCurrentUser } from "@/app/CurrentUserProvider";
 import {
@@ -21,6 +21,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ScheduleMeetingDialog } from "@/components/mentorships/meeting-scheduler";
 import { formatDate } from "@/lib/utils";
 
 type MentorMentorship = FunctionReturnType<
@@ -83,6 +84,7 @@ function ActiveMentorshipCard({
   profilePictureUrl,
   profileHref,
   workspaceHref,
+  mentorshipId,
   startedAt,
   tags,
   tagsLabel,
@@ -95,6 +97,7 @@ function ActiveMentorshipCard({
   profilePictureUrl?: string | null;
   profileHref: string;
   workspaceHref: string;
+  mentorshipId: MentorMentorship["_id"] | MenteeMentorship["_id"];
   startedAt: number;
   tags: string[];
   tagsLabel: string;
@@ -172,8 +175,18 @@ function ActiveMentorshipCard({
           <Button asChild variant="outline" size="sm">
             <Link href={profileHref}>View Profile</Link>
           </Button>
+
+          <ScheduleMeetingDialog
+            mentorshipId={mentorshipId}
+            participantName={name}
+          >
+            <Button type="button" variant="outline" size="sm">
+              <CalendarPlus className="size-4" />
+              Schedule Meeting
+            </Button>
+          </ScheduleMeetingDialog>
         </div>
-        
+
       </CardContent>
     </Card>
   );
@@ -217,6 +230,7 @@ export function ActiveMentorshipsForMentor() {
               : `/profile/id/${mentorship.menteeId}`
           }
           workspaceHref={`/mentor/mentorships/${mentorship._id}`}
+          mentorshipId={mentorship._id}
           startedAt={mentorship.startDate}
           tags={mentorship.interests}
           tagsLabel="Mentee interests"
@@ -266,6 +280,7 @@ export function ActiveMentorshipsForMentee() {
               : `/profile/id/${mentorship.mentorId}`
           }
           workspaceHref={`/mentorships/${mentorship._id}`}
+          mentorshipId={mentorship._id}
           startedAt={mentorship.startDate}
           tags={mentorship.expertise}
           tagsLabel="Mentor expertise"
