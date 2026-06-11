@@ -14,6 +14,7 @@ import type * as mentorRequests from "../mentorRequests.js";
 import type * as mentorshipWorkspace from "../mentorshipWorkspace.js";
 import type * as mentorships from "../mentorships.js";
 import type * as model_auth from "../model/auth.js";
+import type * as model_helper from "../model/helper.js";
 import type * as model_mentorRequests from "../model/mentorRequests.js";
 import type * as model_mentorRequests_fields from "../model/mentorRequests/fields.js";
 import type * as model_mentorshipGoals_fields from "../model/mentorshipGoals/fields.js";
@@ -40,6 +41,7 @@ declare const fullApi: ApiFromModules<{
   mentorshipWorkspace: typeof mentorshipWorkspace;
   mentorships: typeof mentorships;
   "model/auth": typeof model_auth;
+  "model/helper": typeof model_helper;
   "model/mentorRequests": typeof model_mentorRequests;
   "model/mentorRequests/fields": typeof model_mentorRequests_fields;
   "model/mentorshipGoals/fields": typeof model_mentorshipGoals_fields;
