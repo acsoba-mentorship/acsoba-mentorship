@@ -82,6 +82,7 @@ function ActiveMentorshipCard({
   title,
   profilePictureUrl,
   profileHref,
+  workspaceHref,
   startedAt,
   tags,
   tagsLabel,
@@ -93,6 +94,7 @@ function ActiveMentorshipCard({
   title: string;
   profilePictureUrl?: string | null;
   profileHref: string;
+  workspaceHref: string;
   startedAt: number;
   tags: string[];
   tagsLabel: string;
@@ -162,11 +164,16 @@ function ActiveMentorshipCard({
           </div>
         )}
 
-        <div className="border-t border-border/50 pt-4">
+        <div className="flex flex-wrap gap-2 border-t border-border/50 pt-4">
+          <Button asChild size="sm">
+            <Link href={workspaceHref}>Open Workspace</Link>
+          </Button>
+
           <Button asChild variant="outline" size="sm">
             <Link href={profileHref}>View Profile</Link>
           </Button>
         </div>
+        
       </CardContent>
     </Card>
   );
@@ -209,6 +216,7 @@ export function ActiveMentorshipsForMentor() {
               ? `/profile/${mentorship.menteeUsername}`
               : `/profile/id/${mentorship.menteeId}`
           }
+          workspaceHref={`/mentor/mentorships/${mentorship._id}`}
           startedAt={mentorship.startDate}
           tags={mentorship.interests}
           tagsLabel="Mentee interests"
@@ -257,6 +265,7 @@ export function ActiveMentorshipsForMentee() {
               ? `/profile/${mentorship.mentorUsername}`
               : `/profile/id/${mentorship.mentorId}`
           }
+          workspaceHref={`/mentorships/${mentorship._id}`}
           startedAt={mentorship.startDate}
           tags={mentorship.expertise}
           tagsLabel="Mentor expertise"
