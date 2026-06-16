@@ -16,13 +16,13 @@ const TIMELINE_MIN_HOUR = 0;
 const TIMELINE_MAX_HOUR = 24;
 const TIMELINE_GUTTER_HOURS = 1;
 
-const DAY_COLUMN_WIDTH = 188;
-const BASE_HOUR_WIDTH = 188;
-const ROW_HEIGHT = 76;
-const HEADER_HEIGHT = 52;
-const SLOT_HEIGHT = 52;
-const SLOT_TOP = 12;
-const MIN_SLOT_WIDTH = 104;
+const DAY_COLUMN_WIDTH = 160;
+const BASE_HOUR_WIDTH = 128;
+const ROW_HEIGHT = 56;
+const HEADER_HEIGHT = 44;
+const SLOT_HEIGHT = 34;
+const SLOT_TOP = 11;
+const MIN_SLOT_WIDTH = 68;
 
 function getLocalDateKey(timestamp: number) {
   const date = new Date(timestamp);
@@ -238,56 +238,56 @@ export function MeetingTimeline({ meetings }: { meetings: MentorshipMeeting[] })
   const totalWidth = DAY_COLUMN_WIDTH + timelineWidth;
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
+    <div className="space-y-3 text-xs">
+      <div className="space-y-1.5">
         <div className="flex items-center justify-between">
             <label
             htmlFor="meeting-timeline-zoom"
-            className="text-sm font-medium text-muted-foreground"
+            className="text-xs font-medium text-muted-foreground"
             >
             Zoom level
             </label>
 
-            <span className="text-xs text-muted-foreground">{zoom}%</span>
+            <span className="text-[11px] text-muted-foreground">{zoom}%</span>
         </div>
 
         <input
             id="meeting-timeline-zoom"
             type="range"
-            min="60"
+            min="50"
             max="180"
             step="1"
             value={zoom}
             onChange={(event) => setZoom(Number(event.target.value))}
-            className="h-2 w-full accent-blue-500"
+            className="h-1.5 w-full accent-blue-500"
         />
         </div>
 
-      <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-        <div className="flex items-center gap-2">
-          <span className="size-2.5 rounded-full bg-blue-500" />
-          Scheduled
+      <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground">
+        <div className="flex items-center gap-1.5">
+            <span className="size-2 rounded-full bg-blue-500" />
+            Scheduled
         </div>
-        <div className="flex items-center gap-2">
-          <span className="size-2.5 rounded-full bg-emerald-500" />
-          Completed
+        <div className="flex items-center gap-1.5">
+            <span className="size-2 rounded-full bg-yellow-400" />
+            Completed
         </div>
-        <div className="flex items-center gap-2">
-          <span className="size-2.5 rounded-full bg-red-500" />
-          Cancelled
+        <div className="flex items-center gap-1.5">
+            <span className="size-2 rounded-full bg-red-500" />
+            Cancelled
         </div>
       </div>
 
       <div className="overflow-hidden rounded-lg border border-slate-800 bg-slate-950 text-slate-100">
-        <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
-            <div className="flex items-center gap-2 text-sm font-semibold">
-            <CalendarClock className="size-4 text-slate-400" />
+        <div className="flex items-center justify-between border-b border-slate-800 px-3 py-2">
+        <div className="flex items-center gap-1.5 text-xs font-semibold">
+            <CalendarClock className="size-3.5 text-slate-400" />
             Timeline view
-            </div>
+        </div>
 
-            <span className="rounded-full bg-slate-900 px-3 py-1 text-xs text-slate-300">
+        <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] text-slate-300">
             {meetings.length} meeting{meetings.length === 1 ? "" : "s"}
-            </span>
+        </span>
         </div>
 
         <div className="overflow-x-auto">
@@ -299,7 +299,7 @@ export function MeetingTimeline({ meetings }: { meetings: MentorshipMeeting[] })
                 height: HEADER_HEIGHT,
                 }}
             >
-                <div className="sticky left-0 z-20 flex items-center border-r border-slate-800 bg-slate-950 px-5 text-sm font-semibold">
+                <div className="sticky left-0 z-20 flex items-center border-r border-slate-800 bg-slate-950 px-4 text-xs font-semibold">
                 Days
                 </div>
 
@@ -307,7 +307,7 @@ export function MeetingTimeline({ meetings }: { meetings: MentorshipMeeting[] })
                 {hours.map((hour) => (
                     <div
                     key={hour}
-                    className="absolute inset-y-0 flex items-center border-l border-slate-800 px-3 text-sm text-slate-400"
+                    className="absolute inset-y-0 flex items-center border-l border-slate-800 px-2 text-xs text-slate-400"
                     style={{
                         left: (hour - startHour) * hourWidth,
                         width: hourWidth,
@@ -342,13 +342,13 @@ export function MeetingTimeline({ meetings }: { meetings: MentorshipMeeting[] })
                     }}
                 >
                     <div
-                    className="sticky left-0 z-10 border-r border-slate-800 bg-slate-950 px-5 py-4"
+                    className="sticky left-0 z-10 border-r border-slate-800 bg-slate-950 px-4 py-3"
                     style={{ minHeight: rowHeight }}
                     >
-                    <p className="text-sm font-semibold text-slate-100">
+                    <p className="text-xs font-semibold text-slate-100">
                         {formatDay(group.dayStart)}
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-0.5 text-[11px] text-slate-500">
                         {group.meetings.length} session
                         {group.meetings.length === 1 ? "" : "s"}
                     </p>
@@ -391,8 +391,8 @@ export function MeetingTimeline({ meetings }: { meetings: MentorshipMeeting[] })
                         className="absolute bottom-0 top-0 z-30 w-px bg-blue-300/70"
                         style={{ left: nowPosition }}
                         >
-                        <span className="absolute -top-8 left-1/2 -translate-x-1/2 rounded bg-slate-800 px-2 py-1 text-xs font-semibold text-slate-100 shadow">
-                            Now: {formatTime(now)}
+                        <span className="absolute -top-7 left-1/2 -translate-x-1/2 rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-slate-100 shadow">
+                        Now: {formatTime(now)}
                         </span>
                         </div>
                     )}
@@ -402,43 +402,39 @@ export function MeetingTimeline({ meetings }: { meetings: MentorshipMeeting[] })
 
                         return (
                         <div
-                            key={meeting._id}
-                            title={`${meeting.title} • ${formatTime(meeting.startAt)}`}
-                            className={cn(
-                            "absolute overflow-hidden rounded-md border-l-4 bg-slate-900/95 px-3 shadow-sm ring-1 ring-slate-800/80",
+                        key={meeting._id}
+                        title={`${meeting.title} • ${formatTime(meeting.startAt)}`}
+                        className={cn(
+                            "absolute overflow-hidden rounded border-l-4 bg-slate-900/95 px-1.5 py-1 shadow-sm ring-1 ring-slate-800/80",
                             status.border
-                            )}
-                            style={{
+                        )}
+                        style={{
                             ...getMeetingStyle({
-                                meeting,
-                                startHour,
-                                hourWidth,
+                            meeting,
+                            startHour,
+                            hourWidth,
                             }),
                             top: SLOT_TOP + index * ROW_HEIGHT,
                             height: SLOT_HEIGHT,
-                            }}
+                        }}
                         >
-                            <div className="flex h-full min-w-0 flex-col justify-center">
+                        <div className="flex h-full min-w-0 flex-col justify-center">
                             <p
-                                className={cn(
-                                "truncate text-sm font-semibold leading-tight",
+                            className={cn(
+                                "truncate text-[11px] font-semibold leading-none",
                                 status.text
-                                )}
+                            )}
                             >
-                                {meeting.title}
+                            {meeting.title}
                             </p>
 
-                            <div className="mt-1 flex min-w-0 items-center gap-1.5 text-xs leading-none text-slate-300">
-                                <Clock3 className="size-3.5 shrink-0" />
-                                <span className="shrink-0">
-                                {formatTime(meeting.startAt)}
-                                </span>
-                                <span className="text-slate-600">•</span>
-                                <span className="truncate">
-                                {getStatusLabel(meeting.status)}
-                                </span>
+                            <div className="mt-1 flex min-w-0 items-center gap-0.5 text-[10px] leading-none text-slate-300">
+                            <Clock3 className="size-2.5 shrink-0" />
+                            <span className="shrink-0">{formatTime(meeting.startAt)}</span>
+                            <span className="text-slate-600">•</span>
+                            <span className="truncate">{getStatusLabel(meeting.status)}</span>
                             </div>
-                            </div>
+                        </div>
                         </div>
                         );
                     })}
@@ -448,7 +444,7 @@ export function MeetingTimeline({ meetings }: { meetings: MentorshipMeeting[] })
             })}
             </div>
         </div>
-        </div>
+      </div>
     </div>
   );
 }
