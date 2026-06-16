@@ -220,9 +220,25 @@ export function SiteNav() {
           { href: "/requests", label: "My Requests", icon: Inbox },
         ]
       : []),
-    ...(currentUser?.mentorProfile || currentUser?.menteeProfile
-      ? [{ href: "/mentorships/timeline", label: "Timeline", icon: CalendarDays }]
-      : []),
+
+    ...(currentUser?.mentorProfile
+      ? [
+          {
+            href: "/mentor/mentorships/timeline",
+            label: "Timeline",
+            icon: CalendarDays,
+          },
+        ]
+      : currentUser?.menteeProfile
+        ? [
+            {
+              href: "/mentorships/timeline",
+              label: "Timeline",
+              icon: CalendarDays,
+            },
+          ]
+        : []),
+
     { href: "/profile", label: "Profile", icon: User },
   ];
 
