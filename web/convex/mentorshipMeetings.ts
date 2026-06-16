@@ -9,6 +9,11 @@ export const listByMentorship = query({
   handler: (ctx, args) => MentorshipMeetingsModel.listByMentorship(ctx, args),
 });
 
+export const listForCurrentUser = query({
+  args: {},
+  handler: (ctx) => MentorshipMeetingsModel.listForCurrentUser(ctx),
+});
+
 export const createMeeting = mutation({
   args: {
     mentorshipId: v.id("mentorships"),

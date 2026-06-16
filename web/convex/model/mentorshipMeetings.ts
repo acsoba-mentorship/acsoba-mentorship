@@ -4,6 +4,7 @@ import {
   getAuthenticatedUser,
   requireOnboardingComplete,
 } from "./auth";
+import { fetchUsersById } from "./helper";
 
 type Ctx = QueryCtx | MutationCtx;
 
@@ -108,6 +109,76 @@ export async function listByMentorship(
     .withIndex("by_mentorshipId_startAt", (q) => q.eq("mentorshipId", mentorshipId))
     .order("desc")
     .collect();
+}
+
+export async function listForCurrentUser(ctx: QueryCtx) {
+  const currentUser = requireOnboardingComplete(await getAuthenticatedUser(ctx));
+
+  const [mentorMentorships, menteeMentorships] = await Promise.all([
+    ctx.db
+      .query("mentorships")
+      .withIndex("by_mentorId_status", (q) =>
+        q.eq("mentorId", currentUser._id).eq("status", "active")
+      )
+      .collect(),
+
+    ctx.db
+      .query("mentorships")
+      .withIndex("by_menteeId_status", (q) =>
+        q.eq("menteeId", currentUser._id).eq("status", "active")
+      )
+      .collect(),
+  ]);
+
+  const mentorshipById = new Map<Id<"mentorships">, Doc<"mentorships">>();
+
+  for (const mentorship of [...mentorMentorships, ...menteeMentorships]) {
+    mentorshipById.set(mentorship._id, mentorship);
+  }
+
+  const mentorships = [...mentorshipById.values()];
+
+  const counterpartIds = mentorships.map((mentorship) =>
+    mentorship.mentorId === currentUser._id
+      ? mentorship.menteeId
+      : mentorship.mentorId
+  );
+
+  const counterpartById = await fetchUsersById(ctx, counterpartIds);
+
+  const meetingsByMentorship = await Promise.all(
+    mentorships.map((mentorship) =>
+      ctx.db
+        .query("mentorshipMeetings")
+        .withIndex("by_mentorshipId_startAt", (q) =>
+          q.eq("mentorshipId", mentorship._id)
+        )
+        .collect()
+    )
+  );
+
+  return mentorships
+    .flatMap((mentorship, index) => {
+      const viewerRole =
+        mentorship.mentorId === currentUser._id
+          ? ("mentor" as const)
+          : ("mentee" as const);
+
+      const counterpartId =
+        viewerRole === "mentor" ? mentorship.menteeId : mentorship.mentorId;
+
+      const counterpart = counterpartById.get(counterpartId) ?? null;
+      const counterpartName = counterpart?.name?.trim() || "Unknown user";
+
+      return meetingsByMentorship[index].map((meeting) => ({
+        ...meeting,
+        viewerRole,
+        counterpartId,
+        counterpartName,
+        counterpartTitle: counterpart?.title?.trim() || "Community member",
+      }));
+    })
+    .sort((a, b) => a.startAt - b.startAt);
 }
 
 export async function createMeeting(
