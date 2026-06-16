@@ -267,7 +267,7 @@ export function MeetingTimeline({ meetings }: { meetings: MentorshipMeeting[] })
         <input
             id="meeting-timeline-zoom"
             type="range"
-            min="50"
+            min="100"
             max="180"
             step="1"
             value={zoom}

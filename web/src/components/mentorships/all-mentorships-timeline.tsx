@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { type CSSProperties, useEffect, useMemo, useState } from "react";
+import { type CSSProperties, useEffect, useMemo, useState} from "react";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { CalendarClock, Clock3 } from "lucide-react";
@@ -305,7 +305,7 @@ function TimelineGrid({ meetings }: { meetings: TimelineMeeting[] }) {
         <input
           id="all-mentorships-timeline-zoom"
           type="range"
-          min="50"
+          min="100"
           max="180"
           step="1"
           value={zoom}
