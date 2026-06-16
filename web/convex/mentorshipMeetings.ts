@@ -34,3 +34,10 @@ export const completeMeeting = mutation({
   },
   handler: (ctx, args) => MentorshipMeetingsModel.completeMeeting(ctx, args),
 });
+
+export const deleteMeeting = mutation({
+  args: {
+    meetingId: v.id("mentorshipMeetings"),
+  },
+  handler: (ctx, args) => MentorshipMeetingsModel.deleteMeeting(ctx, args),
+});

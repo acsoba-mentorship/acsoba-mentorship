@@ -29,28 +29,26 @@ export function MentorshipMeetingsPanel({
     mentorshipId,
   });
 
-  const cancelMeeting = useMutation(api.mentorshipMeetings.cancelMeeting);
   const completeMeeting = useMutation(api.mentorshipMeetings.completeMeeting);
+  const deleteMeeting = useMutation(api.mentorshipMeetings.deleteMeeting);
 
   const [updatingMeetingIds, setUpdatingMeetingIds] = useState<
     Set<Id<"mentorshipMeetings">>
   >(new Set());
 
-  const scheduledMeetings = useMemo(() => {
-    return (
-      meetings
-        ?.filter((meeting) => meeting.status === "scheduled")
-        .sort((a, b) => a.startAt - b.startAt) ?? []
-    );
+  const orderedMeetings = useMemo(() => {
+    return [...(meetings ?? [])].sort((a, b) => a.startAt - b.startAt);
   }, [meetings]);
 
+  const scheduledMeetings = useMemo(() => {
+    return orderedMeetings.filter((meeting) => meeting.status === "scheduled");
+  }, [orderedMeetings]);
+
   const meetingHistory = useMemo(() => {
-    return (
-      meetings
-        ?.filter((meeting) => meeting.status !== "scheduled")
-        .sort((a, b) => b.updatedAt - a.updatedAt) ?? []
-    );
-  }, [meetings]);
+    return orderedMeetings
+      .filter((meeting) => meeting.status !== "scheduled")
+      .sort((a, b) => b.updatedAt - a.updatedAt);
+  }, [orderedMeetings]);
 
   async function withMeetingUpdate(
     meetingId: Id<"mentorshipMeetings">,
@@ -104,6 +102,14 @@ export function MentorshipMeetingsPanel({
       </CardHeader>
 
       <CardContent className="space-y-6">
+        {orderedMeetings.length === 0 ? (
+          <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+            No sessions scheduled yet.
+          </p>
+        ) : (
+          <MeetingTimeline meetings={orderedMeetings} />
+        )}
+
         <div className="space-y-3">
           <div>
             <h3 className="text-sm font-semibold">Scheduled Sessions</h3>
@@ -113,37 +119,27 @@ export function MentorshipMeetingsPanel({
           </div>
 
           {scheduledMeetings.length === 0 ? (
-            <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-              No sessions scheduled yet.
+            <p className="text-sm text-muted-foreground">
+              No upcoming sessions.
             </p>
           ) : (
-            <div className="space-y-4">
-              <MeetingTimeline meetings={scheduledMeetings} />
-
-              <div className="space-y-3">
-                <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Session details
-                </h4>
-
-                {scheduledMeetings.map((meeting) => (
-                  <MeetingCard
-                    key={meeting._id}
-                    meeting={meeting}
-                    isUpdating={updatingMeetingIds.has(meeting._id)}
-                    onCancel={(meetingId) =>
-                      withMeetingUpdate(meetingId, () =>
-                        cancelMeeting({ meetingId })
-                      )
-                    }
-                    onComplete={(meetingId) =>
-                      withMeetingUpdate(meetingId, () =>
-                        completeMeeting({ meetingId })
-                      )
-                    }
-                  />
-                ))}
-              </div>
-            </div>
+            scheduledMeetings.map((meeting) => (
+              <MeetingCard
+                key={meeting._id}
+                meeting={meeting}
+                isUpdating={updatingMeetingIds.has(meeting._id)}
+                onDelete={(meetingId) =>
+                  withMeetingUpdate(meetingId, () =>
+                    deleteMeeting({ meetingId })
+                  )
+                }
+                onComplete={(meetingId) =>
+                  withMeetingUpdate(meetingId, () =>
+                    completeMeeting({ meetingId })
+                  )
+                }
+              />
+            ))
           )}
         </div>
 
@@ -165,9 +161,9 @@ export function MentorshipMeetingsPanel({
                 key={meeting._id}
                 meeting={meeting}
                 isUpdating={updatingMeetingIds.has(meeting._id)}
-                onCancel={(meetingId) =>
+                onDelete={(meetingId) =>
                   withMeetingUpdate(meetingId, () =>
-                    cancelMeeting({ meetingId })
+                    deleteMeeting({ meetingId })
                   )
                 }
                 onComplete={(meetingId) =>

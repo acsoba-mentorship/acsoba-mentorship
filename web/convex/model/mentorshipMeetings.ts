@@ -175,3 +175,14 @@ export async function completeMeeting(
 
   return meeting._id;
 }
+
+export async function deleteMeeting(
+  ctx: MutationCtx,
+  { meetingId }: { meetingId: Id<"mentorshipMeetings"> }
+) {
+  const { meeting } = await getMeetingAndAuthorize(ctx, meetingId);
+
+  await ctx.db.delete(meeting._id);
+
+  return meeting._id;
+}

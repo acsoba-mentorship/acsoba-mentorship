@@ -1,6 +1,12 @@
 "use client";
 
-import { CheckCircle2, Download, ExternalLink, MapPin, XCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  Download,
+  ExternalLink,
+  MapPin,
+  Trash2,
+} from "lucide-react";
 import type { FunctionReturnType } from "convex/server";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import { api } from "../../../../convex/_generated/api";
@@ -35,7 +41,7 @@ function MeetingStatusBadge({
     );
   }
 
-  return <Badge variant="secondary">Cancelled</Badge>;
+  return <Badge className="border-0 bg-red-50 text-red-700">Cancelled</Badge>;
 }
 
 function CalendarActions({ event }: { event: CalendarEventDetails }) {
@@ -64,12 +70,12 @@ function CalendarActions({ event }: { event: CalendarEventDetails }) {
 
 export function MeetingCard({
   meeting,
-  onCancel,
+  onDelete,
   onComplete,
   isUpdating,
 }: {
   meeting: MentorshipMeeting;
-  onCancel: (meetingId: Id<"mentorshipMeetings">) => void;
+  onDelete: (meetingId: Id<"mentorshipMeetings">) => void;
   onComplete: (meetingId: Id<"mentorshipMeetings">) => void;
   isUpdating: boolean;
 }) {
@@ -108,8 +114,8 @@ export function MeetingCard({
           )}
         </div>
 
-        {meeting.status === "scheduled" && (
-          <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2">
+          {meeting.status === "scheduled" && (
             <Button
               type="button"
               variant="outline"
@@ -120,19 +126,23 @@ export function MeetingCard({
               <CheckCircle2 className="size-4" />
               Complete
             </Button>
+          )}
 
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={isUpdating}
-              onClick={() => onCancel(meeting._id)}
-            >
-              <XCircle className="size-4" />
-              Cancel
-            </Button>
-          </div>
-        )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isUpdating}
+            onClick={() => {
+              if (window.confirm("Delete this meeting?")) {
+                onDelete(meeting._id);
+              }
+            }}
+          >
+            <Trash2 className="size-4" />
+            Delete
+          </Button>
+        </div>
       </div>
 
       {meeting.status === "scheduled" && (
