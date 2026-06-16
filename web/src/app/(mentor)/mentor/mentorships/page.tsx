@@ -35,22 +35,6 @@ export default function MentorMentorshipsPage() {
 
         <ActiveMentorshipsForMentor />
       </section>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Mentorship Actions</CardTitle>
-          <CardDescription>
-            Use each active mentorship card to open the workspace, schedule
-            meetings, add goals, and track progress.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Scheduling is now available from every active mentorship card and
-            inside the mentorship workspace.
-          </p>
-        </CardContent>
-      </Card>
     </div>
   );
 }
