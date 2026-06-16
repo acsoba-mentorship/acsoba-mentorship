@@ -38,6 +38,11 @@ const SLOT_TOP = 11;
 const MIN_SLOT_WIDTH = 76;
 
 type TimelineRoleFilter = "both" | "mentor" | "mentee";
+type TimelineLayoutItem = {
+  meeting: MentorshipTimelineItem;
+  lane: number;
+};
+
 
 function getLocalDateKey(timestamp: number) {
   const date = new Date(timestamp);
@@ -218,6 +223,46 @@ function groupMeetingsByDate(meetings: MentorshipTimelineItem[]) {
 
     return groups;
   }, []);
+}
+function doMeetingsOverlap(
+  first: MentorshipTimelineItem,
+  second: MentorshipTimelineItem
+) {
+  return first.startAt < second.endAt && second.startAt < first.endAt;
+}
+
+function getTimelineLayoutItems(
+  meetings: MentorshipTimelineItem[]
+): TimelineLayoutItem[] {
+  const sortedMeetings = [...meetings].sort((a, b) => {
+    if (a.startAt !== b.startAt) {
+      return a.startAt - b.startAt;
+    }
+
+    return a.endAt - b.endAt;
+  });
+
+  const laneMeetings: MentorshipTimelineItem[][] = [];
+
+  return sortedMeetings.map((meeting) => {
+    const reusableLaneIndex = laneMeetings.findIndex((lane) =>
+      lane.every((existingMeeting) => !doMeetingsOverlap(existingMeeting, meeting))
+    );
+
+    const lane =
+      reusableLaneIndex === -1 ? laneMeetings.length : reusableLaneIndex;
+
+    if (!laneMeetings[lane]) {
+      laneMeetings[lane] = [];
+    }
+
+    laneMeetings[lane].push(meeting);
+
+    return {
+      meeting,
+      lane,
+    };
+  });
 }
 
 function TimelineMeetingSlot({
@@ -544,10 +589,10 @@ export function MentorshipTimelineGrid({
               </div>
             ) : (
               meetingsByDate.map((group) => {
-                const rowHeight = Math.max(
-                  ROW_HEIGHT,
-                  group.meetings.length * ROW_HEIGHT
-                );
+                const layoutItems = getTimelineLayoutItems(group.meetings);
+                const laneCount = Math.max(1, ...layoutItems.map((item) => item.lane + 1));
+
+                const rowHeight = Math.max(ROW_HEIGHT, laneCount * ROW_HEIGHT);
 
                 const nowPosition = getNowPosition({
                   dayStart: group.dayStart,
@@ -621,13 +666,13 @@ export function MentorshipTimelineGrid({
                         </div>
                       )}
 
-                      {group.meetings.map((meeting, index) => (
+                      {layoutItems.map(({ meeting, lane }) => (
                         <TimelineMeetingSlot
                           key={meeting.id}
                           meeting={meeting}
                           startHour={startHour}
                           hourWidth={hourWidth}
-                          index={index}
+                          index={lane}
                         />
                       ))}
                     </div>
