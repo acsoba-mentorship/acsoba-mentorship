@@ -6,6 +6,7 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
 import { useCurrentUser } from "@/app/CurrentUserProvider";
 import {
+  CalendarDays,
   Inbox,
   LayoutDashboard,
   LogOut,
@@ -218,6 +219,9 @@ export function SiteNav() {
           { href: "/mentorships", label: "My Mentorships", icon: Users },
           { href: "/requests", label: "My Requests", icon: Inbox },
         ]
+      : []),
+    ...(currentUser?.mentorProfile || currentUser?.menteeProfile
+      ? [{ href: "/mentorships/timeline", label: "Timeline", icon: CalendarDays }]
       : []),
     { href: "/profile", label: "Profile", icon: User },
   ];
