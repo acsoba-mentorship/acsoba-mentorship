@@ -152,6 +152,8 @@ export function ScheduleMeetingDialog({
     });
   }, [draftEndAt, draftStartAt, existingMeetings]);
 
+  const isPastMeeting = Number.isFinite(draftStartAt) && draftStartAt < Date.now();
+
   function resetForm() {
     setTitle(defaultTitle);
     setDescription("");
@@ -269,6 +271,15 @@ export function ScheduleMeetingDialog({
                     ? `"${conflictingMeetings[0].title}"`
                     : `${conflictingMeetings.length} existing meetings`}
                   .
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {isPastMeeting && (
+              <Alert variant="destructive">
+                <AlertTriangle className="size-4" />
+                <AlertDescription>
+                  This meeting starts in the past.
                 </AlertDescription>
               </Alert>
             )}

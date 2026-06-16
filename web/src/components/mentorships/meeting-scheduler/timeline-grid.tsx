@@ -65,6 +65,7 @@ function formatDay(timestamp: number) {
     weekday: "short",
     month: "short",
     day: "numeric",
+    year: "numeric",
   }).format(new Date(timestamp));
 }
 
