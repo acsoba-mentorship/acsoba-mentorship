@@ -1,10 +1,11 @@
 "use client";
 
-import { type CSSProperties, useMemo } from "react";
-import { CalendarClock, Clock3 } from "lucide-react";
+import { type CSSProperties, useEffect, useMemo, useState } from "react";
+import { CalendarClock } from "lucide-react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "../../../../convex/_generated/api";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 type MentorshipMeeting = FunctionReturnType<
   typeof api.mentorshipMeetings.listByMentorship
@@ -15,6 +16,11 @@ const DEFAULT_TIMELINE_END_HOUR = 20;
 const TIMELINE_MIN_HOUR = 0;
 const TIMELINE_MAX_HOUR = 24;
 const TIMELINE_GUTTER_HOURS = 1;
+
+const DATE_COLUMN_WIDTH = 128;
+const HOUR_COLUMN_WIDTH = 96;
+const ROW_HEIGHT = 56;
+const MIN_SLOT_WIDTH = 64;
 
 function getLocalDateKey(timestamp: number) {
   const date = new Date(timestamp);
@@ -42,18 +48,14 @@ function formatTimelineDate(timestamp: number) {
 
 function formatTimelineTime(timestamp: number) {
   return new Intl.DateTimeFormat(undefined, {
-    hour: "numeric",
+    hour: "2-digit",
     minute: "2-digit",
+    hour12: false,
   }).format(new Date(timestamp));
 }
 
 function formatTimelineHour(hour: number) {
-  const date = new Date();
-  date.setHours(hour, 0, 0, 0);
-
-  return new Intl.DateTimeFormat(undefined, {
-    hour: "numeric",
-  }).format(date);
+  return `${hour}:00`;
 }
 
 function getDurationLabel(startAt: number, endAt: number) {
@@ -84,9 +86,9 @@ function getTimelineBounds(meetings: MentorshipMeeting[]) {
   const latestEndHour = Math.max(
     ...meetings.map((meeting) => {
       const end = new Date(meeting.endAt);
-      const hasMinutes = end.getMinutes() > 0 || end.getSeconds() > 0;
+      const hasPartialHour = end.getMinutes() > 0 || end.getSeconds() > 0;
 
-      return end.getHours() + (hasMinutes ? 1 : 0);
+      return end.getHours() + (hasPartialHour ? 1 : 0);
     })
   );
 
@@ -102,47 +104,49 @@ function getTimelineBounds(meetings: MentorshipMeeting[]) {
   };
 }
 
-function getMeetingSlotStyle({
+function getSlotStyle({
   meeting,
   startHour,
-  endHour,
 }: {
   meeting: MentorshipMeeting;
   startHour: number;
-  endHour: number;
 }): CSSProperties {
   const dayStart = getStartOfLocalDay(meeting.startAt);
-  const rangeStart = dayStart + startHour * 60 * 60 * 1000;
-  const totalMinutes = (endHour - startHour) * 60;
-  const startOffsetMinutes = Math.max(0, (meeting.startAt - rangeStart) / 60000);
-  const durationMinutes = Math.max(
-    15,
-    (meeting.endAt - meeting.startAt) / 60000
+  const timelineStart = dayStart + startHour * 60 * 60 * 1000;
+
+  const startOffsetMinutes = Math.max(
+    0,
+    Math.round((meeting.startAt - timelineStart) / 60000)
   );
 
-  const left = Math.min(100, (startOffsetMinutes / totalMinutes) * 100);
+  const durationMinutes = Math.max(
+    15,
+    Math.round((meeting.endAt - meeting.startAt) / 60000)
+  );
+
+  const left = (startOffsetMinutes / 60) * HOUR_COLUMN_WIDTH;
   const width = Math.max(
-    8,
-    Math.min(100 - left, (durationMinutes / totalMinutes) * 100)
+    MIN_SLOT_WIDTH,
+    (durationMinutes / 60) * HOUR_COLUMN_WIDTH
   );
 
   return {
-    left: `${left}%`,
-    width: `calc(${width}% - 0.5rem)`,
+    left,
+    width,
   };
 }
 
-function getCurrentTimeMarkerStyle({
+function getCurrentTimePosition({
   dayStart,
   startHour,
   endHour,
+  now,
 }: {
   dayStart: number;
   startHour: number;
   endHour: number;
-}): CSSProperties | null {
-  const now = Date.now();
-
+  now: number;
+}) {
   if (getLocalDateKey(now) !== getLocalDateKey(dayStart)) {
     return null;
   }
@@ -154,25 +158,27 @@ function getCurrentTimeMarkerStyle({
     return null;
   }
 
-  return {
-    left: `${((now - rangeStart) / (rangeEnd - rangeStart)) * 100}%`,
-  };
+  return ((now - rangeStart) / (60 * 60 * 1000)) * HOUR_COLUMN_WIDTH;
 }
 
-function getStatusBadge(status: MentorshipMeeting["status"]) {
+function getStatusClasses(status: MentorshipMeeting["status"]) {
   if (status === "scheduled") {
-    return <Badge className="border-0 bg-blue-50 text-blue-700">Scheduled</Badge>;
+    return "border-blue-200 bg-blue-50 text-blue-700";
   }
 
   if (status === "completed") {
-    return (
-      <Badge className="border-0 bg-emerald-50 text-emerald-700">
-        Completed
-      </Badge>
-    );
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
   }
 
-  return <Badge variant="secondary">Cancelled</Badge>;
+  return "border-muted bg-muted text-muted-foreground";
+}
+
+function getStatusLabel(status: MentorshipMeeting["status"]) {
+  if (status === "completed") {
+    return "Done";
+  }
+
+  return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
 function groupMeetingsByDate(meetings: MentorshipMeeting[]) {
@@ -202,6 +208,16 @@ function groupMeetingsByDate(meetings: MentorshipMeeting[]) {
 }
 
 export function MeetingTimeline({ meetings }: { meetings: MentorshipMeeting[] }) {
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setNow(Date.now());
+    }, 60_000);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
   const { startHour, endHour } = useMemo(
     () => getTimelineBounds(meetings),
     [meetings]
@@ -216,37 +232,48 @@ export function MeetingTimeline({ meetings }: { meetings: MentorshipMeeting[] })
     [endHour, startHour]
   );
 
-  const meetingsByDate = useMemo(
-    () => groupMeetingsByDate(meetings),
-    [meetings]
-  );
+  const meetingsByDate = useMemo(() => groupMeetingsByDate(meetings), [
+    meetings,
+  ]);
+
+  const timelineWidth = hours.length * HOUR_COLUMN_WIDTH;
+  const totalWidth = DATE_COLUMN_WIDTH + timelineWidth;
 
   return (
-    <div className="overflow-hidden rounded-xl border bg-muted/20">
-      <div className="flex items-center justify-between gap-3 border-b bg-background px-4 py-3">
-        <div>
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <CalendarClock className="size-4 text-muted-foreground" />
-            Timeline view
-          </div>
+    <div className="overflow-hidden rounded-lg border bg-background">
+      <div className="flex items-center justify-between border-b px-3 py-2">
+        <div className="flex items-center gap-2 text-sm font-semibold">
+          <CalendarClock className="size-4 text-muted-foreground" />
+          Timeline view
         </div>
 
-        <Badge variant="secondary">{meetings.length} scheduled</Badge>
+        <Badge variant="secondary" className="h-6 px-2 text-xs">
+          {meetings.length} scheduled
+        </Badge>
       </div>
 
       <div className="overflow-x-auto">
-        <div className="min-w-[760px]">
-          <div className="grid grid-cols-[8rem_1fr] border-b bg-muted/40 text-xs text-muted-foreground">
-            <div className="border-r px-4 py-3 font-medium">Date</div>
+        <div className="relative" style={{ width: totalWidth }}>
+          <div
+            className="sticky top-0 z-10 grid h-11 border-b bg-background text-xs text-muted-foreground"
+            style={{
+              gridTemplateColumns: `${DATE_COLUMN_WIDTH}px ${timelineWidth}px`,
+            }}
+          >
+            <div className="sticky left-0 z-20 flex items-center border-r bg-background px-3 font-medium">
+              Date
+            </div>
 
-            <div
-              className="relative grid"
-              style={{
-                gridTemplateColumns: `repeat(${hours.length}, minmax(4.5rem, 1fr))`,
-              }}
-            >
+            <div className="relative">
               {hours.map((hour) => (
-                <div key={hour} className="border-r px-2 py-3 last:border-r-0">
+                <div
+                  key={hour}
+                  className="absolute inset-y-0 flex items-center border-l px-2"
+                  style={{
+                    left: (hour - startHour) * HOUR_COLUMN_WIDTH,
+                    width: HOUR_COLUMN_WIDTH,
+                  }}
+                >
                   {formatTimelineHour(hour)}
                 </div>
               ))}
@@ -254,18 +281,30 @@ export function MeetingTimeline({ meetings }: { meetings: MentorshipMeeting[] })
           </div>
 
           {meetingsByDate.map((group) => {
-            const currentMarkerStyle = getCurrentTimeMarkerStyle({
+            const rowHeight = Math.max(
+              ROW_HEIGHT,
+              group.meetings.length * ROW_HEIGHT
+            );
+
+            const currentTimePosition = getCurrentTimePosition({
               dayStart: group.dayStart,
               startHour,
               endHour,
+              now,
             });
 
             return (
               <div
                 key={group.dateKey}
-                className="grid grid-cols-[8rem_1fr] border-b last:border-b-0"
+                className="grid border-b last:border-b-0"
+                style={{
+                  gridTemplateColumns: `${DATE_COLUMN_WIDTH}px ${timelineWidth}px`,
+                }}
               >
-                <div className="border-r bg-background px-4 py-4">
+                <div
+                  className="sticky left-0 z-10 border-r bg-background px-3 py-3"
+                  style={{ minHeight: rowHeight }}
+                >
                   <p className="text-sm font-medium">
                     {formatTimelineDate(group.dayStart)}
                   </p>
@@ -276,31 +315,43 @@ export function MeetingTimeline({ meetings }: { meetings: MentorshipMeeting[] })
                 </div>
 
                 <div
-                  className="relative bg-background"
+                  className="relative"
                   style={{
-                    minHeight: `${Math.max(
-                      7,
-                      group.meetings.length * 4.75 + 0.75
-                    )}rem`,
+                    width: timelineWidth,
+                    minHeight: rowHeight,
                   }}
                 >
-                  <div
-                    className="absolute inset-0 grid"
-                    style={{
-                      gridTemplateColumns: `repeat(${hours.length}, minmax(4.5rem, 1fr))`,
-                    }}
-                  >
-                    {hours.map((hour) => (
-                      <div key={hour} className="border-r last:border-r-0" />
-                    ))}
-                  </div>
-
-                  {currentMarkerStyle && (
+                  {hours.map((hour) => (
                     <div
-                      className="absolute bottom-2 top-2 z-20 w-px bg-primary"
-                      style={currentMarkerStyle}
+                      key={hour}
+                      className="absolute inset-y-0 border-l"
+                      style={{
+                        left: (hour - startHour) * HOUR_COLUMN_WIDTH,
+                        width: HOUR_COLUMN_WIDTH,
+                      }}
+                    />
+                  ))}
+
+                  {hours.flatMap((hour) =>
+                    [15, 30, 45].map((minute) => (
+                      <div
+                        key={`${hour}-${minute}`}
+                        className="absolute inset-y-0 border-l border-border/30"
+                        style={{
+                          left:
+                            (hour - startHour) * HOUR_COLUMN_WIDTH +
+                            (minute / 60) * HOUR_COLUMN_WIDTH,
+                        }}
+                      />
+                    ))
+                  )}
+
+                  {currentTimePosition !== null && (
+                    <div
+                      className="absolute bottom-1 top-1 z-20 w-0.5 bg-red-500"
+                      style={{ left: currentTimePosition }}
                     >
-                      <span className="absolute -top-2 left-1 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground">
+                      <span className="absolute -top-5 left-1/2 -translate-x-1/2 rounded bg-red-500 px-1.5 py-0.5 text-[10px] font-medium text-white shadow-sm">
                         Now
                       </span>
                     </div>
@@ -309,33 +360,38 @@ export function MeetingTimeline({ meetings }: { meetings: MentorshipMeeting[] })
                   {group.meetings.map((meeting, index) => (
                     <div
                       key={meeting._id}
-                      className="absolute z-10 rounded-lg border bg-card p-3 shadow-sm"
+                      title={`${meeting.title} • ${formatTimelineTime(
+                        meeting.startAt
+                      )} • ${getDurationLabel(
+                        meeting.startAt,
+                        meeting.endAt
+                      )}`}
+                      className={cn(
+                        "absolute inset-y-1 cursor-default overflow-hidden rounded-md border px-2 py-1.5 shadow-sm transition hover:ring-2 hover:ring-foreground/20",
+                        getStatusClasses(meeting.status)
+                      )}
                       style={{
-                        ...getMeetingSlotStyle({ meeting, startHour, endHour }),
-                        top: `${0.75 + index * 4.75}rem`,
+                        ...getSlotStyle({ meeting, startHour }),
+                        top: 6 + index * ROW_HEIGHT,
+                        height: ROW_HEIGHT - 12,
                       }}
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">
+                      <div className="flex h-full flex-col justify-center">
+                        <div className="flex items-center justify-between gap-1">
+                          <p className="truncate text-xs font-medium">
                             {meeting.title}
                           </p>
 
-                          <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                            <Clock3 className="size-3" />
-                            {formatTimelineTime(meeting.startAt)} -{" "}
-                            {getDurationLabel(meeting.startAt, meeting.endAt)}
-                          </p>
+                          <span className="shrink-0 rounded bg-background/70 px-1 py-0.5 text-[10px] font-medium">
+                            {getStatusLabel(meeting.status)}
+                          </span>
                         </div>
 
-                        {getStatusBadge(meeting.status)}
-                      </div>
-
-                      {meeting.location && (
-                        <p className="mt-2 truncate text-xs text-muted-foreground">
-                          {meeting.location}
+                        <p className="mt-0.5 truncate text-[11px] opacity-80">
+                          {formatTimelineTime(meeting.startAt)} ·{" "}
+                          {getDurationLabel(meeting.startAt, meeting.endAt)}
                         </p>
-                      )}
+                      </div>
                     </div>
                   ))}
                 </div>
