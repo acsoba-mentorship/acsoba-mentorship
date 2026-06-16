@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 type TimelineMeeting = FunctionReturnType<
   typeof api.mentorshipMeetings.listForCurrentUser
 >[number];
+type TimelineRoleFilter = "both" | "mentor" | "mentee";
 
 const DEFAULT_TIMELINE_START_HOUR = 9;
 const DEFAULT_TIMELINE_END_HOUR = 18;
@@ -227,6 +228,7 @@ function TimelineGrid({ meetings }: { meetings: TimelineMeeting[] }) {
   const [zoom, setZoom] = useState(100);
   const [now, setNow] = useState(Date.now());
   const [showFromTodayOnly, setShowFromTodayOnly] = useState(false);
+  const [roleFilter, setRoleFilter] = useState<TimelineRoleFilter>("both");
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(Date.now()), 60_000);
@@ -235,15 +237,33 @@ function TimelineGrid({ meetings }: { meetings: TimelineMeeting[] }) {
 
   const todayStart = useMemo(() => getStartOfLocalDay(now), [now]);
 
+  const mentorMeetingCount = useMemo(
+    () => meetings.filter((meeting) => meeting.viewerRole === "mentor").length,
+    [meetings]
+  );
+
+  const menteeMeetingCount = useMemo(
+    () => meetings.filter((meeting) => meeting.viewerRole === "mentee").length,
+    [meetings]
+  );
+
+  const roleFilteredMeetings = useMemo(() => {
+    if (roleFilter === "both") {
+      return meetings;
+    }
+
+    return meetings.filter((meeting) => meeting.viewerRole === roleFilter);
+  }, [meetings, roleFilter]);
+
   const visibleMeetings = useMemo(() => {
-    const filteredMeetings = showFromTodayOnly
-      ? meetings.filter(
+    const dateFilteredMeetings = showFromTodayOnly
+      ? roleFilteredMeetings.filter(
           (meeting) => getStartOfLocalDay(meeting.startAt) >= todayStart
         )
-      : meetings;
+      : roleFilteredMeetings;
 
-    return [...filteredMeetings].sort((a, b) => a.startAt - b.startAt);
-  }, [meetings, showFromTodayOnly, todayStart]);
+    return [...dateFilteredMeetings].sort((a, b) => a.startAt - b.startAt);
+  }, [roleFilteredMeetings, showFromTodayOnly, todayStart]);
 
   const { startHour, endHour } = useMemo(
     () => getTimelineBounds(visibleMeetings),
@@ -295,32 +315,77 @@ function TimelineGrid({ meetings }: { meetings: TimelineMeeting[] }) {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="inline-flex rounded-md border border-slate-800 bg-slate-950 p-1 text-[11px]">
-          <button
-            type="button"
-            onClick={() => setShowFromTodayOnly(false)}
-            className={cn(
-              "rounded px-2.5 py-1 font-medium transition",
-              !showFromTodayOnly
-                ? "bg-blue-500 text-white"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            All meetings
-          </button>
+        <div className="flex flex-wrap gap-2">
+          <div className="inline-flex rounded-md border border-slate-800 bg-slate-950 p-1 text-[11px]">
+            <button
+              type="button"
+              onClick={() => setRoleFilter("both")}
+              className={cn(
+                "rounded px-2.5 py-1 font-medium transition",
+                roleFilter === "both"
+                  ? "bg-blue-500 text-white"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Both
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setShowFromTodayOnly(true)}
-            className={cn(
-              "rounded px-2.5 py-1 font-medium transition",
-              showFromTodayOnly
-                ? "bg-blue-500 text-white"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            From today
-          </button>
+            <button
+              type="button"
+              onClick={() => setRoleFilter("mentee")}
+              className={cn(
+                "rounded px-2.5 py-1 font-medium transition",
+                roleFilter === "mentee"
+                  ? "bg-blue-500 text-white"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              As mentee
+              {menteeMeetingCount > 0 ? ` (${menteeMeetingCount})` : ""}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setRoleFilter("mentor")}
+              className={cn(
+                "rounded px-2.5 py-1 font-medium transition",
+                roleFilter === "mentor"
+                  ? "bg-blue-500 text-white"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              As mentor
+              {mentorMeetingCount > 0 ? ` (${mentorMeetingCount})` : ""}
+            </button>
+          </div>
+
+          <div className="inline-flex rounded-md border border-slate-800 bg-slate-950 p-1 text-[11px]">
+            <button
+              type="button"
+              onClick={() => setShowFromTodayOnly(false)}
+              className={cn(
+                "rounded px-2.5 py-1 font-medium transition",
+                !showFromTodayOnly
+                  ? "bg-blue-500 text-white"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              All meetings
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowFromTodayOnly(true)}
+              className={cn(
+                "rounded px-2.5 py-1 font-medium transition",
+                showFromTodayOnly
+                  ? "bg-blue-500 text-white"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              From today
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground">
@@ -395,7 +460,7 @@ function TimelineGrid({ meetings }: { meetings: TimelineMeeting[] }) {
                 </div>
 
                 <div className="flex min-h-16 items-center bg-slate-950 px-4 text-[11px] text-slate-500">
-                  No meetings to show for this filter.
+                  No meetings to show for the selected role and date filters.
                 </div>
               </div>
             ) : (
