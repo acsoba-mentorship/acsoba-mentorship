@@ -1,8 +1,14 @@
 "use client";
 
-import { type ReactNode, useState } from "react";
-import { useMutation } from "convex/react";
-import { CalendarPlus, CheckCircle2, Download, ExternalLink } from "lucide-react";
+import { type ReactNode, useMemo, useState } from "react";
+import { useMutation, useQuery } from "convex/react";
+import {
+  AlertTriangle,
+  CalendarPlus,
+  CheckCircle2,
+  Download,
+  ExternalLink,
+} from "lucide-react";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import { api } from "../../../../convex/_generated/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -96,6 +102,7 @@ export function ScheduleMeetingDialog({
   children?: ReactNode;
 }) {
   const createMeeting = useMutation(api.mentorshipMeetings.createMeeting);
+  const existingMeetings = useQuery(api.mentorshipMeetings.listForCurrentUser);
 
   const defaultTitle = `Mentoring session${
     participantName ? ` with ${participantName}` : ""
@@ -112,6 +119,38 @@ export function ScheduleMeetingDialog({
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const draftStartAt = useMemo(() => {
+    return new Date(startValue).getTime();
+  }, [startValue]);
+
+  const draftEndAt = useMemo(() => {
+    const duration = Number(durationMinutes);
+
+    if (!Number.isFinite(draftStartAt) || !Number.isFinite(duration)) {
+      return Number.NaN;
+    }
+
+    return draftStartAt + duration * 60 * 1000;
+  }, [draftStartAt, durationMinutes]);
+
+  const conflictingMeetings = useMemo(() => {
+    if (
+      !existingMeetings ||
+      !Number.isFinite(draftStartAt) ||
+      !Number.isFinite(draftEndAt)
+    ) {
+      return [];
+    }
+
+    return existingMeetings.filter((meeting) => {
+      if (meeting.status !== "scheduled") {
+        return false;
+      }
+
+      return draftStartAt < meeting.endAt && meeting.startAt < draftEndAt;
+    });
+  }, [draftEndAt, draftStartAt, existingMeetings]);
 
   function resetForm() {
     setTitle(defaultTitle);
@@ -218,6 +257,19 @@ export function ScheduleMeetingDialog({
             {errorMessage && (
               <Alert variant="destructive">
                 <AlertDescription>{errorMessage}</AlertDescription>
+              </Alert>
+            )}
+
+            {conflictingMeetings.length > 0 && (
+              <Alert variant="destructive">
+                <AlertTriangle className="size-4" />
+                <AlertDescription>
+                  This meeting overlaps with{" "}
+                  {conflictingMeetings.length === 1
+                    ? `"${conflictingMeetings[0].title}"`
+                    : `${conflictingMeetings.length} existing meetings`}
+                  .
+                </AlertDescription>
               </Alert>
             )}
 
