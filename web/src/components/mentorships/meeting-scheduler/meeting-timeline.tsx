@@ -208,6 +208,19 @@ function groupMeetingsByDate(meetings: MentorshipMeeting[]) {
 export function MeetingTimeline({ meetings }: { meetings: MentorshipMeeting[] }) {
   const [zoom, setZoom] = useState(100);
   const [now, setNow] = useState(Date.now());
+  const [showFromTodayOnly, setShowFromTodayOnly] = useState(false);
+
+    const todayStart = useMemo(() => getStartOfLocalDay(now), [now]);
+
+    const visibleMeetings = useMemo(() => {
+    if (!showFromTodayOnly) {
+        return meetings;
+    }
+
+    return meetings.filter(
+        (meeting) => getStartOfLocalDay(meeting.startAt) >= todayStart
+    );
+    }, [meetings, showFromTodayOnly, todayStart]);
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(Date.now()), 60_000);
@@ -215,8 +228,8 @@ export function MeetingTimeline({ meetings }: { meetings: MentorshipMeeting[] })
   }, []);
 
   const { startHour, endHour } = useMemo(
-    () => getTimelineBounds(meetings),
-    [meetings]
+    () => getTimelineBounds(visibleMeetings),
+    [visibleMeetings]
   );
 
   const hours = useMemo(
@@ -229,8 +242,8 @@ export function MeetingTimeline({ meetings }: { meetings: MentorshipMeeting[] })
   );
 
   const meetingsByDate = useMemo(
-    () => groupMeetingsByDate(meetings),
-    [meetings]
+    () => groupMeetingsByDate(visibleMeetings),
+    [visibleMeetings]
   );
 
   const hourWidth = BASE_HOUR_WIDTH * (zoom / 100);
@@ -262,6 +275,34 @@ export function MeetingTimeline({ meetings }: { meetings: MentorshipMeeting[] })
             className="h-1.5 w-full accent-blue-500"
         />
         </div>
+      
+      <div className="inline-flex rounded-md border border-slate-800 bg-slate-950 p-1 text-[11px]">
+        <button
+          type="button"
+          onClick={() => setShowFromTodayOnly(false)}
+          className={cn(
+            "rounded px-2.5 py-1 font-medium transition",
+            !showFromTodayOnly
+              ? "bg-blue-500 text-white"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          All meetings
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowFromTodayOnly(true)}
+          className={cn(
+            "rounded px-2.5 py-1 font-medium transition",
+            showFromTodayOnly
+              ? "bg-blue-500 text-white"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          From today
+        </button>
+      </div>
 
       <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground">
         <div className="flex items-center gap-1.5">
@@ -286,7 +327,7 @@ export function MeetingTimeline({ meetings }: { meetings: MentorshipMeeting[] })
         </div>
 
         <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] text-slate-300">
-            {meetings.length} meeting{meetings.length === 1 ? "" : "s"}
+            {visibleMeetings.length} meeting{visibleMeetings.length === 1 ? "" : "s"}
         </span>
         </div>
 
@@ -319,7 +360,23 @@ export function MeetingTimeline({ meetings }: { meetings: MentorshipMeeting[] })
                 </div>
             </div>
 
-            {meetingsByDate.map((group) => {
+            {meetingsByDate.length === 0 ? (
+                <div
+                  className="grid border-b border-slate-800 last:border-b-0"
+                  style={{
+                    gridTemplateColumns: `${DAY_COLUMN_WIDTH}px ${timelineWidth}px`,
+                  }}
+                >
+                  <div className="sticky left-0 z-10 border-r border-slate-800 bg-slate-950 px-4 py-3">
+                    <p className="text-xs font-semibold text-slate-100">No days</p>
+                  </div>
+
+                  <div className="flex min-h-16 items-center bg-slate-950 px-4 text-[11px] text-slate-500">
+                    No meetings to show for this filter.
+                  </div>
+                </div>
+              ) : (
+                meetingsByDate.map((group) => {
                 const rowHeight = Math.max(
                 ROW_HEIGHT,
                 group.meetings.length * ROW_HEIGHT
@@ -441,7 +498,8 @@ export function MeetingTimeline({ meetings }: { meetings: MentorshipMeeting[] })
                     </div>
                 </div>
                 );
-            })}
+              })
+            )}
             </div>
         </div>
       </div>
