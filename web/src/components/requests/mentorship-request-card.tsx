@@ -9,7 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, Inbox, MessageSquare, Sparkles } from "lucide-react";
+import { Calendar, Clock, Inbox, MessageSquare, Sparkles } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import type { RequestStatus } from "./types";
 
@@ -18,6 +18,7 @@ export function RequestStatusBadge({ status }: { status: RequestStatus }) {
     pending: { label: "Pending", className: "border-0 bg-amber-50 text-amber-700" },
     accepted: { label: "Accepted", className: "border-0 bg-emerald-50 text-emerald-700" },
     rejected: { label: "Rejected", className: "border-0 bg-red-50 text-red-700" },
+    expired: { label: "Expired", className: "border-0 bg-slate-100 text-slate-700" },
   };
   const style = styles[status];
 
@@ -33,6 +34,7 @@ export function MentorshipRequestCard({
   tagsLabel,
   status,
   createdAt,
+  expiresAt,
   showActions = false,
   isUpdating = false,
   onAccept,
@@ -46,6 +48,7 @@ export function MentorshipRequestCard({
   tagsLabel: string;
   status: RequestStatus;
   createdAt: number;
+  expiresAt?: number;
   showActions?: boolean;
   isUpdating?: boolean;
   onAccept?: () => void;
@@ -95,9 +98,25 @@ export function MentorshipRequestCard({
         )}
 
         <div className="flex items-center justify-between border-t border-border/50 pt-4">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Calendar className="size-4" />
-            Requested {formatDate(createdAt)}
+          <div className="flex flex-col gap-1 text-sm text-muted-foreground sm:flex-row sm:items-center sm:gap-4">
+            <span className="flex items-center gap-2">
+              <Calendar className="size-4" />
+              Requested {formatDate(createdAt)}
+            </span>
+
+            {expiresAt && status === "pending" && (
+              <span className="flex items-center gap-2">
+                <Clock className="size-4" />
+                Expires {formatDate(expiresAt)}
+              </span>
+            )}
+
+            {expiresAt && status === "expired" && (
+              <span className="flex items-center gap-2">
+                <Clock className="size-4" />
+                Expired {formatDate(expiresAt)}
+              </span>
+            )}
           </div>
           {showActions && onAccept && onReject && (
             <div className="flex gap-2">
