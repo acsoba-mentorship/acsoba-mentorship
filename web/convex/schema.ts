@@ -16,7 +16,8 @@ const mentorshipRequests = defineTable(mentorshipRequestsTableFields)
   .index("by_menteeId", ["menteeId"])
   .index("by_mentorId_status", ["mentorId", "status"])
   .index("by_menteeId_status", ["menteeId", "status"])
-  .index("by_mentorId_menteeId", ["mentorId", "menteeId"]);
+  .index("by_mentorId_menteeId", ["mentorId", "menteeId"])
+  .index("by_status_expiresAt", ["status", "expiresAt"]);
 
 const mentorships = defineTable(mentorshipsTableFields)
   .index("by_mentorId", ["mentorId"])

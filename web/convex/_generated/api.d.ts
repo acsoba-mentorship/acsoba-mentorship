@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as crons from "../crons.js";
 import type * as helper from "../helper.js";
 import type * as init from "../init.js";
 import type * as mentorRequests from "../mentorRequests.js";
@@ -38,6 +39,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  crons: typeof crons;
   helper: typeof helper;
   init: typeof init;
   mentorRequests: typeof mentorRequests;
