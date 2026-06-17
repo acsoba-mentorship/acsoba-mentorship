@@ -13,11 +13,61 @@ import { mentorshipRequestsTableFields } from "./mentorRequests/fields";
 import { createMentorshipFromAcceptedRequest } from "./mentorships";
 import { fetchUsersById } from "./helper";
 
+export const MENTORSHIP_REQUEST_EXPIRY_DAYS = 7;
+
+const MENTORSHIP_REQUEST_EXPIRY_MS =
+  MENTORSHIP_REQUEST_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+
+type RequestWithExpiresAt = Doc<"mentorshipRequests"> & {
+  expiresAt: number;
+};
+
+function getRequestExpiresAt(
+  request: Pick<Doc<"mentorshipRequests">, "createdAt" | "expiresAt">
+) {
+  return request.expiresAt ?? request.createdAt + MENTORSHIP_REQUEST_EXPIRY_MS;
+}
+
+function withExpiresAt(request: Doc<"mentorshipRequests">): RequestWithExpiresAt {
+  return {
+    ...request,
+    expiresAt: getRequestExpiresAt(request),
+  };
+}
+
+function isRequestExpired(
+  request: Pick<
+    Doc<"mentorshipRequests">,
+    "status" | "createdAt" | "expiresAt"
+  >,
+  now = Date.now()
+) {
+  return request.status === "pending" && getRequestExpiresAt(request) <= now;
+}
+
+async function expireRequestIfNeeded(
+  ctx: MutationCtx,
+  request: Doc<"mentorshipRequests">,
+  now = Date.now()
+) {
+  if (!isRequestExpired(request, now)) {
+    return false;
+  }
+
+  await ctx.db.patch("mentorshipRequests", request._id, {
+    status: "expired",
+    expiresAt: getRequestExpiresAt(request),
+    updatedAt: now,
+  });
+
+  return true;
+}
+
 /**
  * Builds mentor-facing request view data.
  */
 function buildMentorRequestView(
-  request: Doc<"mentorshipRequests">,
+  request: RequestWithExpiresAt,
   mentee: Doc<"users"> | null
 ) {
   const name = mentee?.name?.trim() || "Unknown user";
@@ -34,7 +84,7 @@ function buildMentorRequestView(
  * Builds mentee-facing request view data.
  */
 function buildMenteeRequestView(
-  request: Doc<"mentorshipRequests">,
+  request: RequestWithExpiresAt,
   mentor: Doc<"users"> | null
 ) {
   const mentorView = mentor
@@ -76,7 +126,7 @@ export async function requestsByMentor(
 
   const menteeById = await fetchUsersById(ctx, requests.map((r) => r.menteeId));
   return requests.map((request) =>
-    buildMentorRequestView(request, menteeById.get(request.menteeId) ?? null)
+    buildMentorRequestView(withExpiresAt(request), menteeById.get(request.menteeId) ?? null)
   );
 }
 
@@ -103,7 +153,7 @@ export async function requestsByMentee(
 
   const mentorById = await fetchUsersById(ctx, requests.map((r) => r.mentorId));
   return requests.map((request) =>
-    buildMenteeRequestView(request, mentorById.get(request.mentorId) ?? null)
+    buildMenteeRequestView(withExpiresAt(request), mentorById.get(request.mentorId) ?? null)
   );
 }
 
@@ -196,7 +246,17 @@ async function createRequestForMentor(
       q.eq("mentorId", mentorId).eq("status", "pending")
     )
     .collect();
-  const existingPending = pendingRequestsForMentor.find((r) => r.menteeId === menteeId);
+
+  const now = Date.now();
+
+  for (const request of pendingRequestsForMentor) {
+    await expireRequestIfNeeded(ctx, request, now);
+  }
+
+  const existingPending = pendingRequestsForMentor.find(
+    (r) => r.menteeId === menteeId && !isRequestExpired(r, now)
+  );
+
   if (existingPending) {
     throw new Error("You already have a pending request for this mentor");
   }
@@ -207,17 +267,21 @@ async function createRequestForMentor(
       q.eq("mentorId", mentorId).eq("status", "accepted")
     )
     .collect();
-  const existingAccepted = acceptedRequestsForMentor.find((r) => r.menteeId === menteeId);
+
+  const existingAccepted = acceptedRequestsForMentor.find(
+    (r) => r.menteeId === menteeId
+  );
+
   if (existingAccepted) {
     throw new Error("You are already connected with this mentor");
   }
 
-  const now = Date.now();
   return ctx.db.insert("mentorshipRequests", {
     mentorId,
     menteeId,
     status: "pending",
     message: trimmedMessage,
+    expiresAt: now + MENTORSHIP_REQUEST_EXPIRY_MS,
     createdAt: now,
     updatedAt: now,
   });
@@ -247,9 +311,16 @@ export async function acceptRequest(
     throw new Error("Only pending requests can be accepted");
   }
 
+  const now = Date.now();
+
+  if (await expireRequestIfNeeded(ctx, request, now)) {
+    throw new Error("This mentorship request has expired");
+  }
+
   await ctx.db.patch("mentorshipRequests", requestId, {
     status: "accepted",
-    updatedAt: Date.now(),
+    expiresAt: getRequestExpiresAt(request),
+    updatedAt: now,
   });
 
   await createMentorshipFromAcceptedRequest(ctx, { requestId });

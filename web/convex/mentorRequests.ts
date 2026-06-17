@@ -1,4 +1,4 @@
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import * as MentorRequestsModel from "./model/mentorRequests";
 import { mentorshipRequestsTableFields } from "./model/mentorRequests/fields";
@@ -56,4 +56,13 @@ export const acceptRequest = mutation({
 export const rejectRequest = mutation({
   args: { requestId: v.id("mentorshipRequests") },
   handler: (ctx, args) => MentorRequestsModel.rejectRequest(ctx, args),
+});
+
+/**
+ * Expires pending requests whose response window has elapsed.
+ * This is called by the Convex cron job.
+ */
+export const expireStalePendingRequests = internalMutation({
+  args: {},
+  handler: (ctx) => MentorRequestsModel.expireStalePendingRequests(ctx),
 });
