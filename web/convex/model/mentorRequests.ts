@@ -358,3 +358,25 @@ export async function rejectRequest(
   });
   return requestId;
 }
+
+/**
+ * Expires pending mentorship requests whose response window has elapsed.
+ */
+export async function expireStalePendingRequests(ctx: MutationCtx) {
+  const now = Date.now();
+
+  const pendingRequests = await ctx.db
+    .query("mentorshipRequests")
+    .withIndex("by_status_expiresAt", (q) => q.eq("status", "pending"))
+    .collect();
+
+  let expiredCount = 0;
+
+  for (const request of pendingRequests) {
+    if (await expireRequestIfNeeded(ctx, request, now)) {
+      expiredCount += 1;
+    }
+  }
+
+  return { expiredCount };
+}
