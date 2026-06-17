@@ -15,24 +15,47 @@ import { fetchUsersById } from "./helper";
 
 export const MENTORSHIP_REQUEST_EXPIRY_DAYS = 7;
 
-const MENTORSHIP_REQUEST_EXPIRY_MS =
-  MENTORSHIP_REQUEST_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+/**
+ * App expiry timezone.
+ *
+ * Requests expire at 23:59 Singapore time.
+ * Singapore does not use daylight saving time, so UTC+8 is safe here.
+ */
+const APP_TIME_ZONE_OFFSET_MS = 8 * 60 * 60 * 1000;
 
-type RequestWithExpiresAt = Doc<"mentorshipRequests"> & {
+type MentorshipRequestWithExpiresAt = Doc<"mentorshipRequests"> & {
   expiresAt: number;
 };
+
+/**
+ * Returns the expiry timestamp for a request.
+ *
+ * The request date counts as day 1.
+ *
+ * Example:
+ * - Request created on Saturday, any time
+ * - Expiry is Friday 23:59:59.999 Singapore time
+ */
+function getMentorshipRequestExpiresAt(createdAt: number) {
+  const appLocalDate = new Date(createdAt + APP_TIME_ZONE_OFFSET_MS);
+
+  const expiryAsUtcDate = Date.UTC(
+    appLocalDate.getUTCFullYear(),
+    appLocalDate.getUTCMonth(),
+    appLocalDate.getUTCDate() + MENTORSHIP_REQUEST_EXPIRY_DAYS - 1,
+    23,
+    59,
+    59,
+    999
+  );
+
+  return expiryAsUtcDate - APP_TIME_ZONE_OFFSET_MS;
+}
 
 function getRequestExpiresAt(
   request: Pick<Doc<"mentorshipRequests">, "createdAt" | "expiresAt">
 ) {
-  return request.expiresAt ?? request.createdAt + MENTORSHIP_REQUEST_EXPIRY_MS;
-}
-
-function withExpiresAt(request: Doc<"mentorshipRequests">): RequestWithExpiresAt {
-  return {
-    ...request,
-    expiresAt: getRequestExpiresAt(request),
-  };
+  return request.expiresAt ?? getMentorshipRequestExpiresAt(request.createdAt);
 }
 
 function isRequestExpired(
@@ -62,12 +85,11 @@ async function expireRequestIfNeeded(
 
   return true;
 }
-
 /**
  * Builds mentor-facing request view data.
  */
 function buildMentorRequestView(
-  request: RequestWithExpiresAt,
+  request: MentorshipRequestWithExpiresAt,
   mentee: Doc<"users"> | null
 ) {
   const name = mentee?.name?.trim() || "Unknown user";
@@ -84,7 +106,7 @@ function buildMentorRequestView(
  * Builds mentee-facing request view data.
  */
 function buildMenteeRequestView(
-  request: RequestWithExpiresAt,
+  request: MentorshipRequestWithExpiresAt,
   mentor: Doc<"users"> | null
 ) {
   const mentorView = mentor
@@ -125,9 +147,20 @@ export async function requestsByMentor(
     .collect();
 
   const menteeById = await fetchUsersById(ctx, requests.map((r) => r.menteeId));
-  return requests.map((request) =>
-    buildMentorRequestView(withExpiresAt(request), menteeById.get(request.menteeId) ?? null)
-  );
+  const now = Date.now();
+
+  return requests.map((request) => {
+    const requestForView: MentorshipRequestWithExpiresAt = {
+      ...request,
+      status: isRequestExpired(request, now) ? "expired" : request.status,
+      expiresAt: getRequestExpiresAt(request),
+    };
+
+    return buildMentorRequestView(
+      requestForView,
+      menteeById.get(request.menteeId) ?? null
+    );
+  });
 }
 
 /**
@@ -152,9 +185,20 @@ export async function requestsByMentee(
     .collect();
 
   const mentorById = await fetchUsersById(ctx, requests.map((r) => r.mentorId));
-  return requests.map((request) =>
-    buildMenteeRequestView(withExpiresAt(request), mentorById.get(request.mentorId) ?? null)
-  );
+  const now = Date.now();
+
+  return requests.map((request) => {
+    const requestForView: MentorshipRequestWithExpiresAt = {
+      ...request,
+      status: isRequestExpired(request, now) ? "expired" : request.status,
+      expiresAt: getRequestExpiresAt(request),
+    };
+
+    return buildMenteeRequestView(
+      requestForView,
+      mentorById.get(request.mentorId) ?? null
+    );
+  });
 }
 
 /**
@@ -281,7 +325,7 @@ async function createRequestForMentor(
     menteeId,
     status: "pending",
     message: trimmedMessage,
-    expiresAt: now + MENTORSHIP_REQUEST_EXPIRY_MS,
+    expiresAt: getMentorshipRequestExpiresAt(now),
     createdAt: now,
     updatedAt: now,
   });
@@ -352,10 +396,18 @@ export async function rejectRequest(
     throw new Error("Only pending requests can be rejected");
   }
 
+  const now = Date.now();
+
+  if (await expireRequestIfNeeded(ctx, request, now)) {
+    throw new Error("This mentorship request has expired");
+  }
+
   await ctx.db.patch("mentorshipRequests", requestId, {
     status: "rejected",
-    updatedAt: Date.now(),
+    expiresAt: getRequestExpiresAt(request),
+    updatedAt: now,
   });
+
   return requestId;
 }
 
