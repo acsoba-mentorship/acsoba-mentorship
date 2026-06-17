@@ -67,6 +67,7 @@ function RequestSection({
           tagsLabel="Areas of Interest"
           status={request.status}
           createdAt={request.createdAt}
+          expiresAt={request.expiresAt}
           showActions={showActions}
           isUpdating={activeRequestId === request._id}
           onAccept={() => onAccept(request._id)}
@@ -121,6 +122,7 @@ export default function MentorRequestsPage() {
   const pendingRequests = filteredRequests.filter((r) => r.status === "pending");
   const acceptedRequests = filteredRequests.filter((r) => r.status === "accepted");
   const rejectedRequests = filteredRequests.filter((r) => r.status === "rejected");
+  const expiredRequests = filteredRequests.filter((r) => r.status === "expired");
 
   const handleRequestAction = async (
     requestId: MentorRequest["_id"],
@@ -207,6 +209,18 @@ export default function MentorRequestsPage() {
               </Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="expired" className="gap-2">
+            <History className="size-4" />
+            Expired
+            {expiredRequests.length > 0 && requests && (
+              <Badge
+                variant="secondary"
+                className="ml-1 h-5 min-w-5 px-1.5 text-xs"
+              >
+                {expiredRequests.length}
+              </Badge>
+            )}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="pending" className="mt-6">
@@ -260,6 +274,27 @@ export default function MentorRequestsPage() {
               emptyIcon={History}
               emptyTitle="No rejected requests"
               emptyDescription="Rejected mentorship requests will appear here."
+              showActions={false}
+              activeRequestId={activeRequestId}
+              onAccept={(requestId) =>
+                void handleRequestAction(requestId, acceptRequest)
+              }
+              onReject={(requestId) =>
+                void handleRequestAction(requestId, rejectRequest)
+              }
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="expired" className="mt-6">
+          {requests === undefined || currentUser === undefined ? (
+            <RequestsLoadingState />
+          ) : (
+            <RequestSection
+              requests={expiredRequests}
+              emptyIcon={History}
+              emptyTitle="No expired requests"
+              emptyDescription="Expired mentorship requests will appear here."
               showActions={false}
               activeRequestId={activeRequestId}
               onAccept={(requestId) =>

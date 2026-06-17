@@ -46,7 +46,7 @@ function RequestList({
   return (
     <div className="space-y-4">
       {requests.map((request) => (
-        <MentorshipRequestCard
+         <MentorshipRequestCard
           key={request._id}
           name={request.mentorName}
           initials={request.mentorInitials}
@@ -56,6 +56,7 @@ function RequestList({
           tagsLabel="Mentor Expertise"
           status={request.status}
           createdAt={request.createdAt}
+          expiresAt={request.expiresAt}
         />
       ))}
     </div>
@@ -101,6 +102,7 @@ export default function MenteeRequestsPage() {
   const pendingRequests = filteredRequests.filter((r) => r.status === "pending");
   const acceptedRequests = filteredRequests.filter((r) => r.status === "accepted");
   const rejectedRequests = filteredRequests.filter((r) => r.status === "rejected");
+  const expiredRequests = filteredRequests.filter((r) => r.status === "expired");
 
   return (
     <div className="space-y-8">
@@ -108,7 +110,7 @@ export default function MenteeRequestsPage() {
         <h1 className="text-3xl font-bold">My Mentorship Requests</h1>
         <p className="mt-2 text-muted-foreground">
           Track the mentorship requests you&apos;ve sent and see whether mentors
-          have accepted or rejected them.
+          have accepted, rejected, or let expire.
         </p>
       </div>
 
@@ -157,6 +159,17 @@ export default function MenteeRequestsPage() {
               </Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="expired" className="gap-2">
+            Expired
+            {expiredRequests.length > 0 && requests && (
+              <Badge
+                variant="secondary"
+                className="ml-1 h-5 min-w-5 px-1.5 text-xs"
+              >
+                {expiredRequests.length}
+              </Badge>
+            )}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="pending" className="mt-6">
@@ -191,6 +204,18 @@ export default function MenteeRequestsPage() {
               requests={rejectedRequests}
               emptyTitle="No rejected requests"
               emptyDescription="Rejected mentorship requests will appear here."
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="expired" className="mt-6">
+          {requests === undefined || currentUser === undefined ? (
+            <RequestsLoadingState />
+          ) : (
+            <RequestList
+              requests={expiredRequests}
+              emptyTitle="No expired requests"
+              emptyDescription="Requests that are not accepted before their response window closes will appear here so you can continue your mentor search."
             />
           )}
         </TabsContent>
