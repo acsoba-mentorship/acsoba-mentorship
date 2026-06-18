@@ -38,7 +38,6 @@ type PendingPulseSurvey = {
   _id: Id<"mentorshipPulseSurveys">;
   mentorshipId: Id<"mentorships">;
   respondentRole: "mentor" | "mentee";
-  cycleNumber: number;
   dueAt: number;
   counterpartName: string;
   counterpartTitle: string;
@@ -58,28 +57,36 @@ function RatingField({
   onChange: (value: Rating) => void;
 }) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <div>
         <Label>{label}</Label>
-        <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
       </div>
 
-      <div className="grid grid-cols-5 gap-2">
-        {ratingOptions.map((option) => (
-          <button
-            key={option}
-            type="button"
-            onClick={() => onChange(option)}
-            className={cn(
-              "rounded-md border px-3 py-2 text-sm font-medium transition",
-              value === option
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border bg-background hover:bg-muted"
-            )}
-          >
-            {option}
-          </button>
-        ))}
+      <div
+        className="grid gap-2"
+        style={{ gridTemplateColumns: "repeat(5, minmax(0, 1fr))" }}
+      >
+        {ratingOptions.map((option) => {
+          const isSelected = value === option;
+
+          return (
+            <button
+              key={option}
+              type="button"
+              aria-pressed={isSelected}
+              onClick={() => onChange(option)}
+              className={cn(
+                "flex h-11 items-center justify-center rounded-md border text-sm font-semibold transition",
+                isSelected
+                  ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                  : "border-border bg-background text-foreground hover:bg-muted"
+              )}
+            >
+              {option}
+            </button>
+          );
+        })}
       </div>
 
       <div className="flex justify-between text-xs text-muted-foreground">
@@ -289,7 +296,6 @@ export function PulseSurveyPanel({
                       Check-in with {survey.counterpartName}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Cycle {survey.cycleNumber} · Due{" "}
                       {formatDate(survey.dueAt)}
                     </p>
                   </div>
