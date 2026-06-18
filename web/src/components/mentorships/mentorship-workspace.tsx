@@ -8,6 +8,7 @@ import { MentorshipGoals } from "./mentorship-goals";
 import { MentorshipSummaryCard } from "./mentorship-summary-card";
 import { MentorshipTodos } from "./mentorship-todos";
 import { MentorshipMeetingsPanel } from "@/components/mentorships/meeting-scheduler";
+import { PulseSurveyPanel } from "@/components/mentorships/pulse-survey-panel";
 
 export function MentorshipWorkspace({
   mentorshipId,
@@ -47,6 +48,8 @@ export function MentorshipWorkspace({
         participantName={participant?.name}
         canManageMeetings={canManageSessions}
       />
+
+      <PulseSurveyPanel mentorshipId={mentorshipId} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <MentorshipGoals mentorshipId={mentorshipId} goals={workspace.goals} />
