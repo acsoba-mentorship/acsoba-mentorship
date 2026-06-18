@@ -26,9 +26,12 @@ import type * as model_mentorshipTodos_fields from "../model/mentorshipTodos/fie
 import type * as model_mentorshipWorkspace from "../model/mentorshipWorkspace.js";
 import type * as model_mentorships from "../model/mentorships.js";
 import type * as model_mentorships_fields from "../model/mentorships/fields.js";
+import type * as model_pulseSurveys from "../model/pulseSurveys.js";
+import type * as model_pulseSurveys_fields from "../model/pulseSurveys/fields.js";
 import type * as model_users from "../model/users.js";
 import type * as model_users_fields from "../model/users/fields.js";
 import type * as model_users_validators from "../model/users/validators.js";
+import type * as pulseSurveys from "../pulseSurveys.js";
 import type * as users from "../users.js";
 import type * as verification from "../verification.js";
 
@@ -57,9 +60,12 @@ declare const fullApi: ApiFromModules<{
   "model/mentorshipWorkspace": typeof model_mentorshipWorkspace;
   "model/mentorships": typeof model_mentorships;
   "model/mentorships/fields": typeof model_mentorships_fields;
+  "model/pulseSurveys": typeof model_pulseSurveys;
+  "model/pulseSurveys/fields": typeof model_pulseSurveys_fields;
   "model/users": typeof model_users;
   "model/users/fields": typeof model_users_fields;
   "model/users/validators": typeof model_users_validators;
+  pulseSurveys: typeof pulseSurveys;
   users: typeof users;
   verification: typeof verification;
 }>;

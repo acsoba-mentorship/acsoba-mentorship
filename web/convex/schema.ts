@@ -5,6 +5,7 @@ import { mentorshipsTableFields } from "./model/mentorships/fields";
 import { mentorshipGoalsTableFields } from "./model/mentorshipGoals/fields";
 import { mentorshipTodosTableFields } from "./model/mentorshipTodos/fields";
 import { mentorshipMeetingsTableFields } from "./model/mentorshipMeetings/fields";
+import { mentorshipPulseSurveysTableFields } from "./model/pulseSurveys/fields";
 
 const users = defineTable(usersTableFields)
   .index("by_token", ["tokenIdentifier"])
@@ -25,7 +26,8 @@ const mentorships = defineTable(mentorshipsTableFields)
   .index("by_mentorId_status", ["mentorId", "status"])
   .index("by_menteeId_status", ["menteeId", "status"])
   .index("by_mentorId_menteeId", ["mentorId", "menteeId"])
-  .index("by_requestId", ["requestId"]);
+  .index("by_requestId", ["requestId"])
+  .index("by_status", ["status"]);
 
 const mentorshipGoals = defineTable(mentorshipGoalsTableFields)
   .index("by_mentorshipId", ["mentorshipId"])
@@ -43,6 +45,20 @@ const mentorshipMeetings = defineTable(mentorshipMeetingsTableFields)
   .index("by_mentorshipId_startAt", ["mentorshipId", "startAt"])
   .index("by_mentorshipId_status", ["mentorshipId", "status"]);
 
+const mentorshipPulseSurveys = defineTable(mentorshipPulseSurveysTableFields)
+  .index("by_mentorshipId", ["mentorshipId"])
+  .index("by_respondentId_status", ["respondentId", "status"])
+  .index("by_mentorshipId_respondentId_status", [
+    "mentorshipId",
+    "respondentId",
+    "status",
+  ])
+  .index("by_mentorshipId_cycleNumber_respondentRole", [
+    "mentorshipId",
+    "cycleNumber",
+    "respondentRole",
+  ]);
+
 export default defineSchema({
   users,
   mentorshipRequests,
@@ -50,4 +66,5 @@ export default defineSchema({
   mentorshipGoals,
   mentorshipTodos,
   mentorshipMeetings,
+  mentorshipPulseSurveys,
 });

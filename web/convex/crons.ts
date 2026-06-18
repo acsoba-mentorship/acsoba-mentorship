@@ -9,4 +9,10 @@ crons.hourly(
   internal.mentorRequests.expireStalePendingRequests
 );
 
+crons.daily(
+  "generate due pulse surveys",
+  { hourUTC: 16, minuteUTC: 0 },
+  internal.pulseSurveys.generateDuePulseSurveys
+);
+
 export default crons;
