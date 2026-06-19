@@ -218,27 +218,9 @@ export function SiteNav() {
       ? [
           { href: "/mentorships", label: "My Mentorships", icon: Users },
           { href: "/requests", label: "My Requests", icon: Inbox },
+          { href: "/mentorships/timeline", label: "Timeline", icon: CalendarDays },
         ]
       : []),
-
-    ...(currentUser?.mentorProfile
-      ? [
-          {
-            href: "/mentor/mentorships/timeline",
-            label: "Timeline",
-            icon: CalendarDays,
-          },
-        ]
-      : currentUser?.menteeProfile
-        ? [
-            {
-              href: "/mentorships/timeline",
-              label: "Timeline",
-              icon: CalendarDays,
-            },
-          ]
-        : []),
-
     { href: "/profile", label: "Profile", icon: User },
   ];
 

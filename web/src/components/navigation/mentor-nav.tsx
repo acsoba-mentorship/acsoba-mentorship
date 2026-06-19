@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ArrowLeft,
+  CalendarDays,
   LayoutDashboard,
   Inbox,
   Users,
@@ -33,6 +34,7 @@ const mentorNavLinks = [
   { href: "/mentor", label: "Dashboard", icon: LayoutDashboard },
   { href: "/mentor/requests", label: "Requests", icon: Inbox },
   { href: "/mentor/mentorships", label: "Mentorships", icon: Users },
+  { href: "/mentor/mentorships/timeline", label: "Timeline", icon: CalendarDays },
   { href: "/profile", label: "Mentor Profile", icon: UserCog },
   { href: "/mentor/settings", label: "Settings", icon: Settings },
 ] as const;
