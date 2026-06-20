@@ -6,6 +6,7 @@ import {
   ExternalLink,
   MapPin,
   Trash2,
+  XCircle,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -174,14 +175,18 @@ function CalendarActions({ event }: { event: CalendarEventDetails }) {
 
 export function MeetingCard({
   meeting,
+  onCancel,
   onDelete,
   onComplete,
   isUpdating,
+  canManageMeetings,
 }: {
   meeting: MentorshipMeeting;
+  onCancel: (meetingId: Id<"mentorshipMeetings">) => void;
   onDelete: (meetingId: Id<"mentorshipMeetings">) => void;
   onComplete: (meetingId: Id<"mentorshipMeetings">) => void;
   isUpdating: boolean;
+  canManageMeetings: boolean;
 }) {
   const event: CalendarEventDetails = {
     title: meeting.title,
@@ -219,7 +224,7 @@ export function MeetingCard({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {meeting.status === "scheduled" && (
+          {canManageMeetings && meeting.status === "scheduled" && (
             <Button
               type="button"
               variant="outline"
@@ -233,21 +238,42 @@ export function MeetingCard({
             </Button>
           )}
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={isUpdating}
-            onClick={() => {
-              if (window.confirm("Delete this meeting?")) {
-                onDelete(meeting._id);
-              }
-            }}
-            className="border-red-200 bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800"
-          >
-            <Trash2 className="size-4" />
-            Delete
-          </Button>
+          {canManageMeetings && meeting.status === "scheduled" && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isUpdating}
+              onClick={() => {
+                if (window.confirm("Cancel this meeting?")) {
+                  onCancel(meeting._id);
+                }
+              }}
+              className="border-red-200 bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800"
+            >
+              <XCircle className="size-4" />
+              Cancel
+            </Button>
+          )}
+
+          {canManageMeetings && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isUpdating}
+              onClick={() => {
+                if (window.confirm("Delete this meeting?")) {
+                  onDelete(meeting._id);
+                }
+              }}
+              className="border-red-200 bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800"
+            >
+              <Trash2 className="size-4" />
+              Delete
+            </Button>
+          )}
+
         </div>
       </div>
 

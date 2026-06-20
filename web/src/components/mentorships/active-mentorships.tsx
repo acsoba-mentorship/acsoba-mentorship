@@ -90,6 +90,7 @@ function ActiveMentorshipCard({
   tagsLabel,
   email,
   phoneNumber,
+  canManageMeetings = false,
 }: {
   name: string;
   initials: string;
@@ -103,6 +104,7 @@ function ActiveMentorshipCard({
   tagsLabel: string;
   email?: string | null;
   phoneNumber?: string | null;
+  canManageMeetings?: boolean;
 }) {
   return (
     <Card>
@@ -176,15 +178,17 @@ function ActiveMentorshipCard({
             <Link href={profileHref}>View Profile</Link>
           </Button>
 
-          <ScheduleMeetingDialog
-            mentorshipId={mentorshipId}
-            participantName={name}
-          >
-            <Button type="button" variant="outline" size="sm">
-              <CalendarPlus className="size-4" />
-              Schedule Meeting
-            </Button>
-          </ScheduleMeetingDialog>
+          {canManageMeetings && (
+            <ScheduleMeetingDialog
+              mentorshipId={mentorshipId}
+              participantName={name}
+            >
+              <Button type="button" variant="outline" size="sm">
+                <CalendarPlus className="size-4" />
+                Schedule Meeting
+              </Button>
+            </ScheduleMeetingDialog>
+          )}
         </div>
 
       </CardContent>
@@ -236,6 +240,7 @@ export function ActiveMentorshipsForMentor() {
           tagsLabel="Mentee interests"
           email={mentorship.menteeEmail}
           phoneNumber={mentorship.menteePhoneNumber}
+          canManageMeetings
         />
       ))}
     </div>

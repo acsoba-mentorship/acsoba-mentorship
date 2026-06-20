@@ -11,8 +11,10 @@ import { MentorshipMeetingsPanel } from "@/components/mentorships/meeting-schedu
 
 export function MentorshipWorkspace({
   mentorshipId,
+  canManageMeetings = false,
 }: {
   mentorshipId: Id<"mentorships">;
+  canManageMeetings?: boolean;
 }) {
   const workspace = useQuery(api.mentorshipWorkspace.getWorkspace, {
     mentorshipId,
@@ -30,6 +32,7 @@ export function MentorshipWorkspace({
 
   const participant =
     workspace.role === "mentor" ? workspace.mentee : workspace.mentor;
+  const canManageSessions = canManageMeetings && workspace.role === "mentor";
 
   return (
     <div className="space-y-8">
@@ -42,6 +45,7 @@ export function MentorshipWorkspace({
       <MentorshipMeetingsPanel
         mentorshipId={mentorshipId}
         participantName={participant?.name}
+        canManageMeetings={canManageSessions}
       />
 
       <div className="grid gap-6 lg:grid-cols-2">

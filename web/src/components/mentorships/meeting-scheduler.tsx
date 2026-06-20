@@ -22,14 +22,17 @@ export { ScheduleMeetingDialog };
 export function MentorshipMeetingsPanel({
   mentorshipId,
   participantName,
+  canManageMeetings = false,
 }: {
   mentorshipId: Id<"mentorships">;
   participantName?: string | null;
+  canManageMeetings?: boolean;
 }) {
   const meetings = useQuery(api.mentorshipMeetings.listByMentorship, {
     mentorshipId,
   });
 
+  const cancelMeeting = useMutation(api.mentorshipMeetings.cancelMeeting);
   const completeMeeting = useMutation(api.mentorshipMeetings.completeMeeting);
   const deleteMeeting = useMutation(api.mentorshipMeetings.deleteMeeting);
 
@@ -96,10 +99,12 @@ export function MentorshipMeetingsPanel({
             </CardDescription>
           </div>
 
-          <ScheduleMeetingDialog
-            mentorshipId={mentorshipId}
-            participantName={participantName}
-          />
+          {canManageMeetings && (
+            <ScheduleMeetingDialog
+              mentorshipId={mentorshipId}
+              participantName={participantName}
+            />
+          )}
         </div>
       </CardHeader>
 
@@ -156,13 +161,15 @@ export function MentorshipMeetingsPanel({
                     key={meeting._id}
                     meeting={meeting}
                     isUpdating={updatingMeetingIds.has(meeting._id)}
+                    canManageMeetings={canManageMeetings}
+                    onCancel={(meetingId) =>
+                      withMeetingUpdate(meetingId, () => cancelMeeting({ meetingId }))
+                    }
                     onDelete={(meetingId) =>
                       withMeetingUpdate(meetingId, () => deleteMeeting({ meetingId }))
                     }
                     onComplete={(meetingId) =>
-                      withMeetingUpdate(meetingId, () =>
-                        completeMeeting({ meetingId })
-                      )
+                      withMeetingUpdate(meetingId, () => completeMeeting({ meetingId }))
                     }
                   />
                 ))}
@@ -179,6 +186,10 @@ export function MentorshipMeetingsPanel({
                   key={meeting._id}
                   meeting={meeting}
                   isUpdating={updatingMeetingIds.has(meeting._id)}
+                  canManageMeetings={canManageMeetings}
+                  onCancel={(meetingId) =>
+                    withMeetingUpdate(meetingId, () => cancelMeeting({ meetingId }))
+                  }
                   onDelete={(meetingId) =>
                     withMeetingUpdate(meetingId, () => deleteMeeting({ meetingId }))
                   }

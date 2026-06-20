@@ -52,6 +52,12 @@ function assertValidMeetingTime(startAt: number, endAt: number) {
   }
 }
 
+function assertCanManageMeetings(role: "mentor" | "mentee") {
+  if (role !== "mentor") {
+    throw new Error("Only mentors can schedule, cancel, complete, or delete meetings.");
+  }
+}
+
 async function getAuthorizedMentorship(
   ctx: Ctx,
   mentorshipId: Id<"mentorships">
@@ -199,8 +205,12 @@ export async function createMeeting(
     endAt: number;
   }
 ) {
-  const { currentUser } = await getAuthorizedMentorship(ctx, mentorshipId);
+  const { currentUser, role } = await getAuthorizedMentorship(
+    ctx,
+    mentorshipId
+  );
 
+  assertCanManageMeetings(role);
   assertValidMeetingTime(startAt, endAt);
 
   const now = Date.now();
@@ -223,7 +233,13 @@ export async function cancelMeeting(
   ctx: MutationCtx,
   { meetingId }: { meetingId: Id<"mentorshipMeetings"> }
 ) {
-  const { meeting } = await getMeetingAndAuthorize(ctx, meetingId);
+  const { meeting, role } = await getMeetingAndAuthorize(ctx, meetingId);
+
+  assertCanManageMeetings(role);
+
+  if (meeting.status !== "scheduled") {
+    throw new Error("Only scheduled meetings can be cancelled.");
+  }
 
   await ctx.db.patch(meeting._id, {
     status: "cancelled",
@@ -237,7 +253,12 @@ export async function completeMeeting(
   ctx: MutationCtx,
   { meetingId }: { meetingId: Id<"mentorshipMeetings"> }
 ) {
-  const { meeting } = await getMeetingAndAuthorize(ctx, meetingId);
+  const { meeting, role } = await getMeetingAndAuthorize(ctx, meetingId);
+  assertCanManageMeetings(role);
+
+  if (meeting.status !== "scheduled") {
+    throw new Error("Only scheduled meetings can be completed.");
+  }
 
   await ctx.db.patch(meeting._id, {
     status: "completed",
@@ -251,7 +272,8 @@ export async function deleteMeeting(
   ctx: MutationCtx,
   { meetingId }: { meetingId: Id<"mentorshipMeetings"> }
 ) {
-  const { meeting } = await getMeetingAndAuthorize(ctx, meetingId);
+  const { meeting, role } = await getMeetingAndAuthorize(ctx, meetingId);
+  assertCanManageMeetings(role);
 
   await ctx.db.delete(meeting._id);
 
