@@ -226,6 +226,7 @@ export function MeetingCard({
               size="sm"
               disabled={isUpdating}
               onClick={() => onComplete(meeting._id)}
+              className="border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800"
             >
               <CheckCircle2 className="size-4" />
               Complete
@@ -242,6 +243,7 @@ export function MeetingCard({
                 onDelete(meeting._id);
               }
             }}
+            className="border-red-200 bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800"
           >
             <Trash2 className="size-4" />
             Delete
