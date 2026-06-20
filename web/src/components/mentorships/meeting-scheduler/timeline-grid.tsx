@@ -123,7 +123,7 @@ function getStatusStyles(status: MentorshipTimelineStatus) {
     return {
       dot: "bg-blue-500",
       border: "border-l-blue-500",
-      text: "text-blue-400",
+      text: "text-blue-700",
     };
   }
 
@@ -131,14 +131,14 @@ function getStatusStyles(status: MentorshipTimelineStatus) {
     return {
       dot: "bg-yellow-400",
       border: "border-l-yellow-400",
-      text: "text-yellow-300",
+      text: "text-yellow-700",
     };
   }
 
   return {
     dot: "bg-red-500",
     border: "border-l-red-500",
-    text: "text-red-400",
+    text: "text-red-700",
   };
 }
 
@@ -290,15 +290,15 @@ function TimelineMeetingSlot({
         {meeting.title}
       </p>
 
-      <div className="mt-1 flex min-w-0 items-center gap-0.5 text-[10px] leading-none text-slate-300">
+      <div className="mt-1 flex min-w-0 items-center gap-0.5 text-[10px] leading-none text-muted-foreground">
         <Clock3 className="size-2.5 shrink-0" />
         <span className="shrink-0">{formatTime(meeting.startAt)}</span>
-        <span className="text-slate-600">•</span>
+        <span className="text-muted-foreground/60">•</span>
         <span className="truncate">{getStatusLabel(meeting.status)}</span>
 
         {meeting.counterpartName && (
           <>
-            <span className="text-slate-600">•</span>
+            <span className="text-muted-foreground/60">•</span>
             <span className="truncate">{meeting.counterpartName}</span>
           </>
         )}
@@ -307,8 +307,8 @@ function TimelineMeetingSlot({
   );
 
   const className = cn(
-    "absolute overflow-hidden rounded border-l-4 bg-slate-900/95 px-1.5 py-1 shadow-sm ring-1 ring-slate-800/80 transition",
-    meeting.href && "hover:bg-slate-800/95 hover:ring-slate-700",
+    "absolute overflow-hidden rounded border-l-4 bg-card px-1.5 py-1 shadow-sm ring-1 ring-border transition",
+    meeting.href && "hover:bg-muted/70",
     status.border
   );
 
@@ -440,7 +440,7 @@ export function MentorshipTimelineGrid({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2">
           {showRoleFilter && (
-            <div className="inline-flex rounded-md border border-slate-800 bg-slate-950 p-1 text-[11px]">
+            <div className="inline-flex rounded-md border bg-muted p-1 text-[11px]">
               <button
                 type="button"
                 onClick={() => setRoleFilter("both")}
@@ -484,7 +484,7 @@ export function MentorshipTimelineGrid({
             </div>
           )}
 
-          <div className="inline-flex rounded-md border border-slate-800 bg-slate-950 p-1 text-[11px]">
+          <div className="inline-flex rounded-md border bg-muted p-1 text-[11px]">
             <button
               type="button"
               onClick={() => setShowFromTodayOnly(false)}
@@ -529,14 +529,14 @@ export function MentorshipTimelineGrid({
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-slate-800 bg-slate-950 text-slate-100">
-        <div className="flex items-center justify-between border-b border-slate-800 px-3 py-2">
+      <div className="overflow-hidden rounded-lg border bg-background text-foreground">
+        <div className="flex items-center justify-between border-b px-3 py-2">
           <div className="flex items-center gap-1.5 text-xs font-semibold">
-            <CalendarClock className="size-3.5 text-slate-400" />
+            <CalendarClock className="size-3.5 text-muted-foreground" />
             Timeline view
           </div>
 
-          <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] text-slate-300">
+          <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
             {visibleMeetings.length} meeting
             {visibleMeetings.length === 1 ? "" : "s"}
           </span>
@@ -545,21 +545,21 @@ export function MentorshipTimelineGrid({
         <div className="overflow-x-auto">
           <div className="relative" style={{ width: totalWidth }}>
             <div
-              className="grid border-b border-slate-800"
+              className="grid border-b"
               style={{
                 gridTemplateColumns: `${DAY_COLUMN_WIDTH}px ${timelineWidth}px`,
                 height: HEADER_HEIGHT,
               }}
             >
-              <div className="sticky left-0 z-20 flex items-center border-r border-slate-800 bg-slate-950 px-4 text-xs font-semibold">
+              <div className="sticky left-0 z-20 flex items-center border-r bg-background px-4 text-xs font-semibold">
                 Days
               </div>
 
-              <div className="relative bg-slate-950">
+              <div className="relative bg-background">
                 {hours.map((hour) => (
                   <div
                     key={hour}
-                    className="absolute inset-y-0 flex items-center border-l border-slate-800 px-2 text-xs text-slate-400"
+                    className="absolute inset-y-0 flex items-center border-l px-2 text-xs text-muted-foreground"
                     style={{
                       left: (hour - startHour) * hourWidth,
                       width: hourWidth,
@@ -573,18 +573,18 @@ export function MentorshipTimelineGrid({
 
             {meetingsByDate.length === 0 ? (
               <div
-                className="grid border-b border-slate-800 last:border-b-0"
+                className="grid border-b last:border-b-0"
                 style={{
                   gridTemplateColumns: `${DAY_COLUMN_WIDTH}px ${timelineWidth}px`,
                 }}
               >
-                <div className="sticky left-0 z-10 border-r border-slate-800 bg-slate-950 px-4 py-3">
-                  <p className="text-xs font-semibold text-slate-100">
+                <div className="sticky left-0 z-10 border-r bg-background px-4 py-3">
+                  <p className="text-xs font-semibold text-foreground">
                     No days
                   </p>
                 </div>
 
-                <div className="flex min-h-16 items-center bg-slate-950 px-4 text-[11px] text-slate-500">
+                <div className="flex min-h-16 items-center bg-background px-4 text-[11px] text-muted-foreground">
                   No meetings to show for the selected filters.
                 </div>
               </div>
@@ -606,26 +606,26 @@ export function MentorshipTimelineGrid({
                 return (
                   <div
                     key={group.dateKey}
-                    className="grid border-b border-slate-800 last:border-b-0"
+                    className="grid border-b last:border-b-0"
                     style={{
                       gridTemplateColumns: `${DAY_COLUMN_WIDTH}px ${timelineWidth}px`,
                     }}
                   >
                     <div
-                      className="sticky left-0 z-10 border-r border-slate-800 bg-slate-950 px-4 py-3"
+                      className="sticky left-0 z-10 border-r bg-background px-4 py-3"
                       style={{ minHeight: rowHeight }}
                     >
-                      <p className="text-xs font-semibold text-slate-100">
+                      <p className="text-xs font-semibold text-foreground">
                         {formatDay(group.dayStart)}
                       </p>
-                      <p className="mt-0.5 text-[11px] text-slate-500">
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">
                         {group.meetings.length} session
                         {group.meetings.length === 1 ? "" : "s"}
                       </p>
                     </div>
 
                     <div
-                      className="relative bg-slate-950"
+                      className="relative bg-muted/30"
                       style={{
                         width: timelineWidth,
                         minHeight: rowHeight,
@@ -634,7 +634,7 @@ export function MentorshipTimelineGrid({
                       {hours.map((hour) => (
                         <div
                           key={hour}
-                          className="absolute inset-y-0 border-l border-slate-800"
+                          className="absolute inset-y-0 border-l"
                           style={{
                             left: (hour - startHour) * hourWidth,
                             width: hourWidth,
@@ -646,7 +646,7 @@ export function MentorshipTimelineGrid({
                         [15, 30, 45].map((minute) => (
                           <div
                             key={`${hour}-${minute}`}
-                            className="absolute inset-y-0 border-l border-slate-900"
+                            className="absolute inset-y-0 border-l border-border/50"
                             style={{
                               left:
                                 (hour - startHour) * hourWidth +
@@ -658,10 +658,10 @@ export function MentorshipTimelineGrid({
 
                       {nowPosition !== null && (
                         <div
-                          className="absolute bottom-0 top-0 z-30 w-px bg-blue-300/70"
+                          className="absolute bottom-0 top-0 z-30 w-px bg-blue-400"
                           style={{ left: nowPosition }}
                         >
-                          <span className="absolute -top-7 left-1/2 -translate-x-1/2 rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-slate-100 shadow">
+                          <span className="absolute -top-7 left-1/2 -translate-x-1/2 rounded bg-foreground px-1.5 py-0.5 text-[10px] font-semibold leading-none text-background shadow">
                             Now: {formatTime(now)}
                           </span>
                         </div>
