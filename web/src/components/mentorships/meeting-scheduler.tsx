@@ -104,13 +104,7 @@ export function MentorshipMeetingsPanel({
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {orderedMeetings.length === 0 ? (
-          <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-            No sessions scheduled yet.
-          </p>
-        ) : (
-          <MeetingTimeline meetings={orderedMeetings} />
-        )}
+        <MeetingTimeline meetings={orderedMeetings} />
 
         <div className="space-y-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
