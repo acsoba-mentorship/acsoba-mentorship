@@ -7,6 +7,8 @@ import {
   MapPin,
   Trash2,
 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { FunctionReturnType } from "convex/server";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import { api } from "../../../../convex/_generated/api";
@@ -46,24 +48,126 @@ function MeetingStatusBadge({
 
 function CalendarActions({ event }: { event: CalendarEventDetails }) {
   const links = buildExternalCalendarLinks(event);
+  const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [menuStyle, setMenuStyle] = useState<{ top: number; left: number }>({
+    top: 0,
+    left: 0,
+  });
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (closeTimeoutRef.current) {
+        clearTimeout(closeTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  function handleOpen() {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+    setOpen(true);
+  }
+
+  function handleClose() {
+    // Small grace period so moving the cursor from the trigger to the
+    // portal-rendered menu (which lives outside this DOM subtree) doesn't
+    // get treated as "left the menu area" and close it prematurely.
+    closeTimeoutRef.current = setTimeout(() => {
+      setOpen(false);
+    }, 150);
+  }
+
+  useEffect(() => {
+    if (!open || !triggerRef.current) return;
+
+    const updatePosition = () => {
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const menuWidth = 192; // matches min-w-48
+      const gap = 8;
+      const viewportWidth = window.innerWidth;
+
+      // Prefer opening to the right of the button. If there isn't enough
+      // room before the edge of the viewport, fall back to the left side
+      // instead of letting it overflow off-screen.
+      const spaceOnRight = viewportWidth - rect.right;
+      const openToRight = spaceOnRight >= menuWidth + gap;
+
+      const left = openToRight
+        ? rect.right + gap
+        : Math.max(gap, rect.left - menuWidth - gap);
+
+      const top = rect.top + rect.height / 2;
+
+      setMenuStyle({ top, left });
+    };
+
+    updatePosition();
+
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [open]);
 
   return (
-    <div className="flex flex-wrap gap-2">
-      {links.map((link) => (
-        <Button key={link.provider} asChild variant="outline" size="sm">
-          <a href={link.href} target="_blank" rel="noreferrer">
-            {link.provider}
-            <ExternalLink className="size-3.5" />
-          </a>
-        </Button>
-      ))}
-
-      <Button asChild variant="outline" size="sm">
-        <a href={buildIcsDataUri(event)} download={buildIcsFileName(event)}>
-          ICS
-          <Download className="size-3.5" />
-        </a>
+    <div
+      ref={triggerRef}
+      className="relative inline-flex w-fit"
+      onMouseEnter={handleOpen}
+      onMouseLeave={handleClose}
+    >
+      <Button type="button" variant="outline" size="sm">
+        Add to Calendar
+        <ExternalLink className="size-3.5" />
       </Button>
+
+      {open &&
+        mounted &&
+        createPortal(
+          <div
+            className="fixed z-50 min-w-48 -translate-y-1/2 rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
+            style={{ top: menuStyle.top, left: menuStyle.left }}
+            onMouseEnter={handleOpen}
+            onMouseLeave={handleClose}
+          >
+            {links.map((link) => (
+              <a
+                key={link.provider}
+                href={link.href}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center justify-between rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
+              >
+                {link.provider}
+                <ExternalLink className="size-3.5" />
+              </a>
+            ))}
+
+            <a
+              href={buildIcsDataUri(event)}
+              download={buildIcsFileName(event)}
+              className="flex items-center justify-between rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
+            >
+              Download ICS
+              <Download className="size-3.5" />
+            </a>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
@@ -146,10 +250,7 @@ export function MeetingCard({
       </div>
 
       {meeting.status === "scheduled" && (
-        <div className="mt-4 border-t pt-4">
-          <p className="mb-2 text-sm font-medium text-muted-foreground">
-            Add to calendar
-          </p>
+        <div className="mt-4 min-h-44 border-t pt-4">
           <CalendarActions event={event} />
         </div>
       )}
