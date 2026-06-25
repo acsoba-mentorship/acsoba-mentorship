@@ -1,0 +1,65 @@
+--- a/web/src/components/mentorships/meeting-scheduler/timeline-grid.tsx
++++ b/web/src/components/mentorships/meeting-scheduler/timeline-grid.tsx
+@@ -170,10 +170,12 @@
+   meeting,
+   startHour,
+   hourWidth,
++  timelineWidth,
+ }: {
+   meeting: MentorshipTimelineItem;
+   startHour: number;
+   hourWidth: number;
++  timelineWidth: number;
+ }): CSSProperties {
+   const dayStart = getStartOfLocalDay(meeting.startAt);
+   const timelineStart = dayStart + startHour * 60 * 60 * 1000;
+@@ -184,10 +186,17 @@
+   );
+ 
+   const durationMinutes = getDurationMinutes(meeting.startAt, meeting.endAt);
++  const left = (startOffsetMinutes / 60) * hourWidth;
++  const durationWidth = (durationMinutes / 60) * hourWidth;
++  const minimumReadableWidth = Math.min(MIN_SLOT_WIDTH, hourWidth);
++  const availableWidth = Math.max(1, timelineWidth - left);
+ 
+   return {
+-    left: (startOffsetMinutes / 60) * hourWidth,
+-    width: Math.max(MIN_SLOT_WIDTH, (durationMinutes / 60) * hourWidth),
++    left,
++    width: Math.min(
++      Math.max(minimumReadableWidth, durationWidth),
++      availableWidth
++    ),
+   };
+ }
+ 
+@@ -342,11 +351,13 @@
+   meeting,
+   startHour,
+   hourWidth,
++  timelineWidth,
+   index,
+ }: {
+   meeting: MentorshipTimelineItem;
+   startHour: number;
+   hourWidth: number;
++  timelineWidth: number;
+   index: number;
+ }) {
+   const status = getStatusStyles(meeting.status);
+@@ -389,6 +400,7 @@
+       meeting,
+       startHour,
+       hourWidth,
++      timelineWidth,
+     }),
+     top: SLOT_TOP + index * ROW_HEIGHT,
+     height: SLOT_HEIGHT,
+@@ -824,6 +836,7 @@
+                           meeting={meeting}
+                           startHour={startHour}
+                           hourWidth={hourWidth}
++                          timelineWidth={timelineWidth}
+                           index={lane}
+                         />
+                       ))}

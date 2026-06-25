@@ -64,24 +64,6 @@ export function AllMentorshipsTimeline() {
     );
   }
 
-  if (meetings.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>All mentorship meetings</CardTitle>
-          <CardDescription>
-            View scheduled sessions across every active mentorship.
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent>
-          <p className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
-            No meetings have been scheduled across your mentorships yet.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <Card>
