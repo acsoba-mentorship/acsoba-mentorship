@@ -10,6 +10,7 @@ export default function MentorMentorshipDetailPage() {
   return (
     <MentorshipWorkspace
       mentorshipId={params.mentorshipId as Id<"mentorships">}
+      canManageMeetings
     />
   );
 }
