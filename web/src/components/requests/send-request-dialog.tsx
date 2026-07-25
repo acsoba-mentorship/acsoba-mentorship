@@ -62,7 +62,7 @@ function getRequestButtonState({
     return { label: "Accepted", disabled: true };
   }
 
-  if (latestStatus === "rejected") {
+  if (latestStatus === "rejected" || latestStatus === "expired") {
     return { label: "Request Again", disabled: false };
   }
 

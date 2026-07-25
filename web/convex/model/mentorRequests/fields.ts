@@ -3,7 +3,8 @@ import { v } from "convex/values";
 export const mentorshipRequestStatusValidator = v.union(
   v.literal("pending"),
   v.literal("accepted"),
-  v.literal("rejected")
+  v.literal("rejected"),
+  v.literal("expired")
 );
 
 export const mentorshipRequestsTableFields = {
@@ -11,6 +12,7 @@ export const mentorshipRequestsTableFields = {
   menteeId: v.id("users"),
   status: mentorshipRequestStatusValidator,
   message: v.string(),
+  expiresAt: v.optional(v.number()),
   createdAt: v.number(),
   updatedAt: v.number(),
 };
