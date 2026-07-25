@@ -1,8 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { type CSSProperties, useEffect, useMemo, useState } from "react";
-import { CalendarClock, Clock3 } from "lucide-react";
+import {
+  type CSSProperties,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  CalendarClock,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  Settings2,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 export type MentorshipTimelineStatus =
@@ -36,13 +54,13 @@ const HEADER_HEIGHT = 44;
 const SLOT_HEIGHT = 34;
 const SLOT_TOP = 11;
 const MIN_SLOT_WIDTH = 76;
+const ZOOM_PRESETS = [50, 75, 100, 150] as const;
 
 type TimelineRoleFilter = "both" | "mentor" | "mentee";
 type TimelineLayoutItem = {
   meeting: MentorshipTimelineItem;
   lane: number;
 };
-
 
 function getLocalDateKey(timestamp: number) {
   const date = new Date(timestamp);
@@ -152,10 +170,12 @@ function getMeetingStyle({
   meeting,
   startHour,
   hourWidth,
+  timelineWidth,
 }: {
   meeting: MentorshipTimelineItem;
   startHour: number;
   hourWidth: number;
+  timelineWidth: number;
 }): CSSProperties {
   const dayStart = getStartOfLocalDay(meeting.startAt);
   const timelineStart = dayStart + startHour * 60 * 60 * 1000;
@@ -166,10 +186,17 @@ function getMeetingStyle({
   );
 
   const durationMinutes = getDurationMinutes(meeting.startAt, meeting.endAt);
+  const left = (startOffsetMinutes / 60) * hourWidth;
+  const durationWidth = (durationMinutes / 60) * hourWidth;
+  const minimumReadableWidth = Math.min(MIN_SLOT_WIDTH, hourWidth);
+  const availableWidth = Math.max(1, timelineWidth - left);
 
   return {
-    left: (startOffsetMinutes / 60) * hourWidth,
-    width: Math.max(MIN_SLOT_WIDTH, (durationMinutes / 60) * hourWidth),
+    left,
+    width: Math.min(
+      Math.max(minimumReadableWidth, durationWidth),
+      availableWidth
+    ),
   };
 }
 
@@ -200,31 +227,85 @@ function getNowPosition({
   return ((now - timelineStart) / (60 * 60 * 1000)) * hourWidth;
 }
 
-function groupMeetingsByDate(meetings: MentorshipTimelineItem[]) {
-  return meetings.reduce<
-    Array<{
-      dateKey: string;
-      dayStart: number;
-      meetings: MentorshipTimelineItem[];
-    }>
-  >((groups, meeting) => {
-    const dateKey = getLocalDateKey(meeting.startAt);
-    const existingGroup = groups.find((group) => group.dateKey === dateKey);
+function addLocalDays(timestamp: number, days: number) {
+  const date = new Date(timestamp);
+  date.setDate(date.getDate() + days);
+  date.setHours(0, 0, 0, 0);
 
-    if (existingGroup) {
-      existingGroup.meetings.push(meeting);
-      return groups;
-    }
-
-    groups.push({
-      dateKey,
-      dayStart: getStartOfLocalDay(meeting.startAt),
-      meetings: [meeting],
-    });
-
-    return groups;
-  }, []);
+  return date.getTime();
 }
+
+function getStartOfLocalWeek(timestamp: number) {
+  const date = new Date(timestamp);
+  const day = date.getDay();
+  const daysSinceMonday = day === 0 ? 6 : day - 1;
+  date.setDate(date.getDate() - daysSinceMonday);
+  date.setHours(0, 0, 0, 0);
+
+  return date.getTime();
+}
+
+function formatWeekRange(weekStart: number) {
+  const weekEnd = addLocalDays(weekStart, 6);
+  const formatter = new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+
+  const year = new Intl.DateTimeFormat(undefined, {
+    year: "numeric",
+  }).format(new Date(weekEnd));
+
+  return `${formatter.format(new Date(weekStart))} - ${formatter.format(
+    new Date(weekEnd)
+  )}, ${year}`;
+}
+
+type TimelineDayGroup = {
+  dateKey: string;
+  dayStart: number;
+  meetings: MentorshipTimelineItem[];
+};
+
+type TimelineWeekGroup = {
+  weekKey: string;
+  weekStart: number;
+  days: TimelineDayGroup[];
+};
+
+function buildTimelineWeek(
+  meetings: MentorshipTimelineItem[],
+  weekStart: number
+): TimelineWeekGroup {
+  const meetingsByDate = new Map<string, MentorshipTimelineItem[]>();
+
+  meetings.forEach((meeting) => {
+    const dateKey = getLocalDateKey(meeting.startAt);
+    const existingMeetings = meetingsByDate.get(dateKey) ?? [];
+
+    meetingsByDate.set(dateKey, [...existingMeetings, meeting]);
+  });
+
+  const days = Array.from({ length: 7 }, (_, dayIndex) => {
+    const dayStart = addLocalDays(weekStart, dayIndex);
+    const dateKey = getLocalDateKey(dayStart);
+
+    return {
+      dateKey,
+      dayStart,
+      meetings: [...(meetingsByDate.get(dateKey) ?? [])].sort(
+        (a, b) => a.startAt - b.startAt
+      ),
+    };
+  });
+
+  return {
+    weekKey: getLocalDateKey(weekStart),
+    weekStart,
+    days,
+  };
+}
+
 function doMeetingsOverlap(
   first: MentorshipTimelineItem,
   second: MentorshipTimelineItem
@@ -270,11 +351,13 @@ function TimelineMeetingSlot({
   meeting,
   startHour,
   hourWidth,
+  timelineWidth,
   index,
 }: {
   meeting: MentorshipTimelineItem;
   startHour: number;
   hourWidth: number;
+  timelineWidth: number;
   index: number;
 }) {
   const status = getStatusStyles(meeting.status);
@@ -317,6 +400,7 @@ function TimelineMeetingSlot({
       meeting,
       startHour,
       hourWidth,
+      timelineWidth,
     }),
     top: SLOT_TOP + index * ROW_HEIGHT,
     height: SLOT_HEIGHT,
@@ -350,15 +434,42 @@ export function MentorshipTimelineGrid({
 }) {
   const [zoom, setZoom] = useState(100);
   const [now, setNow] = useState(Date.now());
-  const [showFromTodayOnly, setShowFromTodayOnly] = useState(false);
+  const [selectedWeekStart, setSelectedWeekStart] = useState(() =>
+    getStartOfLocalWeek(Date.now())
+  );
   const [roleFilter, setRoleFilter] = useState<TimelineRoleFilter>("both");
+  const timelineScrollerRef = useRef<HTMLDivElement>(null);
+  const [timelineScrollerWidth, setTimelineScrollerWidth] = useState(0);
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(Date.now()), 60_000);
     return () => window.clearInterval(interval);
   }, []);
 
-  const todayStart = useMemo(() => getStartOfLocalDay(now), [now]);
+  useEffect(() => {
+    const scroller = timelineScrollerRef.current;
+
+    if (!scroller) {
+      return;
+    }
+
+    const updateWidth = () => {
+      setTimelineScrollerWidth(scroller.clientWidth);
+    };
+
+    updateWidth();
+
+    const resizeObserver = new ResizeObserver(updateWidth);
+    resizeObserver.observe(scroller);
+
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  const currentWeekStart = useMemo(() => getStartOfLocalWeek(now), [now]);
+  const selectedWeekEnd = useMemo(
+    () => addLocalDays(selectedWeekStart, 7),
+    [selectedWeekStart]
+  );
 
   const mentorMeetingCount = useMemo(
     () => meetings.filter((meeting) => meeting.viewerRole === "mentor").length,
@@ -379,14 +490,13 @@ export function MentorshipTimelineGrid({
   }, [meetings, roleFilter, showRoleFilter]);
 
   const visibleMeetings = useMemo(() => {
-    const dateFilteredMeetings = showFromTodayOnly
-      ? roleFilteredMeetings.filter(
-          (meeting) => getStartOfLocalDay(meeting.startAt) >= todayStart
-        )
-      : roleFilteredMeetings;
-
-    return [...dateFilteredMeetings].sort((a, b) => a.startAt - b.startAt);
-  }, [roleFilteredMeetings, showFromTodayOnly, todayStart]);
+    return roleFilteredMeetings
+      .filter(
+        (meeting) =>
+          meeting.startAt >= selectedWeekStart && meeting.startAt < selectedWeekEnd
+      )
+      .sort((a, b) => a.startAt - b.startAt);
+  }, [roleFilteredMeetings, selectedWeekEnd, selectedWeekStart]);
 
   const { startHour, endHour } = useMemo(
     () => getTimelineBounds(visibleMeetings),
@@ -402,43 +512,23 @@ export function MentorshipTimelineGrid({
     [endHour, startHour]
   );
 
-  const meetingsByDate = useMemo(
-    () => groupMeetingsByDate(visibleMeetings),
-    [visibleMeetings]
+  const selectedWeek = useMemo(
+    () => buildTimelineWeek(visibleMeetings, selectedWeekStart),
+    [selectedWeekStart, visibleMeetings]
   );
 
-  const hourWidth = BASE_HOUR_WIDTH * (zoom / 100);
+  const requestedHourWidth = BASE_HOUR_WIDTH * (zoom / 100);
+  const minimumTimelineWidth = Math.max(0, timelineScrollerWidth - DAY_COLUMN_WIDTH);
+  const minimumHourWidth = hours.length > 0 ? minimumTimelineWidth / hours.length : 0;
+  const hourWidth = Math.max(requestedHourWidth, minimumHourWidth);
   const timelineWidth = hours.length * hourWidth;
   const totalWidth = DAY_COLUMN_WIDTH + timelineWidth;
+  const isCurrentWeek = selectedWeekStart === currentWeekStart;
 
   return (
     <div className="space-y-3 text-xs">
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
-          <label
-            htmlFor="mentorship-timeline-zoom"
-            className="text-xs font-medium text-muted-foreground"
-          >
-            Zoom level
-          </label>
-
-          <span className="text-[11px] text-muted-foreground">{zoom}%</span>
-        </div>
-
-        <input
-          id="mentorship-timeline-zoom"
-          type="range"
-          min="100"
-          max="180"
-          step="1"
-          value={zoom}
-          onChange={(event) => setZoom(Number(event.target.value))}
-          className="h-1.5 w-full accent-blue-500"
-        />
-      </div>
-
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {showRoleFilter && (
             <div className="inline-flex rounded-md border bg-muted p-1 text-[11px]">
               <button
@@ -484,33 +574,41 @@ export function MentorshipTimelineGrid({
             </div>
           )}
 
-          <div className="inline-flex rounded-md border bg-muted p-1 text-[11px]">
-            <button
+          <div className="inline-flex items-center rounded-md border bg-background shadow-xs">
+            <Button
               type="button"
-              onClick={() => setShowFromTodayOnly(false)}
-              className={cn(
-                "rounded px-2.5 py-1 font-medium transition",
-                !showFromTodayOnly
-                  ? "bg-blue-500 text-white"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
+              variant="ghost"
+              size="icon-xs"
+              aria-label="Previous week"
+              onClick={() => setSelectedWeekStart((weekStart) => addLocalDays(weekStart, -7))}
             >
-              All meetings
-            </button>
+              <ChevronLeft className="size-3.5" />
+            </Button>
 
-            <button
+            <div className="min-w-36 border-x px-3 py-1.5 text-center text-[11px] font-medium text-muted-foreground">
+              {formatWeekRange(selectedWeekStart)}
+            </div>
+
+            <Button
               type="button"
-              onClick={() => setShowFromTodayOnly(true)}
-              className={cn(
-                "rounded px-2.5 py-1 font-medium transition",
-                showFromTodayOnly
-                  ? "bg-blue-500 text-white"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
+              variant="ghost"
+              size="icon-xs"
+              aria-label="Next week"
+              onClick={() => setSelectedWeekStart((weekStart) => addLocalDays(weekStart, 7))}
             >
-              From today
-            </button>
+              <ChevronRight className="size-3.5" />
+            </Button>
           </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="xs"
+            disabled={isCurrentWeek}
+            onClick={() => setSelectedWeekStart(currentWeekStart)}
+          >
+            This week
+          </Button>
         </div>
 
         <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground">
@@ -536,14 +634,78 @@ export function MentorshipTimelineGrid({
             Timeline view
           </div>
 
-          <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
-            {visibleMeetings.length} meeting
-            {visibleMeetings.length === 1 ? "" : "s"}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+              {visibleMeetings.length} meeting
+              {visibleMeetings.length === 1 ? "" : "s"}
+            </span>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="xs"
+                  className="gap-1.5"
+                >
+                  <Settings2 className="size-3.5" />
+                  Settings
+                </Button>
+              </PopoverTrigger>
+
+              <PopoverContent align="end" className="space-y-4">
+                <div>
+                  <p className="text-sm font-medium">Timeline settings</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Adjust the timeline zoom without taking space away from the
+                    calendar view.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label
+                      htmlFor="mentorship-timeline-zoom"
+                      className="text-xs font-medium text-muted-foreground"
+                    >
+                      Zoom level
+                    </label>
+
+                    <span className="text-xs font-semibold">{zoom}%</span>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {ZOOM_PRESETS.map((preset) => (
+                      <Button
+                        key={preset}
+                        type="button"
+                        variant={zoom === preset ? "default" : "outline"}
+                        size="xs"
+                        onClick={() => setZoom(preset)}
+                      >
+                        {preset}%
+                      </Button>
+                    ))}
+                  </div>
+
+                  <input
+                    id="mentorship-timeline-zoom"
+                    type="range"
+                    min="50"
+                    max="180"
+                    step="1"
+                    value={zoom}
+                    onChange={(event) => setZoom(Number(event.target.value))}
+                    className="h-1.5 w-full accent-blue-500"
+                  />
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <div className="relative" style={{ width: totalWidth }}>
+        <div ref={timelineScrollerRef} className="overflow-x-auto">
+          <div className="relative" style={{ width: totalWidth, minWidth: "100%" }}>
             <div
               className="grid border-b"
               style={{
@@ -571,32 +733,33 @@ export function MentorshipTimelineGrid({
               </div>
             </div>
 
-            {meetingsByDate.length === 0 ? (
+            <div className="border-b last:border-b-0">
               <div
-                className="grid border-b last:border-b-0"
+                className="grid border-b bg-muted/40"
                 style={{
                   gridTemplateColumns: `${DAY_COLUMN_WIDTH}px ${timelineWidth}px`,
                 }}
               >
-                <div className="sticky left-0 z-10 border-r bg-background px-4 py-3">
-                  <p className="text-xs font-semibold text-foreground">
-                    No days
-                  </p>
+                <div className="sticky left-0 z-20 border-r bg-muted px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Week
                 </div>
 
-                <div className="flex min-h-16 items-center bg-background px-4 text-[11px] text-muted-foreground">
-                  No meetings to show for the selected filters.
+                <div className="flex items-center px-3 py-2 text-[11px] font-semibold text-muted-foreground">
+                  {formatWeekRange(selectedWeek.weekStart)}
                 </div>
               </div>
-            ) : (
-              meetingsByDate.map((group) => {
-                const layoutItems = getTimelineLayoutItems(group.meetings);
-                const laneCount = Math.max(1, ...layoutItems.map((item) => item.lane + 1));
+
+              {selectedWeek.days.map((day) => {
+                const layoutItems = getTimelineLayoutItems(day.meetings);
+                const laneCount = Math.max(
+                  1,
+                  ...layoutItems.map((item) => item.lane + 1)
+                );
 
                 const rowHeight = Math.max(ROW_HEIGHT, laneCount * ROW_HEIGHT);
 
                 const nowPosition = getNowPosition({
-                  dayStart: group.dayStart,
+                  dayStart: day.dayStart,
                   startHour,
                   endHour,
                   hourWidth,
@@ -605,7 +768,7 @@ export function MentorshipTimelineGrid({
 
                 return (
                   <div
-                    key={group.dateKey}
+                    key={day.dateKey}
                     className="grid border-b last:border-b-0"
                     style={{
                       gridTemplateColumns: `${DAY_COLUMN_WIDTH}px ${timelineWidth}px`,
@@ -616,11 +779,11 @@ export function MentorshipTimelineGrid({
                       style={{ minHeight: rowHeight }}
                     >
                       <p className="text-xs font-semibold text-foreground">
-                        {formatDay(group.dayStart)}
+                        {formatDay(day.dayStart)}
                       </p>
                       <p className="mt-0.5 text-[11px] text-muted-foreground">
-                        {group.meetings.length} session
-                        {group.meetings.length === 1 ? "" : "s"}
+                        {day.meetings.length} session
+                        {day.meetings.length === 1 ? "" : "s"}
                       </p>
                     </div>
 
@@ -673,14 +836,15 @@ export function MentorshipTimelineGrid({
                           meeting={meeting}
                           startHour={startHour}
                           hourWidth={hourWidth}
+                          timelineWidth={timelineWidth}
                           index={lane}
                         />
                       ))}
                     </div>
                   </div>
                 );
-              })
-            )}
+              })}
+            </div>
           </div>
         </div>
       </div>
