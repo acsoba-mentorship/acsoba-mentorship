@@ -17,6 +17,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import { SuggestedMentors } from "@/components/dashboard/suggested-mentors";
+import { PulseSurveyReminder } from "@/components/dashboard/pulse-survey-reminder";
 
 const stats = [
   { label: "Active Mentorships", value: "0", icon: Users },
@@ -54,7 +55,9 @@ export default function DashboardPage() {
           </Card>
         ))}
       </div>
-
+      
+      <PulseSurveyReminder />
+      
       {/* Quick Actions */}
       <Card>
         <CardHeader>

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserCog, Inbox, Users } from "lucide-react";
+import { PulseSurveyReminder } from "@/components/dashboard/pulse-survey-reminder";
 
 const quickLinks = [
   {
@@ -39,6 +40,8 @@ export default function MentorDashboardPage() {
         </p>
       </div>
 
+      <PulseSurveyReminder />
+      
       <Card>
         <CardHeader>
           <CardTitle>Quick Actions</CardTitle>
