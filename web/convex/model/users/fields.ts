@@ -5,6 +5,11 @@ export const ONBOARDING_STATUS = {
   COMPLETE: "complete",
 } as const;
 
+export const membershipVerificationStatusValidator = v.union(
+  v.literal("acsoba_verified"),
+  v.literal("auth0_fallback")
+);
+
 export const CAREER_STAGE = {
   STUDENT: "student",
   PROFESSIONAL: "professional",
@@ -93,6 +98,7 @@ export const mentorProfileValidator = v.object({
   expertise: v.array(v.string()),
   maxMentees: v.number(),
   isAvailable: v.boolean(),
+  isVisible: v.optional(v.boolean()),
 });
 
 export const mentorPrivacyOverridesValidator = v.object({
@@ -119,6 +125,13 @@ export const usersTableFields = {
   gender: v.string(),
   nationality: v.string(),
   tokenIdentifier: v.string(),
+  authEmailNormalized: v.optional(v.string()),
+  authEmailVerified: v.optional(v.boolean()),
+  membershipVerificationStatus: v.optional(
+    membershipVerificationStatusValidator
+  ),
+  membershipVerifiedAt: v.optional(v.number()),
+  membershipVerifiedEmail: v.optional(v.string()),
   profilePictureUrl: v.string(),
   title: v.string(),
   bio: v.string(),

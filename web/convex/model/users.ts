@@ -8,7 +8,6 @@ import {
   GOALS_MAX_CHARACTERS,
   isValidUsername,
   makeTemporaryCandidate,
-  MENTOR_LIST_MAX,
   normalizeUsername,
   resolveMentorIdentityVisibility,
   toPublicMentorDTO,
@@ -31,10 +30,15 @@ import {
   usersTableFields,
 } from "./users/fields";
 import { getAuthenticatedUser, requireOnboardingComplete } from "./auth";
+import {
+  claimAdminAccessForUser,
+  getVerifiedNormalizedAuthEmail,
+  syncAuthenticatedEmailAndAdminAccess,
+} from "./admin/bootstrap";
 
 const CONVEX_ID_PATTERN = /^[a-z0-9]{16,64}$/i;
 
-async function hasAcceptedMentorship(
+async function hasActiveMentorship(
   ctx: QueryCtx,
   viewerId: Id<"users">,
   mentorId: Id<"users">
@@ -43,25 +47,14 @@ async function hasAcceptedMentorship(
     return true;
   }
 
-  const requests = await ctx.db
-    .query("mentorshipRequests")
+  const mentorships = await ctx.db
+    .query("mentorships")
     .withIndex("by_mentorId_menteeId", (q) =>
       q.eq("mentorId", mentorId).eq("menteeId", viewerId)
     )
     .collect();
 
-  return requests.some((request) => request.status === "accepted");
-}
-
-async function getAcceptedMentorIdsForMentee(ctx: QueryCtx, menteeId: Id<"users">) {
-  const requests = await ctx.db
-    .query("mentorshipRequests")
-    .withIndex("by_menteeId_status", (q) =>
-      q.eq("menteeId", menteeId).eq("status", "accepted")
-    )
-    .collect();
-
-  return new Set(requests.map((request) => request.mentorId));
+  return mentorships.some((mentorship) => mentorship.status === "active");
 }
 
 async function toPublicUserProfile(
@@ -69,8 +62,20 @@ async function toPublicUserProfile(
   currentUser: Doc<"users">,
   user: Doc<"users">
 ) {
+  const hasMentorshipAccess = await hasActiveMentorship(
+    ctx,
+    currentUser._id,
+    user._id
+  );
+  if (
+    user.mentorProfile?.isVisible === false &&
+    !hasMentorshipAccess
+  ) {
+    return null;
+  }
+
   const forceRevealIdentity =
-    !!user.mentorProfile && (await hasAcceptedMentorship(ctx, currentUser._id, user._id));
+    !!user.mentorProfile && hasMentorshipAccess;
   const mentorVisibility = resolveMentorIdentityVisibility(
     user.mentorSettings?.privacy,
     forceRevealIdentity
@@ -87,7 +92,10 @@ async function toPublicUserProfile(
     title: user.title,
     bio: user.bio,
     location: user.location,
-    profilePictureUrl: user.profilePictureUrl,
+    profilePictureUrl:
+      shouldApplyMentorPrivacy && !mentorVisibility.name
+        ? ""
+        : user.profilePictureUrl,
     email: shouldApplyMentorPrivacy && mentorVisibility.email ? user.email : null,
     phoneNumber:
       shouldApplyMentorPrivacy && mentorVisibility.phoneNumber ? user.phoneNumber : null,
@@ -134,23 +142,30 @@ export async function storeUser(ctx: MutationCtx) {
     .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
     .unique();
 
+  const identityEmail = identity.email?.trim();
+  const identityEmailVerified = identity.emailVerified === true;
+
   if (user !== null) {
+    await syncAuthenticatedEmailAndAdminAccess(ctx, user, {
+      authEmail: identityEmail,
+      authEmailVerified: identityEmailVerified,
+    });
     return user._id;
   }
 
   const now = Date.now();
   const identityName = identity.name?.trim();
-  const identityEmail = identity.email?.trim() ?? "";
+  const contactEmail = identityEmail ?? "";
   const displayName =
     identityName && !identityName.includes("@")
       ? identityName
-      : identityEmail.split("@")[0] || "";
+      : contactEmail.split("@")[0] || "";
   const temporaryUsername = await ensureUniqueTemporaryUsername(
     ctx,
     displayName || "user"
   );
 
-  return await ctx.db.insert("users", {
+  const userId = await ctx.db.insert("users", {
     name: displayName,
     username: temporaryUsername,
     usernameUpdatedAt: now,
@@ -159,11 +174,16 @@ export async function storeUser(ctx: MutationCtx) {
     gender: "",
     nationality: "",
     tokenIdentifier: identity.tokenIdentifier,
+    authEmailNormalized: getVerifiedNormalizedAuthEmail(
+      identityEmail,
+      identityEmailVerified
+    ),
+    authEmailVerified: identityEmailVerified,
     profilePictureUrl: "",
     title: "",
     bio: "",
     location: "",
-    email: identityEmail,
+    email: contactEmail,
     phoneNumber: "",
     interests: [],
     industries: [],
@@ -172,6 +192,14 @@ export async function storeUser(ctx: MutationCtx) {
     onboardingStatus: ONBOARDING_STATUS.INCOMPLETE,
     createdAt: now,
   });
+
+  await claimAdminAccessForUser(ctx, {
+    userId,
+    authEmail: identityEmail,
+    authEmailVerified: identityEmailVerified,
+  });
+
+  return userId;
 }
 
 /**
@@ -265,34 +293,63 @@ export async function checkUsernameAvailable(
 /**
  * Lists mentors prioritized by availability.
  */
-export async function listMentors(
-  ctx: QueryCtx,
-  { limit }: { limit?: number }
-) {
+export async function listMentors(ctx: QueryCtx) {
   const currentUser = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
-  const effectiveLimit = Math.min(Math.max(limit ?? MENTOR_LIST_MAX, 1), MENTOR_LIST_MAX);
+  const [available, unavailable, activeMentorships, completedMentorships] =
+    await Promise.all([
+      ctx.db
+        .query("users")
+        .withIndex("by_mentor_availability", (q) =>
+          q.eq("mentorProfile.isAvailable", true)
+        )
+        .collect(),
+      ctx.db
+        .query("users")
+        .withIndex("by_mentor_availability", (q) =>
+          q.eq("mentorProfile.isAvailable", false)
+        )
+        .collect(),
+      ctx.db
+        .query("mentorships")
+        .withIndex("by_status", (q) => q.eq("status", "active"))
+        .collect(),
+      ctx.db
+        .query("mentorships")
+        .withIndex("by_status", (q) => q.eq("status", "completed"))
+        .collect(),
+    ]);
+  const activeMentorIds = new Set(
+    activeMentorships
+      .filter((mentorship) => mentorship.menteeId === currentUser._id)
+      .map((mentorship) => mentorship.mentorId)
+  );
 
-  const available = await ctx.db
-    .query("users")
-    .withIndex("by_mentor_availability", (q) => q.eq("mentorProfile.isAvailable", true))
-    .take(effectiveLimit);
+  const mentors = [...available, ...unavailable]
+    .filter(
+      (mentor) =>
+        mentor._id === currentUser._id ||
+        mentor.mentorProfile?.isVisible !== false
+    );
+  const activeCounts = new Map<string, number>();
+  const completedCounts = new Map<string, number>();
 
-  const remaining = effectiveLimit - available.length;
-  const unavailable =
-    remaining > 0
-      ? await ctx.db
-          .query("users")
-          .withIndex("by_mentor_availability", (q) => q.eq("mentorProfile.isAvailable", false))
-          .take(remaining)
-      : [];
+  activeMentorships.forEach((mentorship) => {
+    const key = String(mentorship.mentorId);
+    activeCounts.set(key, (activeCounts.get(key) ?? 0) + 1);
+  });
+  completedMentorships.forEach((mentorship) => {
+    const key = String(mentorship.mentorId);
+    completedCounts.set(key, (completedCounts.get(key) ?? 0) + 1);
+  });
 
-  const acceptedMentorIds = await getAcceptedMentorIdsForMentee(ctx, currentUser._id);
-
-  return [...available, ...unavailable].map((mentor) =>
+  return mentors.map((mentor) =>
     toPublicMentorDTO(mentor, {
       forceRevealIdentity:
-        mentor._id === currentUser._id || acceptedMentorIds.has(mentor._id),
+        mentor._id === currentUser._id || activeMentorIds.has(mentor._id),
+      viewerInterests: currentUser.interests ?? [],
+      activeMentorshipCount: activeCounts.get(String(mentor._id)) ?? 0,
+      completedMentorshipCount: completedCounts.get(String(mentor._id)) ?? 0,
     })
   );
 }
@@ -455,6 +512,25 @@ export async function setUserOnboardingComplete(
   args: Infer<typeof setUserOnboardingCompleteArgsValidator>
 ) {
   const user = await getAuthenticatedUser(ctx);
+  const identity = await ctx.auth.getUserIdentity();
+  const verifiedEmail =
+    identity?.emailVerified === true
+      ? identity.email?.trim().toLowerCase()
+      : undefined;
+  const verificationRequired =
+    process.env.ACSOBA_VERIFICATION_REQUIRED?.trim().toLowerCase() === "true";
+
+  if (
+    !verifiedEmail ||
+    user.membershipVerifiedEmail !== verifiedEmail ||
+    !user.membershipVerificationStatus ||
+    (verificationRequired &&
+      user.membershipVerificationStatus !== "acsoba_verified")
+  ) {
+    throw new Error(
+      "Complete membership verification with your signed-in email before finishing onboarding"
+    );
+  }
 
   if (args.careerStage === CAREER_STAGE.STUDENT && args.education.length === 0) {
     throw new Error("At least one education entry is required for students");
@@ -606,13 +682,44 @@ export async function updateMentorProfile(
   args: Infer<typeof mentorProfileValidator>
 ) {
   const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
+  if (
+    !Number.isInteger(args.yearsOfExperience) ||
+    args.yearsOfExperience < 0 ||
+    args.yearsOfExperience > 80
+  ) {
+    throw new Error("Years of experience must be a whole number from 0 to 80");
+  }
+  if (
+    !Number.isInteger(args.maxMentees) ||
+    args.maxMentees < 1 ||
+    args.maxMentees > 100
+  ) {
+    throw new Error("Maximum mentees must be a whole number from 1 to 100");
+  }
+
+  const activeMentorships = await ctx.db
+    .query("mentorships")
+    .withIndex("by_mentorId_status", (q) =>
+      q.eq("mentorId", user._id).eq("status", "active")
+    )
+    .collect();
+  if (args.maxMentees < activeMentorships.length) {
+    throw new Error(
+      `Maximum mentees cannot be lower than your ${activeMentorships.length} active mentorships`
+    );
+  }
+
+  const expertise = Array.from(
+    new Set(args.expertise.map((item) => item.trim()).filter(Boolean))
+  ).slice(0, 50);
 
   await ctx.db.patch("users", user._id, {
     mentorProfile: {
       yearsOfExperience: args.yearsOfExperience,
-      expertise: args.expertise,
+      expertise,
       maxMentees: args.maxMentees,
       isAvailable: args.isAvailable,
+      isVisible: args.isVisible ?? user.mentorProfile?.isVisible ?? true,
     },
   });
   return user._id;

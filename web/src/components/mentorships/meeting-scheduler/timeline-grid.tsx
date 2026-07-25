@@ -433,7 +433,7 @@ export function MentorshipTimelineGrid({
   showRoleFilter?: boolean;
 }) {
   const [zoom, setZoom] = useState(100);
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
   const [selectedWeekStart, setSelectedWeekStart] = useState(() =>
     getStartOfLocalWeek(Date.now())
   );

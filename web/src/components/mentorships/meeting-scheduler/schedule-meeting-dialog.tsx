@@ -194,6 +194,18 @@ export function ScheduleMeetingDialog({
       return;
     }
 
+    if (startAt <= Date.now()) {
+      setErrorMessage("Please choose a meeting time in the future.");
+      return;
+    }
+
+    if (conflictingMeetings.length > 0) {
+      setErrorMessage(
+        "Choose another time that does not overlap an existing meeting."
+      );
+      return;
+    }
+
     const endAt = startAt + duration * 60 * 1000;
 
     setIsSubmitting(true);
@@ -356,7 +368,12 @@ export function ScheduleMeetingDialog({
             <Button
               type="button"
               onClick={handleSubmit}
-              disabled={isSubmitting || !title.trim()}
+              disabled={
+                isSubmitting ||
+                !title.trim() ||
+                isPastMeeting ||
+                conflictingMeetings.length > 0
+              }
             >
               {isSubmitting ? "Saving..." : "Save Meeting"}
             </Button>

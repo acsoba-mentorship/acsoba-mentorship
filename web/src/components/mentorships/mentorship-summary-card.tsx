@@ -13,12 +13,16 @@ type MentorshipSummaryCardProps = {
     name?: string | null;
   } | null;
   startDate: number;
+  plannedEndDate?: number | null;
+  agreedDurationMonths?: number | null;
 };
 
 export function MentorshipSummaryCard({
   role,
   participant,
   startDate,
+  plannedEndDate,
+  agreedDurationMonths,
 }: MentorshipSummaryCardProps) {
   return (
     <Card>
@@ -30,7 +34,7 @@ export function MentorshipSummaryCard({
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="grid gap-4 sm:grid-cols-3">
+      <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <p className="text-sm text-muted-foreground">Your role</p>
           <p className="font-medium capitalize">{role}</p>
@@ -44,6 +48,19 @@ export function MentorshipSummaryCard({
         <div>
           <p className="text-sm text-muted-foreground">Started</p>
           <p className="font-medium">{formatDate(startDate)}</p>
+        </div>
+
+        <div>
+          <p className="text-sm text-muted-foreground">Planned period</p>
+          <p className="font-medium">
+            {plannedEndDate
+              ? `${formatDate(plannedEndDate)}${
+                  agreedDurationMonths
+                    ? ` (${agreedDurationMonths} months)`
+                    : ""
+                }`
+              : "Not specified"}
+          </p>
         </div>
       </CardContent>
     </Card>

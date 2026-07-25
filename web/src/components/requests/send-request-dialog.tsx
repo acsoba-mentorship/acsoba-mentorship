@@ -12,6 +12,13 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -20,6 +27,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+
+const DURATION_OPTIONS = [
+  { value: "1", label: "1 month" },
+  { value: "3", label: "3 months" },
+  { value: "6", label: "6 months" },
+  { value: "12", label: "12 months" },
+] as const;
 
 function getRequestButtonState({
   mentor,
@@ -93,6 +107,7 @@ export function SendRequestDialog({
   const createRequest = useMutation(api.mentorRequests.createRequestByMentorId);
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
+  const [durationMonths, setDurationMonths] = useState("3");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -130,8 +145,10 @@ export function SendRequestDialog({
       await createRequest({
         mentorId: mentor.mentorId,
         message,
+        proposedDurationMonths: Number(durationMonths),
       });
       setMessage("");
+      setDurationMonths("3");
       setOpen(false);
     } catch (submissionError) {
       setError(
@@ -152,6 +169,7 @@ export function SendRequestDialog({
         if (!nextOpen) {
           setError(null);
           setMessage("");
+          setDurationMonths("3");
         }
       }}
     >
@@ -185,22 +203,52 @@ export function SendRequestDialog({
           </Alert>
         )}
 
-        <div className="space-y-2">
-          <label htmlFor="request-message" className="text-sm font-medium">
-            Message
-          </label>
-          <Textarea
-            id="request-message"
-            aria-describedby="request-message-counter"
-            value={message}
-            onChange={(event) => setMessage(event.target.value)}
-            placeholder="Hi! I’d love mentorship on..."
-            className="min-h-32"
-            maxLength={1000}
-          />
-          <p id="request-message-counter" className="text-right text-xs text-muted-foreground">
-            {message.length}/1000
-          </p>
+        <div className="space-y-5">
+          <div className="space-y-2">
+            <label htmlFor="request-duration" className="text-sm font-medium">
+              Proposed mentorship length
+            </label>
+            <Select
+              value={durationMonths}
+              onValueChange={setDurationMonths}
+            >
+              <SelectTrigger id="request-duration" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DURATION_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              The mentor agrees to this planned period by accepting your
+              request.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="request-message" className="text-sm font-medium">
+              Message
+            </label>
+            <Textarea
+              id="request-message"
+              aria-describedby="request-message-counter"
+              value={message}
+              onChange={(event) => setMessage(event.target.value)}
+              placeholder="Hi! I’d love mentorship on..."
+              className="min-h-32"
+              maxLength={1000}
+            />
+            <p
+              id="request-message-counter"
+              className="text-right text-xs text-muted-foreground"
+            >
+              {message.length}/1000
+            </p>
+          </div>
         </div>
 
         <DialogFooter>

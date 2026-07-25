@@ -5,13 +5,16 @@ import {
   requireOnboardingComplete,
 } from "./auth";
 import { fetchUsersById } from "./helper";
+import {
+  DEFAULT_PROGRAM_SETTINGS,
+  getEffectiveProgramSettings,
+} from "./programSettings";
+import { createNotification } from "./notifications";
 
 type Ctx = QueryCtx | MutationCtx;
 
-export const PULSE_SURVEY_INTERVAL_DAYS = 30;
-
-const PULSE_SURVEY_INTERVAL_MS =
-  PULSE_SURVEY_INTERVAL_DAYS * 24 * 60 * 60 * 1000;
+export const PULSE_SURVEY_INTERVAL_DAYS =
+  DEFAULT_PROGRAM_SETTINGS.pulseSurveyIntervalDays;
 
 type RespondentRole = "mentor" | "mentee";
 
@@ -306,17 +309,34 @@ async function createPulseSurveyIfMissing(
     updatedAt: now,
   });
 
+  await createNotification(ctx, {
+    userId: respondentId,
+    type: "pulse_survey_due",
+    title: "Pulse survey due",
+    message:
+      "A periodic mentorship health check is ready. Your answers are visible to programme administrators, not your counterpart.",
+    href:
+      respondentRole === "mentor"
+        ? `/mentor/mentorships/${mentorship._id}`
+        : `/mentorships/${mentorship._id}`,
+  });
+
   return true;
 }
 
 /**
  * Generates due pulse surveys for active mentorships.
  *
- * This creates one survey for the mentor and one survey for the mentee
- * every 30 days from the mentorship start date.
+ * This creates one survey for the mentor and one survey for the mentee at the
+ * configured interval. After the first cycle, cadence advances from the latest
+ * assigned survey so changing the interval cannot collide with an old cycle
+ * number.
  */
 export async function generateDuePulseSurveys(ctx: MutationCtx) {
   const now = Date.now();
+  const settings = await getEffectiveProgramSettings(ctx);
+  const pulseSurveyIntervalMs =
+    settings.pulseSurveyIntervalDays * 24 * 60 * 60 * 1000;
 
   const activeMentorships = await ctx.db
     .query("mentorships")
@@ -326,14 +346,52 @@ export async function generateDuePulseSurveys(ctx: MutationCtx) {
   let createdCount = 0;
 
   for (const mentorship of activeMentorships) {
-    const elapsedMs = now - mentorship.startDate;
+    const existingSurveys = await ctx.db
+      .query("mentorshipPulseSurveys")
+      .withIndex("by_mentorshipId", (q) =>
+        q.eq("mentorshipId", mentorship._id)
+      )
+      .collect();
 
-    if (elapsedMs < PULSE_SURVEY_INTERVAL_MS) {
-      continue;
+    let cycleNumber: number;
+    let dueAt: number;
+
+    if (existingSurveys.length === 0) {
+      const elapsedMs = now - mentorship.startDate;
+      if (elapsedMs < pulseSurveyIntervalMs) {
+        continue;
+      }
+
+      cycleNumber = Math.max(1, Math.floor(elapsedMs / pulseSurveyIntervalMs));
+      dueAt = mentorship.startDate + cycleNumber * pulseSurveyIntervalMs;
+    } else {
+      const latestCycleNumber = Math.max(
+        ...existingSurveys.map((survey) => survey.cycleNumber)
+      );
+      const latestCycleSurveys = existingSurveys.filter(
+        (survey) => survey.cycleNumber === latestCycleNumber
+      );
+      const latestDueAt = Math.max(
+        ...latestCycleSurveys.map((survey) => survey.dueAt)
+      );
+      const hasMentorSurvey = latestCycleSurveys.some(
+        (survey) => survey.respondentRole === "mentor"
+      );
+      const hasMenteeSurvey = latestCycleSurveys.some(
+        (survey) => survey.respondentRole === "mentee"
+      );
+
+      if (!hasMentorSurvey || !hasMenteeSurvey) {
+        cycleNumber = latestCycleNumber;
+        dueAt = latestDueAt;
+      } else {
+        cycleNumber = latestCycleNumber + 1;
+        dueAt = latestDueAt + pulseSurveyIntervalMs;
+        if (now < dueAt) {
+          continue;
+        }
+      }
     }
-
-    const cycleNumber = Math.floor(elapsedMs / PULSE_SURVEY_INTERVAL_MS);
-    const dueAt = mentorship.startDate + cycleNumber * PULSE_SURVEY_INTERVAL_MS;
 
     const createdMentorSurvey = await createPulseSurveyIfMissing(ctx, {
       mentorship,

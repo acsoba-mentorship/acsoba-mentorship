@@ -68,6 +68,7 @@ function RequestSection({
           status={request.status}
           createdAt={request.createdAt}
           expiresAt={request.expiresAt}
+          proposedDurationMonths={request.proposedDurationMonths}
           showActions={showActions}
           isUpdating={activeRequestId === request._id}
           onAccept={() => onAccept(request._id)}
@@ -172,56 +173,58 @@ export default function MentorRequestsPage() {
       )}
 
       <Tabs defaultValue="pending" className="w-full">
-        <TabsList>
-          <TabsTrigger value="pending" className="gap-2">
-            <Inbox className="size-4" />
-            Pending
-            {pendingRequests.length > 0 && requests && (
-              <Badge
-                variant="secondary"
-                className="ml-1 h-5 min-w-5 px-1.5 text-xs"
-              >
-                {pendingRequests.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="accepted" className="gap-2">
-            <History className="size-4" />
-            Accepted
-            {acceptedRequests.length > 0 && requests && (
-              <Badge
-                variant="secondary"
-                className="ml-1 h-5 min-w-5 px-1.5 text-xs"
-              >
-                {acceptedRequests.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="rejected" className="gap-2">
-            <History className="size-4" />
-            Rejected
-            {rejectedRequests.length > 0 && requests && (
-              <Badge
-                variant="secondary"
-                className="ml-1 h-5 min-w-5 px-1.5 text-xs"
-              >
-                {rejectedRequests.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="expired" className="gap-2">
-            <History className="size-4" />
-            Expired
-            {expiredRequests.length > 0 && requests && (
-              <Badge
-                variant="secondary"
-                className="ml-1 h-5 min-w-5 px-1.5 text-xs"
-              >
-                {expiredRequests.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-        </TabsList>
+        <div className="-mx-1 overflow-x-auto px-1 pb-1">
+          <TabsList className="min-w-max">
+            <TabsTrigger value="pending" className="gap-2">
+              <Inbox className="size-4" />
+              Pending
+              {pendingRequests.length > 0 && requests && (
+                <Badge
+                  variant="secondary"
+                  className="ml-1 h-5 min-w-5 px-1.5 text-xs"
+                >
+                  {pendingRequests.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="accepted" className="gap-2">
+              <History className="size-4" />
+              Accepted
+              {acceptedRequests.length > 0 && requests && (
+                <Badge
+                  variant="secondary"
+                  className="ml-1 h-5 min-w-5 px-1.5 text-xs"
+                >
+                  {acceptedRequests.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="rejected" className="gap-2">
+              <History className="size-4" />
+              Rejected
+              {rejectedRequests.length > 0 && requests && (
+                <Badge
+                  variant="secondary"
+                  className="ml-1 h-5 min-w-5 px-1.5 text-xs"
+                >
+                  {rejectedRequests.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="expired" className="gap-2">
+              <History className="size-4" />
+              Expired
+              {expiredRequests.length > 0 && requests && (
+                <Badge
+                  variant="secondary"
+                  className="ml-1 h-5 min-w-5 px-1.5 text-xs"
+                >
+                  {expiredRequests.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="pending" className="mt-6">
           {requests === undefined || currentUser === undefined ? (

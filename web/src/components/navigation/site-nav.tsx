@@ -3,22 +3,31 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth0 } from "@auth0/auth0-react";
-import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
+import {
+  Authenticated,
+  AuthLoading,
+  Unauthenticated,
+  useQuery,
+} from "convex/react";
 import { useCurrentUser } from "@/app/CurrentUserProvider";
 import {
   CalendarDays,
+  Flag,
   Inbox,
   LayoutDashboard,
   LogOut,
   Menu,
   Search,
   Shield,
+  ShieldCheck,
   User,
   Users,
 } from "lucide-react";
 
+import { api } from "../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { NotificationMenu } from "@/components/navigation/notification-menu";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -103,7 +112,7 @@ function MobileNavLinks({
   );
 }
 
-function UserMenu() {
+function UserMenu({ hasAdminAccess }: { hasAdminAccess: boolean }) {
   const { user, logout } = useAuth0();
   const { currentUser } = useCurrentUser();
 
@@ -166,6 +175,20 @@ function UserMenu() {
             </Link>
           </DropdownMenuItem>
         )}
+        {hasAdminAccess && (
+          <DropdownMenuItem asChild>
+            <Link href="/admin">
+              <ShieldCheck />
+              Programme Admin
+            </Link>
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem asChild>
+          <Link href="/report-incident">
+            <Flag />
+            Report an Incident
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>
           <LogOut />
@@ -210,6 +233,10 @@ function AuthButtons() {
 export function SiteNav() {
   const pathname = usePathname();
   const { currentUser, isAuthenticated } = useCurrentUser();
+  const adminAccess = useQuery(
+    api.admin.getMyAccess,
+    isAuthenticated ? {} : "skip"
+  );
 
   const appNavLinks = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -221,7 +248,17 @@ export function SiteNav() {
           { href: "/mentorships/timeline", label: "Timeline", icon: CalendarDays },
         ]
       : []),
+    { href: "/report-incident", label: "Report Incident", icon: Flag },
     { href: "/profile", label: "Profile", icon: User },
+    ...(adminAccess
+      ? [
+          {
+            href: "/admin",
+            label: "Admin",
+            icon: ShieldCheck,
+          },
+        ]
+      : []),
   ];
 
   const logoNavLink = isAuthenticated ? "/dashboard" : "/";
@@ -230,6 +267,7 @@ export function SiteNav() {
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/mentorships") ||
     pathname.startsWith("/requests") ||
+    pathname.startsWith("/report-incident") ||
     pathname.startsWith("/search") ||
     pathname.startsWith("/profile");
 
@@ -279,7 +317,8 @@ export function SiteNav() {
             <Skeleton className="h-8 w-8 rounded-full" />
           </AuthLoading>
           <Authenticated>
-            <UserMenu />
+            <NotificationMenu inverted />
+            <UserMenu hasAdminAccess={Boolean(adminAccess)} />
           </Authenticated>
           <Unauthenticated>
             <div className="hidden md:flex">

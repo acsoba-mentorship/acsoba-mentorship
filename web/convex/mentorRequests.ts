@@ -27,6 +27,7 @@ export const createRequest = mutation({
   args: {
     mentorUsername: usersTableFields.username,
     message: mentorshipRequestsTableFields.message,
+    proposedDurationMonths: v.number(),
   },
   handler: (ctx, args) => MentorRequestsModel.createRequest(ctx, args),
 });
@@ -38,6 +39,7 @@ export const createRequestByMentorId = mutation({
   args: {
     mentorId: v.id("users"),
     message: mentorshipRequestsTableFields.message,
+    proposedDurationMonths: v.number(),
   },
   handler: (ctx, args) => MentorRequestsModel.createRequestByMentorId(ctx, args),
 });

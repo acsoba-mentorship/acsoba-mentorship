@@ -37,8 +37,15 @@ export function useLatestRequestStatusByMentor() {
     return map;
   }, [sentRequests]);
 
-  const getLatestStatus = (mentorId: Id<"users">): RequestStatus | null =>
-    latestRequestByMentor.get(mentorId)?.status ?? null;
+  const getLatestStatus = (mentorId: Id<"users">): RequestStatus | null => {
+    const request = latestRequestByMentor.get(mentorId);
+
+    if (request?.status === "accepted" && !request.connectionActive) {
+      return null;
+    }
+
+    return request?.status ?? null;
+  };
 
   /** True while `requestsByMentee` is in flight — avoid treating unknown as "no request". */
   const latestRequestStatusLoading =

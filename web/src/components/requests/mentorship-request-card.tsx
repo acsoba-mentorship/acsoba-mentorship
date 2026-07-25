@@ -9,7 +9,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, Clock, Inbox, MessageSquare, Sparkles } from "lucide-react";
+import {
+  Calendar,
+  CalendarRange,
+  Clock,
+  Inbox,
+  MessageSquare,
+  Sparkles,
+} from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import type { RequestStatus } from "./types";
 
@@ -35,6 +42,7 @@ export function MentorshipRequestCard({
   status,
   createdAt,
   expiresAt,
+  proposedDurationMonths,
   showActions = false,
   isUpdating = false,
   onAccept,
@@ -49,6 +57,7 @@ export function MentorshipRequestCard({
   status: RequestStatus;
   createdAt: number;
   expiresAt?: number;
+  proposedDurationMonths?: number;
   showActions?: boolean;
   isUpdating?: boolean;
   onAccept?: () => void;
@@ -103,6 +112,13 @@ export function MentorshipRequestCard({
               <Calendar className="size-4" />
               Requested {formatDate(createdAt)}
             </span>
+
+            {proposedDurationMonths && (
+              <span className="flex items-center gap-2">
+                <CalendarRange className="size-4" />
+                {proposedDurationMonths}-month period
+              </span>
+            )}
 
             {expiresAt && status === "pending" && (
               <span className="flex items-center gap-2">

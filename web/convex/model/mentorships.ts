@@ -9,6 +9,31 @@ import {
 } from "./auth";
 import { fetchUsersById } from "./helper";
 
+const DEFAULT_MENTORSHIP_DURATION_MONTHS = 3;
+
+function addUtcMonths(timestamp: number, months: number) {
+  const result = new Date(timestamp);
+  const originalDay = result.getUTCDate();
+
+  result.setUTCDate(1);
+  result.setUTCMonth(result.getUTCMonth() + months);
+  const lastDayOfTargetMonth = new Date(
+    Date.UTC(result.getUTCFullYear(), result.getUTCMonth() + 1, 0)
+  ).getUTCDate();
+  result.setUTCDate(Math.min(originalDay, lastDayOfTargetMonth));
+
+  return result.getTime();
+}
+
+function getAgreedDurationMonths(value: number | undefined) {
+  return value &&
+    Number.isInteger(value) &&
+    value >= 1 &&
+    value <= 24
+    ? value
+    : DEFAULT_MENTORSHIP_DURATION_MONTHS;
+}
+
 /**
  * Builds the mentorship data shown to a mentor.
  *
@@ -90,6 +115,9 @@ export async function createMentorshipFromAcceptedRequest(
   }
 
   const now = Date.now();
+  const agreedDurationMonths = getAgreedDurationMonths(
+    request.proposedDurationMonths
+  );
 
   /**
    * First check whether this exact request already created a mentorship.
@@ -133,6 +161,8 @@ export async function createMentorshipFromAcceptedRequest(
     menteeId: request.menteeId,
     requestId,
     startDate: now,
+    plannedEndDate: addUtcMonths(now, agreedDurationMonths),
+    agreedDurationMonths,
     status: "active",
     createdAt: now,
     updatedAt: now,

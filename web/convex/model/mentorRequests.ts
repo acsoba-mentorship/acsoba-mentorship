@@ -12,50 +12,49 @@ import { usersTableFields } from "./users/fields";
 import { mentorshipRequestsTableFields } from "./mentorRequests/fields";
 import { createMentorshipFromAcceptedRequest } from "./mentorships";
 import { fetchUsersById } from "./helper";
+import {
+  DEFAULT_PROGRAM_SETTINGS,
+  getEffectiveProgramSettings,
+} from "./programSettings";
+import { createNotification } from "./notifications";
 
-export const MENTORSHIP_REQUEST_EXPIRY_DAYS = 7;
-
-/**
- * App expiry timezone.
- *
- * Requests expire at 23:59 Singapore time.
- * Singapore does not use daylight saving time, so UTC+8 is safe here.
- */
-const APP_TIME_ZONE_OFFSET_MS = 8 * 60 * 60 * 1000;
+export const MENTORSHIP_REQUEST_EXPIRY_DAYS =
+  DEFAULT_PROGRAM_SETTINGS.requestExpiryDays;
+export const DEFAULT_MENTORSHIP_DURATION_MONTHS = 3;
 
 type MentorshipRequestWithExpiresAt = Doc<"mentorshipRequests"> & {
   expiresAt: number;
 };
 
 /**
- * Returns the expiry timestamp for a request.
- *
- * The request date counts as day 1.
- *
- * Example:
- * - Request created on Saturday, any time
- * - Expiry is Friday 23:59:59.999 Singapore time
+ * Returns the expiry timestamp after the configured number of complete
+ * 24-hour periods have elapsed.
  */
-function getMentorshipRequestExpiresAt(createdAt: number) {
-  const appLocalDate = new Date(createdAt + APP_TIME_ZONE_OFFSET_MS);
-
-  const expiryAsUtcDate = Date.UTC(
-    appLocalDate.getUTCFullYear(),
-    appLocalDate.getUTCMonth(),
-    appLocalDate.getUTCDate() + MENTORSHIP_REQUEST_EXPIRY_DAYS - 1,
-    23,
-    59,
-    59,
-    999
-  );
-
-  return expiryAsUtcDate - APP_TIME_ZONE_OFFSET_MS;
+function getMentorshipRequestExpiresAt(
+  createdAt: number,
+  expiryDays: number = MENTORSHIP_REQUEST_EXPIRY_DAYS
+) {
+  return createdAt + expiryDays * 24 * 60 * 60 * 1000;
 }
 
 function getRequestExpiresAt(
   request: Pick<Doc<"mentorshipRequests">, "createdAt" | "expiresAt">
 ) {
   return request.expiresAt ?? getMentorshipRequestExpiresAt(request.createdAt);
+}
+
+function normalizeDurationMonths(durationMonths: number) {
+  if (
+    !Number.isInteger(durationMonths) ||
+    durationMonths < 1 ||
+    durationMonths > 24
+  ) {
+    throw new Error(
+      "Proposed mentorship length must be a whole number from 1 to 24 months"
+    );
+  }
+
+  return durationMonths;
 }
 
 function isRequestExpired(
@@ -83,6 +82,15 @@ async function expireRequestIfNeeded(
     updatedAt: now,
   });
 
+  await createNotification(ctx, {
+    userId: request.menteeId,
+    type: "request_expired",
+    title: "Mentorship request expired",
+    message:
+      "A mentor did not respond before the request deadline. You can continue your search and contact another mentor.",
+    href: "/requests",
+  });
+
   return true;
 }
 /**
@@ -107,10 +115,11 @@ function buildMentorRequestView(
  */
 function buildMenteeRequestView(
   request: MentorshipRequestWithExpiresAt,
-  mentor: Doc<"users"> | null
+  mentor: Doc<"users"> | null,
+  connectionActive: boolean
 ) {
   const mentorView = mentor
-    ? toPublicMentorDTO(mentor, { forceRevealIdentity: request.status === "accepted" })
+    ? toPublicMentorDTO(mentor, { forceRevealIdentity: connectionActive })
     : null;
   const name = mentorView?.name?.trim() || "Unknown user";
   return {
@@ -122,6 +131,7 @@ function buildMenteeRequestView(
     mentorEmail: mentorView?.email ?? null,
     mentorPhoneNumber: mentorView?.phoneNumber ?? null,
     expertise: mentorView?.mentorProfile?.expertise ?? [],
+    connectionActive,
   };
 }
 
@@ -185,6 +195,15 @@ export async function requestsByMentee(
     .collect();
 
   const mentorById = await fetchUsersById(ctx, requests.map((r) => r.mentorId));
+  const activeMentorships = await ctx.db
+    .query("mentorships")
+    .withIndex("by_menteeId_status", (q) =>
+      q.eq("menteeId", menteeId).eq("status", "active")
+    )
+    .collect();
+  const activeMentorIds = new Set(
+    activeMentorships.map((mentorship) => mentorship.mentorId)
+  );
   const now = Date.now();
 
   return requests.map((request) => {
@@ -196,7 +215,8 @@ export async function requestsByMentee(
 
     return buildMenteeRequestView(
       requestForView,
-      mentorById.get(request.mentorId) ?? null
+      mentorById.get(request.mentorId) ?? null,
+      activeMentorIds.has(request.mentorId)
     );
   });
 }
@@ -206,9 +226,14 @@ export async function requestsByMentee(
  */
 export async function createRequest(
   ctx: MutationCtx,
-  { mentorUsername, message }: { 
+  {
+    mentorUsername,
+    message,
+    proposedDurationMonths,
+  }: {
     mentorUsername: Infer<typeof usersTableFields.username>;
     message: Infer<typeof mentorshipRequestsTableFields.message>;
+    proposedDurationMonths: number;
   }
 ) {
   const mentor = await ctx.db
@@ -223,6 +248,7 @@ export async function createRequest(
   return createRequestForMentor(ctx, {
     mentor,
     message,
+    proposedDurationMonths,
   });
 }
 
@@ -234,9 +260,11 @@ export async function createRequestByMentorId(
   {
     mentorId,
     message,
+    proposedDurationMonths,
   }: {
     mentorId: Id<"users">;
     message: Infer<typeof mentorshipRequestsTableFields.message>;
+    proposedDurationMonths: number;
   }
 ) {
   const mentor = await ctx.db.get("users", mentorId);
@@ -248,6 +276,7 @@ export async function createRequestByMentorId(
   return createRequestForMentor(ctx, {
     mentor,
     message,
+    proposedDurationMonths,
   });
 }
 
@@ -256,15 +285,18 @@ async function createRequestForMentor(
   {
     mentor,
     message,
+    proposedDurationMonths,
   }: {
     mentor: Doc<"users">;
     message: Infer<typeof mentorshipRequestsTableFields.message>;
+    proposedDurationMonths: number;
   }
 ) {
   const currentUser = requireMenteeProfile(
     requireOnboardingComplete(await getAuthenticatedUser(ctx))
   );
   const trimmedMessage = message.trim();
+  const durationMonths = normalizeDurationMonths(proposedDurationMonths);
   const mentorId = mentor._id;
   const menteeId = currentUser._id;
 
@@ -272,8 +304,26 @@ async function createRequestForMentor(
     throw new Error("You cannot request mentorship from yourself");
   }
 
-  if (!mentor.mentorProfile || !mentor.mentorProfile.isAvailable) {
+  if (
+    !mentor.mentorProfile ||
+    !mentor.mentorProfile.isAvailable ||
+    mentor.mentorProfile.isVisible === false
+  ) {
     throw new Error("Selected mentor is not available for mentorship");
+  }
+
+  const [mentorActiveMentorships, settings] = await Promise.all([
+    ctx.db
+      .query("mentorships")
+      .withIndex("by_mentorId_status", (q) =>
+        q.eq("mentorId", mentorId).eq("status", "active")
+      )
+      .collect(),
+    getEffectiveProgramSettings(ctx),
+  ]);
+
+  if (mentorActiveMentorships.length >= mentor.mentorProfile.maxMentees) {
+    throw new Error("Selected mentor has reached their active mentee limit");
   }
 
   if (!trimmedMessage) {
@@ -297,6 +347,36 @@ async function createRequestForMentor(
     await expireRequestIfNeeded(ctx, request, now);
   }
 
+  const pendingRequestsForMentee = await ctx.db
+    .query("mentorshipRequests")
+    .withIndex("by_menteeId_status", (q) =>
+      q.eq("menteeId", menteeId).eq("status", "pending")
+    )
+    .collect();
+
+  for (const request of pendingRequestsForMentee) {
+    await expireRequestIfNeeded(ctx, request, now);
+  }
+
+  const activeMentorshipsForMentee = await ctx.db
+    .query("mentorships")
+    .withIndex("by_menteeId_status", (q) =>
+      q.eq("menteeId", menteeId).eq("status", "active")
+    )
+    .collect();
+  const livePendingCount = pendingRequestsForMentee.filter(
+    (request) => !isRequestExpired(request, now)
+  ).length;
+
+  if (
+    activeMentorshipsForMentee.length + livePendingCount >=
+    settings.maxActiveMentorsPerMentee
+  ) {
+    throw new Error(
+      `You can have at most ${settings.maxActiveMentorsPerMentee} active or pending mentors at a time`
+    );
+  }
+
   const existingPending = pendingRequestsForMentor.find(
     (r) => r.menteeId === menteeId && !isRequestExpired(r, now)
   );
@@ -305,30 +385,41 @@ async function createRequestForMentor(
     throw new Error("You already have a pending request for this mentor");
   }
 
-  const acceptedRequestsForMentor = await ctx.db
-    .query("mentorshipRequests")
-    .withIndex("by_mentorId_status", (q) =>
-      q.eq("mentorId", mentorId).eq("status", "accepted")
+  const mentorshipsBetweenPair = await ctx.db
+    .query("mentorships")
+    .withIndex("by_mentorId_menteeId", (q) =>
+      q.eq("mentorId", mentorId).eq("menteeId", menteeId)
     )
     .collect();
 
-  const existingAccepted = acceptedRequestsForMentor.find(
-    (r) => r.menteeId === menteeId
+  const existingActive = mentorshipsBetweenPair.find(
+    (mentorship) => mentorship.status === "active"
   );
 
-  if (existingAccepted) {
+  if (existingActive) {
     throw new Error("You are already connected with this mentor");
   }
 
-  return ctx.db.insert("mentorshipRequests", {
+  const requestId = await ctx.db.insert("mentorshipRequests", {
     mentorId,
     menteeId,
     status: "pending",
     message: trimmedMessage,
-    expiresAt: getMentorshipRequestExpiresAt(now),
+    proposedDurationMonths: durationMonths,
+    expiresAt: getMentorshipRequestExpiresAt(now, settings.requestExpiryDays),
     createdAt: now,
     updatedAt: now,
   });
+
+  await createNotification(ctx, {
+    userId: mentorId,
+    type: "request_received",
+    title: "New mentorship request",
+    message: `${currentUser.name || "A programme member"} sent you a mentorship request.`,
+    href: "/mentor/requests",
+  });
+
+  return requestId;
 }
 
 /**
@@ -361,6 +452,38 @@ export async function acceptRequest(
     throw new Error("This mentorship request has expired");
   }
 
+  const [activeMentorshipsForMentor, activeMentorshipsForMentee, settings] =
+    await Promise.all([
+      ctx.db
+        .query("mentorships")
+        .withIndex("by_mentorId_status", (q) =>
+          q.eq("mentorId", request.mentorId).eq("status", "active")
+        )
+        .collect(),
+      ctx.db
+        .query("mentorships")
+        .withIndex("by_menteeId_status", (q) =>
+          q.eq("menteeId", request.menteeId).eq("status", "active")
+        )
+        .collect(),
+      getEffectiveProgramSettings(ctx),
+    ]);
+
+  if (
+    activeMentorshipsForMentor.length >= currentUser.mentorProfile!.maxMentees
+  ) {
+    throw new Error("You have reached your active mentee limit");
+  }
+
+  if (
+    activeMentorshipsForMentee.length >=
+    settings.maxActiveMentorsPerMentee
+  ) {
+    throw new Error(
+      "This mentee has reached the programme's active mentor limit"
+    );
+  }
+
   await ctx.db.patch("mentorshipRequests", requestId, {
     status: "accepted",
     expiresAt: getRequestExpiresAt(request),
@@ -368,6 +491,14 @@ export async function acceptRequest(
   });
 
   await createMentorshipFromAcceptedRequest(ctx, { requestId });
+
+  await createNotification(ctx, {
+    userId: request.menteeId,
+    type: "request_accepted",
+    title: "Mentorship request accepted",
+    message: `${currentUser.name || "Your mentor"} accepted your request. Your mentorship workspace is ready.`,
+    href: "/mentorships",
+  });
 
   return requestId;
 }
@@ -406,6 +537,15 @@ export async function rejectRequest(
     status: "rejected",
     expiresAt: getRequestExpiresAt(request),
     updatedAt: now,
+  });
+
+  await createNotification(ctx, {
+    userId: request.menteeId,
+    type: "request_rejected",
+    title: "Mentorship request update",
+    message:
+      "A mentor was unable to accept your request. You can continue searching for another match.",
+    href: "/requests",
   });
 
   return requestId;

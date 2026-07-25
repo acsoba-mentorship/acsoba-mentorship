@@ -1,36 +1,45 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Shepherds web application
 
-## Getting Started
+Next.js 16 + React 19 frontend and Convex backend for the ACS OBA Shepherds
+Programme.
 
-First, run the development server:
+## Local development
 
 ```bash
+cp .env.example .env.local
+# Replace every placeholder in .env.local with real development values.
+npm ci
+# Terminal 1 (keeps running)
+npx convex dev
+# Terminal 2
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`npx convex dev` watches for backend changes, so keep it running in a separate
+terminal from the Next.js development server.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The full setup, Auth0 configuration, Convex environment variables, head-admin
+bootstrap, deployment, and troubleshooting instructions are in
+[`../DEBUGGING_AND_INTEGRATION.md`](../DEBUGGING_AND_INTEGRATION.md).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Checks
 
-## Learn More
+```bash
+npm run check
+npm run build
+```
 
-To learn more about Next.js, take a look at the following resources:
+Use `npm run build:webpack` only as a diagnostic fallback in constrained
+containers where Turbopack cannot access process metrics.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Code organization
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `src/app` - application routes
+- `src/components` - feature and shared UI
+- `convex/*.ts` - thin public Convex query/mutation/action wrappers
+- `convex/model/*.ts` - domain logic and authorization
+- `convex/model/*/fields.ts` - reusable validators and schema fields
+- `convex/schema.ts` - authoritative database schema
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Run `npx convex codegen` after adding or renaming public Convex modules in a
+configured deployment.

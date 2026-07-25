@@ -61,8 +61,8 @@ export const checkUsernameAvailable = query({
  * Lists mentors, prioritizing mentors currently marked available.
  */
 export const listMentors = query({
-  args: { limit: v.optional(v.number()) },
-  handler: (ctx, args) => UsersModel.listMentors(ctx, args),
+  args: {},
+  handler: (ctx) => UsersModel.listMentors(ctx),
 });
 
 /**

@@ -174,6 +174,7 @@ export const mentorDetailsSchema = z.object({
   yearsOfExperience: z.number().int("Must be an integer").min(0, "Must be 0 or more").max(50),
   maxMentees: z.number().int("Must be an integer").min(1, "Must be at least 1").max(100),
   isAvailable: z.boolean(),
+  isVisible: z.boolean(),
 });
 
 export type MentorDetailsFormValues = z.infer<typeof mentorDetailsSchema>;

@@ -54,3 +54,31 @@ export function requireMenteeProfile(user: Doc<"users">): Doc<"users"> {
   }
   return user;
 }
+
+/**
+ * Ensures the caller has operational administrator access.
+ */
+export async function requireAdmin(ctx: AuthCtx) {
+  const user = await getAuthenticatedUser(ctx);
+  const membership = await ctx.db
+    .query("adminMemberships")
+    .withIndex("by_user", (q) => q.eq("userId", user._id))
+    .unique();
+
+  if (!membership || membership.status !== "active") {
+    throw new Error("Administrator access required");
+  }
+
+  return { user, membership };
+}
+
+/**
+ * Ensures the caller is the environment-seeded head administrator.
+ */
+export async function requireHeadAdmin(ctx: AuthCtx) {
+  const principal = await requireAdmin(ctx);
+  if (principal.membership.role !== "head_admin") {
+    throw new Error("Head administrator access required");
+  }
+  return principal;
+}
