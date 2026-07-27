@@ -7,7 +7,9 @@ export const notificationTypeValidator = v.union(
   v.literal("request_expired"),
   v.literal("pulse_survey_due"),
   v.literal("exit_feedback_due"),
-  v.literal("incident_updated")
+  v.literal("incident_updated"),
+  v.literal("internship_interest_received"),
+  v.literal("internship_interest_acknowledged")
 );
 
 export const notificationsTableFields = {
