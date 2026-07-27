@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { SuggestedMentors } from "@/components/dashboard/suggested-mentors";
 import { PulseSurveyReminder } from "@/components/dashboard/pulse-survey-reminder";
+import { VolunteeringChecklist } from "@/components/dashboard/volunteering-checklist";
 
 const stats = [
   { label: "Active Mentorships", value: "0", icon: Users },
@@ -57,6 +58,8 @@ export default function DashboardPage() {
       </div>
       
       <PulseSurveyReminder />
+
+      <VolunteeringChecklist />
       
       {/* Quick Actions */}
       <Card>

@@ -16,6 +16,7 @@ import {
   Siren,
   SlidersHorizontal,
   UserCog,
+  Users2,
 } from "lucide-react";
 
 import { api } from "../../../convex/_generated/api";
@@ -27,6 +28,7 @@ import { OutstandingFormsSection } from "@/components/admin/outstanding-forms-se
 import { OverviewSection } from "@/components/admin/overview-section";
 import { ProgrammeSettingsSection } from "@/components/admin/programme-settings-section";
 import { PulseSurveysSection } from "@/components/admin/pulse-surveys-section";
+import { VolunteeringSection } from "@/components/admin/volunteering-section";
 import { AdminStatusBadge } from "@/components/admin/admin-shared";
 import { NotificationMenu } from "@/components/navigation/notification-menu";
 import { Button } from "@/components/ui/button";
@@ -51,6 +53,7 @@ type AdminSection =
   | "exit"
   | "incidents"
   | "settings"
+  | "volunteering"
   | "admins"
   | "audit";
 
@@ -90,6 +93,12 @@ const operationalSections = [
     label: "Programme settings",
     description: "Operating rules",
     icon: SlidersHorizontal,
+  },
+  {
+    value: "volunteering",
+    label: "Volunteering",
+    description: "Manage activities",
+    icon: Users2,
   },
 ] as const;
 
@@ -256,6 +265,8 @@ function SectionContent({
       return <IncidentReviewSection />;
     case "settings":
       return <ProgrammeSettingsSection />;
+    case "volunteering":
+      return <VolunteeringSection />;
     case "admins":
       return isHeadAdmin ? <AdminManagementSection /> : null;
     case "audit":
