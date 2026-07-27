@@ -19,6 +19,10 @@ import {
   internshipsTableFields,
   internshipInterestsTableFields,
 } from "./model/internships/fields";
+import {
+  volunteerActivitiesTableFields,
+  volunteerSignupsTableFields,
+} from "./model/volunteering/fields";
 
 const users = defineTable(usersTableFields)
   .index("by_token", ["tokenIdentifier"])
@@ -120,6 +124,15 @@ const internshipInterests = defineTable(internshipInterestsTableFields)
   .index("by_internshipId_applicantId", ["internshipId", "applicantId"])
   .index("by_internshipId_status", ["internshipId", "status"]);
 
+const volunteerActivities = defineTable(volunteerActivitiesTableFields)
+  .index("by_isActive", ["isActive"])
+  .index("by_createdBy", ["createdBy"]);
+
+const volunteerSignups = defineTable(volunteerSignupsTableFields)
+  .index("by_userId", ["userId"])
+  .index("by_activityId", ["activityId"])
+  .index("by_activityId_userId", ["activityId", "userId"]);
+
 export default defineSchema({
   users,
   mentorshipRequests,
@@ -137,4 +150,6 @@ export default defineSchema({
   exitFeedback,
   internships,
   internshipInterests,
+  volunteerActivities,
+  volunteerSignups,
 });
