@@ -12,6 +12,7 @@ import {
 import { useCurrentUser } from "@/app/CurrentUserProvider";
 import {
   CalendarDays,
+  Briefcase,
   Flag,
   Inbox,
   LayoutDashboard,
@@ -241,6 +242,7 @@ export function SiteNav() {
   const appNavLinks = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/search", label: "Find Mentors", icon: Search },
+    { href: "/internships", label: "Internships", icon: Briefcase },
     ...(currentUser?.menteeProfile
       ? [
           { href: "/mentorships", label: "My Mentorships", icon: Users },
@@ -269,6 +271,7 @@ export function SiteNav() {
     pathname.startsWith("/requests") ||
     pathname.startsWith("/report-incident") ||
     pathname.startsWith("/search") ||
+    pathname.startsWith("/internships") ||
     pathname.startsWith("/profile");
 
   return (
