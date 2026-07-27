@@ -15,6 +15,10 @@ import {
 import { notificationsTableFields } from "./model/notifications/fields";
 import { incidentReportsTableFields } from "./model/incidentReports/fields";
 import { exitFeedbackTableFields } from "./model/exitFeedback/fields";
+import {
+  internshipsTableFields,
+  internshipInterestsTableFields,
+} from "./model/internships/fields";
 
 const users = defineTable(usersTableFields)
   .index("by_token", ["tokenIdentifier"])
@@ -105,6 +109,17 @@ const exitFeedback = defineTable(exitFeedbackTableFields)
   .index("by_mentorshipId_respondentId", ["mentorshipId", "respondentId"])
   .index("by_status_dueAt", ["status", "dueAt"]);
 
+const internships = defineTable(internshipsTableFields)
+  .index("by_offerorId", ["offerorId"])
+  .index("by_status", ["status"])
+  .index("by_status_closingDate", ["status", "closingDate"]);
+
+const internshipInterests = defineTable(internshipInterestsTableFields)
+  .index("by_internshipId", ["internshipId"])
+  .index("by_applicantId", ["applicantId"])
+  .index("by_internshipId_applicantId", ["internshipId", "applicantId"])
+  .index("by_internshipId_status", ["internshipId", "status"]);
+
 export default defineSchema({
   users,
   mentorshipRequests,
@@ -120,4 +135,6 @@ export default defineSchema({
   notifications,
   incidentReports,
   exitFeedback,
+  internships,
+  internshipInterests,
 });
