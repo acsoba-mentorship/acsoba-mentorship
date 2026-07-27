@@ -14,6 +14,7 @@ import type * as exitFeedback from "../exitFeedback.js";
 import type * as helper from "../helper.js";
 import type * as incidentReports from "../incidentReports.js";
 import type * as init from "../init.js";
+import type * as internships from "../internships.js";
 import type * as mentorRequests from "../mentorRequests.js";
 import type * as mentorshipMeetings from "../mentorshipMeetings.js";
 import type * as mentorshipWorkspace from "../mentorshipWorkspace.js";
@@ -28,6 +29,8 @@ import type * as model_exitFeedback_fields from "../model/exitFeedback/fields.js
 import type * as model_helper from "../model/helper.js";
 import type * as model_incidentReports from "../model/incidentReports.js";
 import type * as model_incidentReports_fields from "../model/incidentReports/fields.js";
+import type * as model_internships from "../model/internships.js";
+import type * as model_internships_fields from "../model/internships/fields.js";
 import type * as model_mentorRequests from "../model/mentorRequests.js";
 import type * as model_mentorRequests_fields from "../model/mentorRequests/fields.js";
 import type * as model_mentorshipGoals_fields from "../model/mentorshipGoals/fields.js";
@@ -45,11 +48,14 @@ import type * as model_pulseSurveys_fields from "../model/pulseSurveys/fields.js
 import type * as model_users from "../model/users.js";
 import type * as model_users_fields from "../model/users/fields.js";
 import type * as model_users_validators from "../model/users/validators.js";
+import type * as model_volunteering from "../model/volunteering.js";
+import type * as model_volunteering_fields from "../model/volunteering/fields.js";
 import type * as notifications from "../notifications.js";
 import type * as programSettings from "../programSettings.js";
 import type * as pulseSurveys from "../pulseSurveys.js";
 import type * as users from "../users.js";
 import type * as verification from "../verification.js";
+import type * as volunteering from "../volunteering.js";
 
 import type {
   ApiFromModules,
@@ -64,6 +70,7 @@ declare const fullApi: ApiFromModules<{
   helper: typeof helper;
   incidentReports: typeof incidentReports;
   init: typeof init;
+  internships: typeof internships;
   mentorRequests: typeof mentorRequests;
   mentorshipMeetings: typeof mentorshipMeetings;
   mentorshipWorkspace: typeof mentorshipWorkspace;
@@ -78,6 +85,8 @@ declare const fullApi: ApiFromModules<{
   "model/helper": typeof model_helper;
   "model/incidentReports": typeof model_incidentReports;
   "model/incidentReports/fields": typeof model_incidentReports_fields;
+  "model/internships": typeof model_internships;
+  "model/internships/fields": typeof model_internships_fields;
   "model/mentorRequests": typeof model_mentorRequests;
   "model/mentorRequests/fields": typeof model_mentorRequests_fields;
   "model/mentorshipGoals/fields": typeof model_mentorshipGoals_fields;
@@ -95,11 +104,14 @@ declare const fullApi: ApiFromModules<{
   "model/users": typeof model_users;
   "model/users/fields": typeof model_users_fields;
   "model/users/validators": typeof model_users_validators;
+  "model/volunteering": typeof model_volunteering;
+  "model/volunteering/fields": typeof model_volunteering_fields;
   notifications: typeof notifications;
   programSettings: typeof programSettings;
   pulseSurveys: typeof pulseSurveys;
   users: typeof users;
   verification: typeof verification;
+  volunteering: typeof volunteering;
 }>;
 
 /**
