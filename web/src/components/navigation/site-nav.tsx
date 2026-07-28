@@ -250,17 +250,6 @@ export function SiteNav() {
           { href: "/mentorships/timeline", label: "Timeline", icon: CalendarDays },
         ]
       : []),
-    { href: "/report-incident", label: "Report Incident", icon: Flag },
-    { href: "/profile", label: "Profile", icon: User },
-    ...(adminAccess
-      ? [
-          {
-            href: "/admin",
-            label: "Admin",
-            icon: ShieldCheck,
-          },
-        ]
-      : []),
   ];
 
   const logoNavLink = isAuthenticated ? "/dashboard" : "/";
