@@ -22,6 +22,10 @@ The full setup, Auth0 configuration, Convex environment variables, head-admin
 bootstrap, deployment, and troubleshooting instructions are in
 [`../DEBUGGING_AND_INTEGRATION.md`](../DEBUGGING_AND_INTEGRATION.md).
 
+Before production sign-up testing, apply and verify the hosted-login branding
+and transactional-email requirements in
+[`docs/auth0-branding-and-email.md`](docs/auth0-branding-and-email.md).
+
 ## Checks
 
 ```bash
