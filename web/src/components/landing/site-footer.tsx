@@ -17,15 +17,12 @@ export function SiteFooter() {
               <Link href="/" className="text-sm text-primary-foreground/70 transition-colors hover:text-primary-foreground">
                 Home
               </Link>
-              <Link href="/search" className="text-sm text-primary-foreground/70 transition-colors hover:text-primary-foreground">
-                Mentors
-              </Link>
             </nav>
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-primary-foreground/50">Contact</p>
             <nav className="mt-3 flex flex-col gap-2">
-              <span className="text-sm text-primary-foreground/70">contact@acsobashepherds.com</span>
+              <span className="text-sm text-primary-foreground/70">shepherds@acsoba.org</span>
             </nav>
           </div>
         </div>

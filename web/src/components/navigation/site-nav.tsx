@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image"
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth0 } from "@auth0/auth0-react";
@@ -66,10 +67,10 @@ function NavLinks({
           key={link.href}
           href={link.href}
           className={cn(
-            "flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary-foreground",
+            "flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary",
             pathname === link.href
-              ? "text-primary-foreground"
-              : "text-primary-foreground/60"
+              ? "text-primary"
+              : "text-foreground/60"
           )}
         >
           <link.icon className="size-4" />
@@ -131,7 +132,7 @@ function UserMenu({ hasAdminAccess }: { hasAdminAccess: boolean }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="rounded-full text-primary-foreground hover:text-primary-foreground hover:bg-primary-foreground/10">
+        <Button variant="ghost" size="icon" className="rounded-full">
           <Avatar size="sm">
             <AvatarImage src={user?.picture ?? undefined} alt={user?.name ?? "User"} />
             <AvatarFallback>{initials}</AvatarFallback>
@@ -208,7 +209,6 @@ function AuthButtons() {
       <Button
         variant="ghost"
         size="sm"
-        className="text-primary-foreground hover:text-primary-foreground hover:bg-primary-foreground/10"
         onClick={() => {
           if (!isLoading) void loginWithRedirect();
         }}
@@ -264,12 +264,12 @@ export function SiteNav() {
     pathname.startsWith("/profile");
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-primary">
-      <div className="mx-auto flex h-14 max-w-7xl items-center px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-50 w-full border-b bg-white">
+      <div className="mx-auto flex h-20 max-w-7xl items-center px-4 sm:px-6 lg:px-8">
         {/* Mobile hamburger */}
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon-sm" className="mr-2 text-primary-foreground hover:text-primary-foreground hover:bg-primary-foreground/10 md:hidden">
+            <Button variant="ghost" size="icon-sm" className="mr-2 md:hidden">
               <Menu className="size-5" />
               <span className="sr-only">Toggle menu</span>
             </Button>
@@ -291,25 +291,37 @@ export function SiteNav() {
           </SheetContent>
         </Sheet>
 
-        {/* Logo */}
-        <Link href={logoNavLink} className="mr-6 flex items-center gap-2 font-bold text-primary-foreground">
-          ACS OBA Shepherds
+        {/* Logo — sits directly on the white bar, no background patch needed */}
+        <Link
+          href={logoNavLink}
+          className="mr-8 flex items-center"
+          aria-label="ACS OBA Shepherds home"
+        >
+          <Image
+            src="/logo.png"
+            alt="ACS OBA Shepherds"
+            width={260}
+            height={78}
+            unoptimized
+            className="h-14 w-auto object-contain"
+            priority
+          />
         </Link>
 
         {/* Desktop nav links (only on app routes) */}
         {isAppRoute && (
-          <nav className="hidden items-center gap-6 md:flex">
+          <nav className="hidden items-center gap-8 md:flex">
             <NavLinks pathname={pathname} links={appNavLinks} />
           </nav>
         )}
 
         {/* Right side: auth state */}
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-3">
           <AuthLoading>
             <Skeleton className="h-8 w-8 rounded-full" />
           </AuthLoading>
           <Authenticated>
-            <NotificationMenu inverted />
+            <NotificationMenu />
             <UserMenu hasAdminAccess={Boolean(adminAccess)} />
           </Authenticated>
           <Unauthenticated>
