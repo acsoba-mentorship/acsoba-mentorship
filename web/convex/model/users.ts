@@ -695,32 +695,32 @@ export async function setUserOnboardingComplete(
     onboardingStatus: ONBOARDING_STATUS.COMPLETE,
   } as const;
 
-  if (args.role === "mentee") {
+  if (args.profile.role === "mentee") {
     await validateOnboardingSelections(ctx, {
-      interests: args.interests,
-      industries: args.industries,
+      interests: args.profile.interests,
+      industries: args.profile.industries,
     });
     await ctx.db.patch("users", user._id, {
       ...profileBasics,
-      interests: args.interests,
-      industries: args.industries,
+      interests: args.profile.interests,
+      industries: args.profile.industries,
       menteeProfile: {
-        ...validateMenteeProfile(args.menteeProfile),
-        industries: args.industries,
+        ...validateMenteeProfile(args.profile.menteeProfile),
+        industries: args.profile.industries,
       },
     });
   } else {
     await validateOnboardingSelections(ctx, {
-      industries: args.industries,
+      industries: args.profile.industries,
     });
     await ctx.db.patch("users", user._id, {
       ...profileBasics,
-      industries: args.industries,
+      industries: args.profile.industries,
       mentorProfile: {
-        ...normalizeMentorProfile(args.mentorProfile, {
+        ...normalizeMentorProfile(args.profile.mentorProfile, {
           requireExpertise: true,
         }),
-        industries: args.industries,
+        industries: args.profile.industries,
       },
     });
   }

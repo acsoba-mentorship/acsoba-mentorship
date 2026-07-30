@@ -45,6 +45,7 @@ export function ConvexClientProvider({
         window.location.replace(getSafeReturnTo(appState));
       }}
       useRefreshTokens
+      cacheLocation="localstorage"
     >
       <ConvexProviderWithAuth0 client={convex}>
         {children}

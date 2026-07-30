@@ -52,21 +52,26 @@ const onboardingBackgroundValidators = {
   experience: v.array(experienceEntryValidator),
 };
 
-export const setUserOnboardingCompleteArgsValidator = v.union(
-  v.object({
-    ...onboardingBackgroundValidators,
-    role: v.literal("mentee"),
-    interests: v.array(v.string()),
-    industries: v.array(v.string()),
-    menteeProfile: menteeProfileValidator,
-  }),
-  v.object({
-    ...onboardingBackgroundValidators,
-    role: v.literal("mentor"),
-    industries: v.array(v.string()),
-    mentorProfile: mentorProfileValidator,
-  })
-);
+const onboardingMenteeProfileValidator = v.object({
+  role: v.literal("mentee"),
+  interests: v.array(v.string()),
+  industries: v.array(v.string()),
+  menteeProfile: menteeProfileValidator,
+});
+
+const onboardingMentorProfileValidator = v.object({
+  role: v.literal("mentor"),
+  industries: v.array(v.string()),
+  mentorProfile: mentorProfileValidator,
+});
+
+export const setUserOnboardingCompleteArgsValidator = v.object({
+  ...onboardingBackgroundValidators,
+  profile: v.union(
+    onboardingMenteeProfileValidator,
+    onboardingMentorProfileValidator
+  ),
+});
 
 export const enrollAsMenteeArgsValidator = v.object({
   interests: v.array(v.string()),
