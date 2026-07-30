@@ -23,6 +23,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 type ProgrammeSettings = FunctionReturnType<
   typeof api.programSettings.getForAdmin
@@ -67,6 +68,17 @@ const settingDefinitions = [
   },
 ] as const;
 
+function catalogToText(values: readonly string[]) {
+  return values.join("\n");
+}
+
+function textToCatalog(value: string) {
+  return value
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 function ProgrammeSettingsForm({
   settings,
 }: {
@@ -78,6 +90,8 @@ function ProgrammeSettingsForm({
     requestExpiryDays: String(settings.requestExpiryDays),
     pulseSurveyIntervalDays: String(settings.pulseSurveyIntervalDays),
     exitSurveyDueDays: String(settings.exitSurveyDueDays),
+    onboardingIndustries: catalogToText(settings.onboardingIndustries),
+    onboardingInterests: catalogToText(settings.onboardingInterests),
   }));
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,6 +108,8 @@ function ProgrammeSettingsForm({
       requestExpiryDays: Number(values.requestExpiryDays),
       pulseSurveyIntervalDays: Number(values.pulseSurveyIntervalDays),
       exitSurveyDueDays: Number(values.exitSurveyDueDays),
+      onboardingIndustries: textToCatalog(values.onboardingIndustries),
+      onboardingInterests: textToCatalog(values.onboardingInterests),
     };
 
     try {
@@ -149,6 +165,55 @@ function ProgrammeSettingsForm({
             </p>
           </div>
         ))}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-xl border border-primary/10 bg-[#faf8f1] p-5">
+          <label
+            htmlFor="onboardingIndustries"
+            className="text-sm font-semibold text-primary"
+          >
+            Onboarding industries
+          </label>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            Enter one industry per line, in the order members should see them.
+          </p>
+          <Textarea
+            id="onboardingIndustries"
+            required
+            value={values.onboardingIndustries}
+            onChange={(event) =>
+              setValues((current) => ({
+                ...current,
+                onboardingIndustries: event.target.value,
+              }))
+            }
+            className="mt-4 min-h-48 bg-background"
+          />
+        </div>
+        <div className="rounded-xl border border-primary/10 bg-[#faf8f1] p-5">
+          <label
+            htmlFor="onboardingInterests"
+            className="text-sm font-semibold text-primary"
+          >
+            Onboarding interests
+          </label>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            Enter one interest per line, in the order members should see them.
+          </p>
+          <Textarea
+            id="onboardingInterests"
+            required
+            value={values.onboardingInterests}
+            onChange={(event) =>
+              setValues((current) => ({
+                ...current,
+                onboardingInterests: event.target.value,
+              }))
+            }
+            className="mt-4 min-h-48 bg-background"
+          />
+        </div>
       </div>
 
       {error && <AdminError message={error} />}

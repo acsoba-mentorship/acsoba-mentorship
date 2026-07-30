@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
 import { OnboardingShell } from "@/components/onboarding/onboarding-shell";
 import { PresetMultiSelect } from "@/components/onboarding/preset-multi-select";
 import { useOnboardingDraft } from "@/components/onboarding/onboarding-provider";
@@ -15,6 +17,13 @@ import { interestsChapterSchema } from "@/lib/validation/onboarding";
 
 export function InterestsStep() {
   const { draft, updateDraft, goNext } = useOnboardingDraft();
+  const configuredOptions = useQuery(
+    api.programSettings.getOnboardingOptions
+  );
+  const industryOptions: readonly string[] =
+    configuredOptions?.industries ?? PRESET_INDUSTRIES;
+  const interestOptions: readonly string[] =
+    configuredOptions?.interests ?? PRESET_INTERESTS;
   const [industries, setIndustries] = useState<string[]>(
     draft.interestsChapter?.industries ?? []
   );
@@ -27,6 +36,15 @@ export function InterestsStep() {
     const parsed = interestsChapterSchema.safeParse({ industries, interests });
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? "Please complete both sections");
+      return;
+    }
+    if (
+      !parsed.data.industries.every((value) =>
+        industryOptions.includes(value)
+      ) ||
+      !parsed.data.interests.every((value) => interestOptions.includes(value))
+    ) {
+      setError("Available options changed. Review your selections and try again.");
       return;
     }
 
@@ -61,14 +79,14 @@ export function InterestsStep() {
         <PresetMultiSelect
           title="Industries you are interested in"
           description="Pick the sectors you'd like to explore with a mentor."
-          options={PRESET_INDUSTRIES}
+          options={industryOptions}
           value={industries}
           onChange={setIndustries}
         />
         <PresetMultiSelect
           title="We want to know more about what you like"
           description="Topics and themes you care about."
-          options={PRESET_INTERESTS}
+          options={interestOptions}
           value={interests}
           onChange={setInterests}
         />

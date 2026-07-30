@@ -7,8 +7,6 @@ import {
   ONBOARDING_TAG_MAX,
   ONBOARDING_TAG_MIN,
   PREFERRED_COMMUNICATION_MODE_OPTIONS,
-  PRESET_INDUSTRIES,
-  PRESET_INTERESTS,
   type GenderValue,
 } from "@/lib/onboarding/constants";
 import { experienceEntryFieldsSchema } from "@/lib/validation/profile";
@@ -18,12 +16,17 @@ const genderValues = GENDER_OPTIONS.map((o) => o.value) as [
   ...GenderValue[],
 ];
 const nationalityValues = [...NATIONALITY_OPTIONS] as [string, ...string[]];
-const industryValues = [...PRESET_INDUSTRIES] as [string, ...string[]];
-const interestValues = [...PRESET_INTERESTS] as [string, ...string[]];
 
-const tagSelectionSchema = (allowed: [string, ...string[]]) => z.array(z.enum(allowed))
+const tagSelectionSchema = z
+  .array(z.string().trim().min(1).max(80))
   .min(ONBOARDING_TAG_MIN, `Select at least ${ONBOARDING_TAG_MIN}`)
-  .max(ONBOARDING_TAG_MAX, `Select at most ${ONBOARDING_TAG_MAX}`);
+  .max(ONBOARDING_TAG_MAX, `Select at most ${ONBOARDING_TAG_MAX}`)
+  .refine(
+    (values) =>
+      new Set(values.map((value) => value.toLocaleLowerCase("en-SG"))).size ===
+      values.length,
+    "Select each option only once"
+  );
 
 export const personalDetailsSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required").max(80),
@@ -70,8 +73,8 @@ export const workingBackgroundSchema = experienceEntryFieldsSchema.pick({
 export type WorkingBackgroundFormValues = z.infer<typeof workingBackgroundSchema>;
 
 export const interestsChapterSchema = z.object({
-  industries: tagSelectionSchema(industryValues),
-  interests: tagSelectionSchema(interestValues),
+  industries: tagSelectionSchema,
+  interests: tagSelectionSchema,
 });
 
 export type InterestsChapterFormValues = z.infer<typeof interestsChapterSchema>;

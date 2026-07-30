@@ -37,6 +37,8 @@ export const programSettingsTableFields = {
   requestExpiryDays: v.number(),
   pulseSurveyIntervalDays: v.number(),
   exitSurveyDueDays: v.number(),
+  onboardingIndustries: v.optional(v.array(v.string())),
+  onboardingInterests: v.optional(v.array(v.string())),
   updatedBy: v.optional(v.id("users")),
   updatedAt: v.number(),
 };

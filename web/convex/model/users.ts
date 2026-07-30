@@ -35,6 +35,7 @@ import {
   getVerifiedNormalizedAuthEmail,
   syncAuthenticatedEmailAndAdminAccess,
 } from "./admin/bootstrap";
+import { getEffectiveProgramSettings } from "./programSettings";
 
 const CONVEX_ID_PATTERN = /^[a-z0-9]{16,64}$/i;
 
@@ -551,6 +552,15 @@ export async function setUserOnboardingComplete(
   }
   if (args.industries.length < 1 || args.industries.length > 3) {
     throw new Error("Select between 1 and 3 industries");
+  }
+  const onboardingOptions = await getEffectiveProgramSettings(ctx);
+  const availableInterests = new Set(onboardingOptions.onboardingInterests);
+  const availableIndustries = new Set(onboardingOptions.onboardingIndustries);
+  if (!args.interests.every((interest) => availableInterests.has(interest))) {
+    throw new Error("Select interests from the available onboarding options");
+  }
+  if (!args.industries.every((industry) => availableIndustries.has(industry))) {
+    throw new Error("Select industries from the available onboarding options");
   }
 
   await ctx.db.patch("users", user._id, {

@@ -12,7 +12,30 @@ export const DEFAULT_PROGRAM_SETTINGS = {
   requestExpiryDays: 7,
   pulseSurveyIntervalDays: 30,
   exitSurveyDueDays: 14,
+  onboardingIndustries: [
+    "Technology",
+    "Finance",
+    "Healthcare",
+    "Education",
+    "Consulting",
+    "Marketing",
+    "Engineering",
+    "Legal",
+  ],
+  onboardingInterests: [
+    "Leadership",
+    "Career growth",
+    "Networking",
+    "Public speaking",
+    "Entrepreneurship",
+    "Work-life balance",
+    "Technical skills",
+    "Interview prep",
+  ],
 } as const;
+
+const CATALOG_MAX_ENTRIES = 50;
+const CATALOG_ITEM_MAX_CHARACTERS = 80;
 
 function validateInteger(
   value: number,
@@ -24,6 +47,38 @@ function validateInteger(
     throw new Error(`${label} must be a whole number from ${minimum} to ${maximum}`);
   }
   return value;
+}
+
+function normalizeCatalog(values: string[], label: string) {
+  const normalized: string[] = [];
+  const seen = new Set<string>();
+
+  for (const rawValue of values) {
+    const value = rawValue.trim().replace(/\s+/g, " ");
+    if (!value) continue;
+    if (value.length > CATALOG_ITEM_MAX_CHARACTERS) {
+      throw new Error(
+        `${label} entries must be ${CATALOG_ITEM_MAX_CHARACTERS} characters or fewer`
+      );
+    }
+
+    const key = value.toLocaleLowerCase("en-SG");
+    if (!seen.has(key)) {
+      seen.add(key);
+      normalized.push(value);
+    }
+  }
+
+  if (normalized.length === 0) {
+    throw new Error(`${label} must include at least one entry`);
+  }
+  if (normalized.length > CATALOG_MAX_ENTRIES) {
+    throw new Error(
+      `${label} must include at most ${CATALOG_MAX_ENTRIES} entries`
+    );
+  }
+
+  return normalized;
 }
 
 export async function getEffectiveProgramSettings(ctx: Ctx) {
@@ -40,6 +95,12 @@ export async function getEffectiveProgramSettings(ctx: Ctx) {
           requestExpiryDays: stored.requestExpiryDays,
           pulseSurveyIntervalDays: stored.pulseSurveyIntervalDays,
           exitSurveyDueDays: stored.exitSurveyDueDays,
+          onboardingIndustries:
+            stored.onboardingIndustries ??
+            [...DEFAULT_PROGRAM_SETTINGS.onboardingIndustries],
+          onboardingInterests:
+            stored.onboardingInterests ??
+            [...DEFAULT_PROGRAM_SETTINGS.onboardingInterests],
         }
       : {}),
     updatedAt: stored?.updatedAt ?? null,
@@ -52,6 +113,14 @@ export async function getForAdmin(ctx: QueryCtx) {
   return getEffectiveProgramSettings(ctx);
 }
 
+export async function getOnboardingOptions(ctx: QueryCtx) {
+  const settings = await getEffectiveProgramSettings(ctx);
+  return {
+    industries: settings.onboardingIndustries,
+    interests: settings.onboardingInterests,
+  };
+}
+
 export async function updateForAdmin(
   ctx: MutationCtx,
   args: {
@@ -59,6 +128,8 @@ export async function updateForAdmin(
     requestExpiryDays: number;
     pulseSurveyIntervalDays: number;
     exitSurveyDueDays: number;
+    onboardingIndustries: string[];
+    onboardingInterests: string[];
   }
 ) {
   const { user: admin } = await requireAdmin(ctx);
@@ -87,6 +158,14 @@ export async function updateForAdmin(
       "Exit survey due days",
       1,
       90
+    ),
+    onboardingIndustries: normalizeCatalog(
+      args.onboardingIndustries,
+      "Onboarding industries"
+    ),
+    onboardingInterests: normalizeCatalog(
+      args.onboardingInterests,
+      "Onboarding interests"
     ),
   };
 
