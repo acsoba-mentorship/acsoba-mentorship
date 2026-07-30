@@ -149,6 +149,8 @@ export const usersTableFields = {
   experience: v.array(experienceEntryValidator),
   menteeProfile: v.optional(menteeProfileValidator),
   mentorProfile: v.optional(mentorProfileValidator),
+  // Legacy field retained so existing deployed documents continue to validate.
+  // Identity disclosure is now fixed programme policy and ignores this value.
   mentorSettings: v.optional(mentorSettingsValidator),
   onboardingStatus: onboardingStatusValidator,
   createdAt: v.number(),

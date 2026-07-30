@@ -22,7 +22,7 @@ interface ProfileEditDialogProps {
 
 /**
  * Generic dialog shell for profile section editing.
- * Used across About, Goals, Interests, Education, Experience, and Mentor settings.
+ * Used across About, Goals, Interests, Education, Experience, and mentor profile sections.
  */
 export function ProfileEditDialog({
   trigger,

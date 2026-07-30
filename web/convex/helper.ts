@@ -7,24 +7,6 @@ export const USERNAME_PATTERN = /^[a-z0-9](?:[a-z0-9_]*[a-z0-9])?$/;
 export const USERNAME_CHANGE_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
 export const ANONYMOUS_MENTOR_NAME = "Anonymous Mentor";
 
-export const DEFAULT_MENTOR_PRIVACY_SETTINGS = {
-  masterIdentityDisclosure: false,
-  overrides: {
-    name: false,
-    email: false,
-    phoneNumber: false,
-  },
-} as const;
-
-type MentorPrivacySettings = NonNullable<Doc<"users">["mentorSettings"]>["privacy"];
-
-type MentorIdentityVisibility = {
-  name: boolean;
-  username: boolean;
-  email: boolean;
-  phoneNumber: boolean;
-};
-
 /**
  * Normalizes a username into canonical lowercase format.
  */
@@ -116,44 +98,11 @@ export function getInitials(name: string): string {
 }
 
 /**
- * Resolves persisted mentor privacy settings into effective field visibility.
- */
-export function resolveMentorIdentityVisibility(
-  settings?: MentorPrivacySettings,
-  forceReveal = false
-): MentorIdentityVisibility {
-  if (forceReveal) {
-    return {
-      name: true,
-      username: true,
-      email: true,
-      phoneNumber: true,
-    };
-  }
-
-  const masterIdentityDisclosure =
-    settings?.masterIdentityDisclosure ??
-    DEFAULT_MENTOR_PRIVACY_SETTINGS.masterIdentityDisclosure;
-
-  const name =
-    masterIdentityDisclosure &&
-    (settings?.overrides?.name ?? DEFAULT_MENTOR_PRIVACY_SETTINGS.overrides.name);
-
-  return {
-    name,
-    username: name,
-    email:
-      masterIdentityDisclosure &&
-      (settings?.overrides?.email ?? DEFAULT_MENTOR_PRIVACY_SETTINGS.overrides.email),
-    phoneNumber:
-      masterIdentityDisclosure &&
-      (settings?.overrides?.phoneNumber ??
-        DEFAULT_MENTOR_PRIVACY_SETTINGS.overrides.phoneNumber),
-  };
-}
-
-/**
  * Maps a user document into the public mentor list payload.
+ *
+ * Identity disclosure is programme policy, not a mentor preference. Callers
+ * may reveal identity only after separately establishing that the viewer is
+ * the mentor or is in an active mentorship with them.
  */
 export function toPublicMentorDTO(
   user: Doc<"users">,
@@ -164,10 +113,7 @@ export function toPublicMentorDTO(
     completedMentorshipCount?: number;
   } = {}
 ) {
-  const visibility = resolveMentorIdentityVisibility(
-    user.mentorSettings?.privacy,
-    options.forceRevealIdentity
-  );
+  const revealIdentity = options.forceRevealIdentity === true;
 
   const activeMentorshipCount = options.activeMentorshipCount ?? 0;
   const completedMentorshipCount = options.completedMentorshipCount ?? 0;
@@ -230,14 +176,14 @@ export function toPublicMentorDTO(
 
   return {
     mentorId: user._id,
-    username: visibility.username ? user.username : null,
-    name: visibility.name ? user.name : ANONYMOUS_MENTOR_NAME,
+    username: revealIdentity ? user.username : null,
+    name: revealIdentity ? user.name : ANONYMOUS_MENTOR_NAME,
     title: user.title,
     bio: user.bio,
     location: user.location,
-    profilePictureUrl: visibility.name ? user.profilePictureUrl : "",
-    email: visibility.email ? user.email : null,
-    phoneNumber: visibility.phoneNumber ? user.phoneNumber : null,
+    profilePictureUrl: revealIdentity ? user.profilePictureUrl : "",
+    email: revealIdentity ? user.email : null,
+    phoneNumber: revealIdentity ? user.phoneNumber : null,
     industries: mentorProfile?.industries ?? user.industries ?? [],
     mentorProfile,
     ageGroup,

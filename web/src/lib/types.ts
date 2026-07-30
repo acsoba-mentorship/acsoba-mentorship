@@ -14,7 +14,7 @@ export type UserId = Id<"users">;
 /** Privacy-safe public profile returned by getUserByUsername/getUserById.
  *  Excludes internal fields (_id, tokenIdentifier, dateOfBirth, onboardingStatus,
  *  createdAt, etc.). Sensitive contact fields are present but nullable, and are
- *  null when redacted by mentor privacy settings. */
+ *  null while a mentor's identity is hidden by programme policy. */
 export type PublicUserProfile = {
   userId: Id<"users">;
   username: string | null;

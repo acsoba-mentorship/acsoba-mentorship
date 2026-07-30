@@ -119,6 +119,7 @@ export function ScheduleMeetingDialog({
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validationNow, setValidationNow] = useState(() => Date.now());
 
   const draftStartAt = useMemo(() => {
     return new Date(startValue).getTime();
@@ -152,9 +153,11 @@ export function ScheduleMeetingDialog({
     });
   }, [draftEndAt, draftStartAt, existingMeetings]);
 
-  const isPastMeeting = Number.isFinite(draftStartAt) && draftStartAt < Date.now();
+  const isPastMeeting =
+    Number.isFinite(draftStartAt) && draftStartAt < validationNow;
 
   function resetForm() {
+    setValidationNow(Date.now());
     setTitle(defaultTitle);
     setDescription("");
     setLocation("");

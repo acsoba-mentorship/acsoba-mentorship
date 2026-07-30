@@ -6,7 +6,6 @@ import {
   enrollAsMentorArgsValidator,
   setUserOnboardingCompleteArgsValidator,
   updateMentorProfileArgsValidator,
-  updateMentorPrivacySettingsArgsValidator,
   updateUserIndustriesArgsValidator,
   updateUserInterestsArgsValidator,
   updateUserProfileArgsValidator,
@@ -65,22 +64,6 @@ export const checkUsernameAvailable = query({
 export const listMentors = query({
   args: {},
   handler: (ctx) => UsersModel.listMentors(ctx),
-});
-
-/**
- * Returns the caller's mentor privacy settings with defaults applied.
- */
-export const getMyMentorPrivacySettings = query({
-  args: {},
-  handler: (ctx) => UsersModel.getMyMentorPrivacySettings(ctx),
-});
-
-/**
- * Updates mentor identity disclosure settings for the caller.
- */
-export const updateMyMentorPrivacySettings = mutation({
-  args: updateMentorPrivacySettingsArgsValidator,
-  handler: (ctx, args) => UsersModel.updateMyMentorPrivacySettings(ctx, args),
 });
 
 /**

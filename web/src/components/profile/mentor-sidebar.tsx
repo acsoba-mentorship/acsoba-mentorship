@@ -205,7 +205,7 @@ export function MentorSidebar({ user, isOwnProfile = false }: MentorSidebarProps
             Manage Your Mentorships
           </p>
           <p className="mt-1 text-xs text-primary-foreground/60">
-            Review requests, active mentorships, and settings.
+            Review requests, active mentorships, and your mentor profile.
           </p>
 
           <Link

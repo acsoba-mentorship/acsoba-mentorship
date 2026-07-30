@@ -4,12 +4,10 @@ import type { Infer } from "convex/values";
 import {
   ANONYMOUS_MENTOR_NAME,
   buildUsernameStatus,
-  DEFAULT_MENTOR_PRIVACY_SETTINGS,
   GOALS_MAX_CHARACTERS,
   isValidUsername,
   makeTemporaryCandidate,
   normalizeUsername,
-  resolveMentorIdentityVisibility,
   toPublicMentorDTO,
   USERNAME_CHANGE_COOLDOWN_MS,
 } from "../helper";
@@ -17,7 +15,6 @@ import {
   enrollAsMenteeArgsValidator,
   enrollAsMentorArgsValidator,
   setUserOnboardingCompleteArgsValidator,
-  updateMentorPrivacySettingsArgsValidator,
   updateUserProfileArgsValidator,
 } from "./users/validators";
 import {
@@ -27,7 +24,6 @@ import {
   menteeProfileValidator,
   mentorProfileValidator,
   ONBOARDING_STATUS,
-  mentorPrivacySettingsValidator,
   usersTableFields,
 } from "./users/fields";
 import { getAuthenticatedUser, requireOnboardingComplete } from "./auth";
@@ -40,23 +36,33 @@ import { getEffectiveProgramSettings } from "./programSettings";
 
 const CONVEX_ID_PATTERN = /^[a-z0-9]{16,64}$/i;
 
-async function hasActiveMentorship(
+async function hasActiveRelationship(
   ctx: QueryCtx,
   viewerId: Id<"users">,
-  mentorId: Id<"users">
+  profileUserId: Id<"users">
 ) {
-  if (viewerId === mentorId) {
+  if (viewerId === profileUserId) {
     return true;
   }
 
-  const mentorships = await ctx.db
-    .query("mentorships")
-    .withIndex("by_mentorId_menteeId", (q) =>
-      q.eq("mentorId", mentorId).eq("menteeId", viewerId)
-    )
-    .collect();
+  const [profileAsMentor, viewerAsMentor] = await Promise.all([
+    ctx.db
+      .query("mentorships")
+      .withIndex("by_mentorId_menteeId", (q) =>
+        q.eq("mentorId", profileUserId).eq("menteeId", viewerId)
+      )
+      .collect(),
+    ctx.db
+      .query("mentorships")
+      .withIndex("by_mentorId_menteeId", (q) =>
+        q.eq("mentorId", viewerId).eq("menteeId", profileUserId)
+      )
+      .collect(),
+  ]);
 
-  return mentorships.some((mentorship) => mentorship.status === "active");
+  return [...profileAsMentor, ...viewerAsMentor].some(
+    (mentorship) => mentorship.status === "active"
+  );
 }
 
 async function toPublicUserProfile(
@@ -64,7 +70,7 @@ async function toPublicUserProfile(
   currentUser: Doc<"users">,
   user: Doc<"users">
 ) {
-  const hasMentorshipAccess = await hasActiveMentorship(
+  const hasMentorshipAccess = await hasActiveRelationship(
     ctx,
     currentUser._id,
     user._id
@@ -76,31 +82,25 @@ async function toPublicUserProfile(
     return null;
   }
 
-  const forceRevealIdentity =
-    !!user.mentorProfile && hasMentorshipAccess;
-  const mentorVisibility = resolveMentorIdentityVisibility(
-    user.mentorSettings?.privacy,
-    forceRevealIdentity
-  );
-  const shouldApplyMentorPrivacy = !!user.mentorProfile;
+  const isMentor = !!user.mentorProfile;
+  const revealMentorIdentity = isMentor && hasMentorshipAccess;
 
   return {
     userId: user._id,
-    username: shouldApplyMentorPrivacy && !mentorVisibility.username ? null : user.username,
+    username: isMentor && !revealMentorIdentity ? null : user.username,
     name:
-      shouldApplyMentorPrivacy && !mentorVisibility.name
+      isMentor && !revealMentorIdentity
         ? ANONYMOUS_MENTOR_NAME
         : user.name,
     title: user.title,
     bio: user.bio,
     location: user.location,
     profilePictureUrl:
-      shouldApplyMentorPrivacy && !mentorVisibility.name
+      isMentor && !revealMentorIdentity
         ? ""
         : user.profilePictureUrl,
-    email: shouldApplyMentorPrivacy && mentorVisibility.email ? user.email : null,
-    phoneNumber:
-      shouldApplyMentorPrivacy && mentorVisibility.phoneNumber ? user.phoneNumber : null,
+    email: revealMentorIdentity ? user.email : null,
+    phoneNumber: revealMentorIdentity ? user.phoneNumber : null,
     education: user.education,
     experience: user.experience,
     interests: user.interests ?? [],
@@ -359,53 +359,6 @@ export async function listMentors(ctx: QueryCtx) {
       completedMentorshipCount: completedCounts.get(String(mentor._id)) ?? 0,
     })
   );
-}
-
-/**
- * Returns the caller's mentor privacy settings with defaults filled in.
- */
-export async function getMyMentorPrivacySettings(ctx: QueryCtx) {
-  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
-  return user.mentorSettings?.privacy ?? DEFAULT_MENTOR_PRIVACY_SETTINGS;
-}
-
-/**
- * Updates the caller's mentor privacy settings while preserving omitted fields.
- */
-export async function updateMyMentorPrivacySettings(
-  ctx: MutationCtx,
-  args: Infer<typeof updateMentorPrivacySettingsArgsValidator>
-) {
-  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
-  const previous = user.mentorSettings?.privacy ?? DEFAULT_MENTOR_PRIVACY_SETTINGS;
-
-  const privacy: Infer<typeof mentorPrivacySettingsValidator> = {
-    masterIdentityDisclosure:
-      args.masterIdentityDisclosure ?? previous.masterIdentityDisclosure,
-    overrides: {
-      name:
-        args.overrides?.name ??
-        previous.overrides?.name ??
-        DEFAULT_MENTOR_PRIVACY_SETTINGS.overrides.name,
-      email:
-        args.overrides?.email ??
-        previous.overrides?.email ??
-        DEFAULT_MENTOR_PRIVACY_SETTINGS.overrides.email,
-      phoneNumber:
-        args.overrides?.phoneNumber ??
-        previous.overrides?.phoneNumber ??
-        DEFAULT_MENTOR_PRIVACY_SETTINGS.overrides.phoneNumber,
-    },
-  };
-
-  await ctx.db.patch("users", user._id, {
-    mentorSettings: {
-      ...(user.mentorSettings ?? {}),
-      privacy,
-    },
-  });
-
-  return privacy;
 }
 
 /**

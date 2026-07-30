@@ -11,7 +11,6 @@ import {
   Inbox,
   Users,
   UserCog,
-  Settings,
   ShieldCheck,
   Menu,
 } from "lucide-react";
@@ -41,7 +40,6 @@ const mentorNavLinks = [
   { href: "/mentor/mentorships", label: "Mentorships", icon: Users },
   { href: "/mentor/mentorships/timeline", label: "Timeline", icon: CalendarDays },
   { href: "/profile", label: "Mentor Profile", icon: UserCog },
-  { href: "/mentor/settings", label: "Settings", icon: Settings },
   { href: "/report-incident", label: "Report Incident", icon: Flag },
 ] as const;
 

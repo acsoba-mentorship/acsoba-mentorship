@@ -4,7 +4,6 @@ import {
   educationEntryValidator,
   experienceEntryValidator,
   menteeProfileValidator,
-  mentorPrivacySettingsValidator,
   mentorProfileValidator,
   usersTableFields,
 } from "./fields";
@@ -36,8 +35,6 @@ export const updateUserProfileArgsValidator = userProfileFieldsValidator.pick(
   "location"
 );
 export const updateMentorProfileArgsValidator = mentorProfileValidator;
-export const updateMentorPrivacySettingsArgsValidator =
-  mentorPrivacySettingsValidator.partial();
 
 const onboardingPersonalDetailsValidator = v.object({
   name: usersTableFields.name,
