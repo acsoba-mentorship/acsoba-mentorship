@@ -7,6 +7,9 @@ export const COMMITMENT_LEVEL_OPTIONS = [
   "Monthly",
 ] as const;
 
+export type CommitmentLevelValue =
+  (typeof COMMITMENT_LEVEL_OPTIONS)[number];
+
 export const PREFERRED_COMMUNICATION_MODE_OPTIONS = [
   "Video call",
   "Voice call",
@@ -14,6 +17,9 @@ export const PREFERRED_COMMUNICATION_MODE_OPTIONS = [
   "Meetup",
   "Chat",
 ] as const;
+
+export type PreferredCommunicationModeValue =
+  (typeof PREFERRED_COMMUNICATION_MODE_OPTIONS)[number];
 
 export const GENDER_OPTIONS = [
   { value: "male", label: "Male" },

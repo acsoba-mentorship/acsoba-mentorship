@@ -2,6 +2,7 @@ import type { Infer } from "convex/values";
 import type { setUserOnboardingCompleteArgsValidator } from "../../../convex/model/users/validators";
 import type { menteeProfileValidator } from "../../../convex/model/users/fields";
 import type { OnboardingDraft } from "@/components/onboarding/onboarding-draft";
+import type { OnboardingRole } from "@/lib/onboarding";
 import {
   educationFormToEntry,
   experienceFormToEntry,
@@ -12,18 +13,14 @@ type SubmitPayload = Infer<typeof setUserOnboardingCompleteArgsValidator>;
 
 export function buildOnboardingSubmitPayload(
   draft: OnboardingDraft,
-  email: string
+  email: string,
+  role: OnboardingRole
 ): SubmitPayload {
-  if (
-    !draft.personal ||
-    !draft.career ||
-    !draft.interestsChapter ||
-    !draft.mentoring
-  ) {
+  if (!draft.personal || !draft.career) {
     throw new Error("Onboarding draft is incomplete");
   }
 
-  const { personal, career, interestsChapter, mentoring } = draft;
+  const { personal, career } = draft;
   const name = `${personal.firstName.trim()} ${personal.lastName.trim()}`.trim();
 
   const education =
@@ -52,7 +49,7 @@ export function buildOnboardingSubmitPayload(
         ]
       : [];
 
-  return {
+  const background = {
     personalDetails: {
       name,
       email,
@@ -68,16 +65,43 @@ export function buildOnboardingSubmitPayload(
     careerStage: career.careerStage,
     education,
     experience,
-    interests: interestsChapter.interests,
-    industries: interestsChapter.industries,
+  };
+
+  if (role === "mentor") {
+    if (!draft.mentor) {
+      throw new Error("Mentor onboarding draft is incomplete");
+    }
+    return {
+      ...background,
+      role,
+      industries: draft.mentor.industries,
+      mentorProfile: {
+        yearsOfExperience: draft.mentor.yearsOfExperience,
+        expertise: draft.mentor.expertise,
+        maxMentees: draft.mentor.maxMentees,
+        isAvailable: draft.mentor.isAvailable,
+        isVisible: true,
+      },
+    };
+  }
+
+  if (!draft.interestsChapter || !draft.mentoring) {
+    throw new Error("Mentee onboarding draft is incomplete");
+  }
+
+  return {
+    ...background,
+    role,
+    interests: draft.interestsChapter.interests,
+    industries: draft.interestsChapter.industries,
     menteeProfile: {
-      goals: mentoring.goals,
+      goals: draft.mentoring.goals,
       commitmentLevel:
-        mentoring.commitmentLevel as Infer<
+        draft.mentoring.commitmentLevel as Infer<
           typeof menteeProfileValidator.fields.commitmentLevel
         >,
       preferredCommunicationModes:
-        mentoring.preferredCommunicationModes as Infer<
+        draft.mentoring.preferredCommunicationModes as Infer<
           typeof menteeProfileValidator.fields.preferredCommunicationModes
         >,
     },

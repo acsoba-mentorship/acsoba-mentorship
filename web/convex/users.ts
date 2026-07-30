@@ -2,6 +2,8 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import * as UsersModel from "./model/users";
 import {
+  enrollAsMenteeArgsValidator,
+  enrollAsMentorArgsValidator,
   setUserOnboardingCompleteArgsValidator,
   updateMentorProfileArgsValidator,
   updateMentorPrivacySettingsArgsValidator,
@@ -98,12 +100,30 @@ export const updateUsername = mutation({
 });
 
 /**
- * Writes the complete mentee onboarding payload and marks the user complete.
+ * Writes the selected role's initial onboarding payload and marks the user complete.
  */
 export const setUserOnboardingComplete = mutation({
   args: setUserOnboardingCompleteArgsValidator,
   returns: v.id("users"),
   handler: (ctx, args) => UsersModel.setUserOnboardingComplete(ctx, args),
+});
+
+/**
+ * Adds a mentee profile to an already-onboarded mentor.
+ */
+export const enrollAsMentee = mutation({
+  args: enrollAsMenteeArgsValidator,
+  returns: v.id("users"),
+  handler: (ctx, args) => UsersModel.enrollAsMentee(ctx, args),
+});
+
+/**
+ * Adds a mentor profile to an already-onboarded mentee.
+ */
+export const enrollAsMentor = mutation({
+  args: enrollAsMentorArgsValidator,
+  returns: v.id("users"),
+  handler: (ctx, args) => UsersModel.enrollAsMentor(ctx, args),
 });
 
 /**

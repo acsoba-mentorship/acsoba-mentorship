@@ -19,9 +19,9 @@ export function OnboardingShell({
   title,
   description,
 }: OnboardingShellProps) {
-  const { draft, step, goBack } = useOnboardingDraft();
-  const progress = getProgressPercent(step);
-  const previousStep = getPreviousStep(step, draft);
+  const { role, draft, step, goBack } = useOnboardingDraft();
+  const progress = getProgressPercent(step, draft, role);
+  const previousStep = getPreviousStep(step, draft, role);
 
   return (
     <div className="flex min-h-screen flex-col bg-background">

@@ -15,7 +15,11 @@ import { api } from "../../../convex/_generated/api";
 import { useCurrentUser } from "@/app/CurrentUserProvider";
 import { RedirectToLanding } from "@/components/auth/redirects";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ONBOARDING_START_PATH, ONBOARDING_STATUS } from "@/lib/onboarding";
+import {
+  getPrimaryAppPath,
+  ONBOARDING_START_PATH,
+  ONBOARDING_STATUS,
+} from "@/lib/onboarding";
 
 function AdminGateLoading({ label = "Confirming administrator access" }) {
   return (
@@ -75,7 +79,7 @@ function AdminAccessGate({ children }: { children: React.ReactNode }) {
         if (!claimedAccess) {
           router.replace(
             currentUser.onboardingStatus === ONBOARDING_STATUS.COMPLETE
-              ? "/dashboard"
+              ? getPrimaryAppPath(currentUser)
               : ONBOARDING_START_PATH
           );
         }
@@ -83,7 +87,7 @@ function AdminAccessGate({ children }: { children: React.ReactNode }) {
       .catch(() => {
         router.replace(
           currentUser.onboardingStatus === ONBOARDING_STATUS.COMPLETE
-            ? "/dashboard"
+            ? getPrimaryAppPath(currentUser)
             : ONBOARDING_START_PATH
         );
       });

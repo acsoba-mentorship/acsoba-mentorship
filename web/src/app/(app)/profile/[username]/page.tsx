@@ -50,15 +50,23 @@ function ProfileByUsernameContent() {
       <ProfileHeader user={viewedUser} />
       <Separator />
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+      <div
+        className={
+          viewedUser.mentorProfile
+            ? "grid gap-6 lg:grid-cols-[1fr_320px]"
+            : "grid gap-6"
+        }
+      >
         <ProfileMainContent
           user={viewedUser}
           isOwnProfile={isOwnProfile}
         />
-        <MentorSidebar
-          user={viewedUser}
-          isOwnProfile={isOwnProfile}
-        />
+        {viewedUser.mentorProfile ? (
+          <MentorSidebar
+            user={viewedUser}
+            isOwnProfile={isOwnProfile}
+          />
+        ) : null}
       </div>
     </div>
   );

@@ -48,6 +48,10 @@ import {
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn, getInitials } from "@/lib/utils";
+import {
+  getPrimaryAppPath,
+  ONBOARDING_START_PATH,
+} from "@/lib/onboarding";
 
 function NavLinks({
   pathname,
@@ -117,6 +121,7 @@ function MobileNavLinks({
 function UserMenu({ hasAdminAccess }: { hasAdminAccess: boolean }) {
   const { user, logout } = useAuth0();
   const { currentUser } = useCurrentUser();
+  const primaryAppPath = getPrimaryAppPath(currentUser);
 
   const initials = user?.name ? getInitials(user.name) : "U";
 
@@ -150,9 +155,9 @@ function UserMenu({ hasAdminAccess }: { hasAdminAccess: boolean }) {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/dashboard">
-            <LayoutDashboard />
-            Dashboard
+          <Link href={primaryAppPath}>
+            {primaryAppPath === "/mentor" ? <Shield /> : <LayoutDashboard />}
+            {primaryAppPath === "/mentor" ? "Mentor Panel" : "Dashboard"}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
@@ -221,6 +226,7 @@ function AuthButtons() {
         onClick={() => {
           if (!isLoading)
             void loginWithRedirect({
+              appState: { returnTo: ONBOARDING_START_PATH },
               authorizationParams: { screen_hint: "signup" },
             });
         }}
@@ -238,9 +244,12 @@ export function SiteNav() {
     api.admin.getMyAccess,
     isAuthenticated ? {} : "skip"
   );
+  const primaryAppPath = getPrimaryAppPath(currentUser);
 
   const appNavLinks = [
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    primaryAppPath === "/mentor"
+      ? { href: "/mentor", label: "Mentor Panel", icon: Shield }
+      : { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/search", label: "Find Mentors", icon: Search },
     { href: "/internships", label: "Internships", icon: Briefcase },
     ...(currentUser?.menteeProfile
@@ -252,7 +261,7 @@ export function SiteNav() {
       : []),
   ];
 
-  const logoNavLink = isAuthenticated ? "/dashboard" : "/";
+  const logoNavLink = isAuthenticated ? primaryAppPath : "/";
 
   const isAppRoute =
     pathname.startsWith("/dashboard") ||

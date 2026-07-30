@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ProfileHeader } from "@/components/profile/profile-header";
 import { ProfileMainContent } from "@/components/profile/profile-main-content";
 import { MentorSidebar } from "@/components/profile/mentor-sidebar";
+import { RoleEnrollmentCard } from "@/components/profile/role-enrollment-card";
 import { useConvexAuth } from "convex/react";
 import { useCurrentUser } from "@/app/CurrentUserProvider";
 import type { PublicUserProfile } from "@/lib/types";
@@ -46,7 +47,12 @@ function ProfileContent() {
     education: user.education,
     experience: user.experience,
     interests: user.interests ?? [],
-    industries: user.industries ?? [],
+    industries:
+      (user.mentorProfile
+        ? user.mentorProfile.industries
+        : user.menteeProfile?.industries) ??
+      user.industries ??
+      [],
     menteeProfile: user.menteeProfile,
     mentorProfile: user.mentorProfile,
   };
@@ -54,11 +60,20 @@ function ProfileContent() {
   return (
     <div className="space-y-6">
       <ProfileHeader user={publicUser} />
+      <RoleEnrollmentCard user={publicUser} />
       <Separator />
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+      <div
+        className={
+          publicUser.mentorProfile
+            ? "grid gap-6 lg:grid-cols-[1fr_320px]"
+            : "grid gap-6"
+        }
+      >
         <ProfileMainContent user={publicUser} isOwnProfile={true} />
-        <MentorSidebar user={publicUser} isOwnProfile={true} />
+        {publicUser.mentorProfile ? (
+          <MentorSidebar user={publicUser} isOwnProfile={true} />
+        ) : null}
       </div>
     </div>
   );

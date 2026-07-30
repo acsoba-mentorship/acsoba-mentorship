@@ -4,6 +4,7 @@ import type { StudentBackgroundFormValues } from "@/lib/validation/onboarding";
 import type { WorkingBackgroundFormValues } from "@/lib/validation/onboarding";
 import type { InterestsChapterFormValues } from "@/lib/validation/onboarding";
 import type { MentoringChapterFormValues } from "@/lib/validation/onboarding";
+import type { MentorChapterFormValues } from "@/lib/validation/onboarding";
 
 export type OnboardingDraft = {
   personal?: PersonalDetailsFormValues;
@@ -13,4 +14,5 @@ export type OnboardingDraft = {
   workingBackground?: WorkingBackgroundFormValues;
   interestsChapter?: InterestsChapterFormValues;
   mentoring?: MentoringChapterFormValues;
+  mentor?: MentorChapterFormValues;
 };

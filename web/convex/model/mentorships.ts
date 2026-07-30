@@ -55,7 +55,8 @@ function buildMentorMentorshipView(
     menteePhoneNumber: mentee?.phoneNumber ?? null,
     menteeProfilePictureUrl: mentee?.profilePictureUrl ?? null,
     interests: mentee?.interests ?? [],
-    industries: mentee?.industries ?? [],
+    industries:
+      mentee?.menteeProfile?.industries ?? mentee?.industries ?? [],
     menteeProfile: mentee?.menteeProfile ?? null,
   };
 }
@@ -86,7 +87,8 @@ function buildMenteeMentorshipView(
     mentorPhoneNumber: mentorView?.phoneNumber ?? null,
     mentorProfilePictureUrl: mentorView?.profilePictureUrl ?? null,
     expertise: mentorView?.mentorProfile?.expertise ?? [],
-    industries: mentorView?.industries ?? [],
+    industries:
+      mentorView?.mentorProfile?.industries ?? mentorView?.industries ?? [],
     mentorProfile: mentorView?.mentorProfile ?? null,
   };
 }

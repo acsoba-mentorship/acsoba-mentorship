@@ -193,7 +193,7 @@ export function toPublicMentorDTO(
     .filter(Boolean);
   const mentorKeywords = [
     ...(mentorProfile?.expertise ?? []),
-    ...(user.industries ?? []),
+    ...(mentorProfile?.industries ?? user.industries ?? []),
     company,
     user.title,
   ]
@@ -238,7 +238,7 @@ export function toPublicMentorDTO(
     profilePictureUrl: visibility.name ? user.profilePictureUrl : "",
     email: visibility.email ? user.email : null,
     phoneNumber: visibility.phoneNumber ? user.phoneNumber : null,
-    industries: user.industries ?? [],
+    industries: mentorProfile?.industries ?? user.industries ?? [],
     mentorProfile,
     ageGroup,
     company,

@@ -10,7 +10,10 @@ import { useOnboardingDraft } from "@/components/onboarding/onboarding-provider"
 import { Button } from "@/components/ui/button";
 import { GENDER_OPTIONS } from "@/lib/onboarding/constants";
 import { buildOnboardingSubmitPayload } from "@/lib/onboarding/build-submit-payload";
-import { POST_ONBOARDING_PATH } from "@/lib/onboarding";
+import {
+  POST_MENTOR_ONBOARDING_PATH,
+  POST_ONBOARDING_PATH,
+} from "@/lib/onboarding";
 import { MONTHS } from "@/lib/constants";
 
 function monthLabel(month: number) {
@@ -20,7 +23,7 @@ function monthLabel(month: number) {
 export function ReviewStep() {
   const router = useRouter();
   const { currentUser } = useCurrentUser();
-  const { draft, resetDraft } = useOnboardingDraft();
+  const { draft, resetDraft, role } = useOnboardingDraft();
   const completeOnboarding = useMutation(api.users.setUserOnboardingComplete);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -39,9 +42,13 @@ export function ReviewStep() {
     setError(null);
     setSubmitting(true);
     try {
-      const payload = buildOnboardingSubmitPayload(draft, email);
+      const payload = buildOnboardingSubmitPayload(draft, email, role);
       await completeOnboarding(payload);
-      router.replace(POST_ONBOARDING_PATH);
+      router.replace(
+        role === "mentor"
+          ? POST_MENTOR_ONBOARDING_PATH
+          : POST_ONBOARDING_PATH
+      );
       resetDraft();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong. Try again.");
@@ -117,29 +124,53 @@ export function ReviewStep() {
           ) : null}
         </section>
 
-        <section className="rounded-xl border p-4">
-          <h2 className="mb-2 font-semibold">Interests</h2>
-          <p className="mb-1 font-medium text-foreground">Industries</p>
-          <p className="text-muted-foreground">
-            {interestsChapter?.industries.join(", ")}
-          </p>
-          <p className="mb-1 mt-3 font-medium text-foreground">Topics</p>
-          <p className="text-muted-foreground">
-            {interestsChapter?.interests.join(", ")}
-          </p>
-        </section>
+        {role === "mentee" ? (
+          <>
+            <section className="rounded-xl border p-4">
+              <h2 className="mb-2 font-semibold">Interests</h2>
+              <p className="mb-1 font-medium text-foreground">Industries</p>
+              <p className="text-muted-foreground">
+                {interestsChapter?.industries.join(", ")}
+              </p>
+              <p className="mb-1 mt-3 font-medium text-foreground">Topics</p>
+              <p className="text-muted-foreground">
+                {interestsChapter?.interests.join(", ")}
+              </p>
+            </section>
 
-        <section className="rounded-xl border p-4">
-          <h2 className="mb-2 font-semibold">Mentoring preferences</h2>
-          <ul className="space-y-1 text-muted-foreground">
-            <li>Commitment: {mentoring?.commitmentLevel}</li>
-            <li>
-              Communication:{" "}
-              {mentoring?.preferredCommunicationModes.join(", ")}
-            </li>
-            <li className="pt-2 text-foreground">{mentoring?.goals}</li>
-          </ul>
-        </section>
+            <section className="rounded-xl border p-4">
+              <h2 className="mb-2 font-semibold">Mentoring preferences</h2>
+              <ul className="space-y-1 text-muted-foreground">
+                <li>Commitment: {mentoring?.commitmentLevel}</li>
+                <li>
+                  Communication:{" "}
+                  {mentoring?.preferredCommunicationModes.join(", ")}
+                </li>
+                <li className="pt-2 text-foreground">{mentoring?.goals}</li>
+              </ul>
+            </section>
+          </>
+        ) : (
+          <section className="rounded-xl border p-4">
+            <h2 className="mb-2 font-semibold">Mentor profile</h2>
+            <ul className="space-y-1 text-muted-foreground">
+              <li>
+                Experience: {draft.mentor?.yearsOfExperience ?? 0} years
+              </li>
+              <li>Maximum mentees: {draft.mentor?.maxMentees ?? 1}</li>
+              <li>
+                Expertise: {draft.mentor?.expertise.join(", ")}
+              </li>
+              <li>
+                Industries: {draft.mentor?.industries.join(", ")}
+              </li>
+              <li>
+                Availability:{" "}
+                {draft.mentor?.isAvailable ? "Available" : "Not available"}
+              </li>
+            </ul>
+          </section>
+        )}
 
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
       </div>

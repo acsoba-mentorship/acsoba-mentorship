@@ -37,89 +37,90 @@ export function MentorSidebar({ user, isOwnProfile = false }: MentorSidebarProps
     useLatestRequestStatusByMentor();
   const mentorForRequest = publicUserToMentorProfileDto(user);
 
+  if (!profile) {
+    return null;
+  }
+
   return (
     <div className="space-y-4">
-
       {/* ── Unified "Connect with" card — same for own and visitor profiles ── */}
-      {profile && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between gap-2">
-              <CardTitle className="font-semibold tracking-wide">
-                Connect with {firstName}
-              </CardTitle>
-              {isOwnProfile && (
-                <ProfileEditDialog
-                  open={mentorshipDetailsOpen}
-                  onOpenChange={setMentorshipDetailsOpen}
-                  trigger={
-                    <Button variant="ghost" size="icon" className="size-8" aria-label="Edit Mentorship Details">
-                      <Pencil className="size-3.5" />
-                    </Button>
-                  }
-                  title="Edit Mentorship Details"
-                  description="Update availability, max mentees, and years of experience."
-                >
-                  <MentorDetailsForm
-                    user={user}
-                    onSuccess={() => setMentorshipDetailsOpen(false)}
-                  />
-                </ProfileEditDialog>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Stat tiles */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-lg bg-muted/60 px-3 py-2.5">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  Experience
-                </p>
-                <p className="mt-1 text-sm font-semibold">
-                  {profile.yearsOfExperience != null
-                    ? `${profile.yearsOfExperience} yr${profile.yearsOfExperience === 1 ? "" : "s"}`
-                    : "—"}
-                </p>
-              </div>
-              <div className="rounded-lg bg-muted/60 px-3 py-2.5">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  Mentees
-                </p>
-                <p className="mt-1 text-sm font-semibold">
-                  {profile.maxMentees != null ? `${profile.maxMentees} max` : "—"}
-                </p>
-              </div>
-            </div>
-
-            {/* Availability */}
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Availability</span>
-              <Badge
-                className={`text-xs border-0 ${profile.isAvailable ? "bg-emerald-50 text-emerald-700" : "bg-muted text-muted-foreground"}`}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="font-semibold tracking-wide">
+              Connect with {firstName}
+            </CardTitle>
+            {isOwnProfile && (
+              <ProfileEditDialog
+                open={mentorshipDetailsOpen}
+                onOpenChange={setMentorshipDetailsOpen}
+                trigger={
+                  <Button variant="ghost" size="icon" className="size-8" aria-label="Edit Mentorship Details">
+                    <Pencil className="size-3.5" />
+                  </Button>
+                }
+                title="Edit Mentorship Details"
+                description="Update availability, max mentees, and years of experience."
               >
-                {profile.isAvailable ? AVAILABLE : UNAVAILABLE}
-              </Badge>
-            </div>
-
-            {/* CTA — only for visitor */}
-            {!isOwnProfile && mentorForRequest && (
-              <>
-                <Separator />
-                <SendRequestDialog
-                  mentor={mentorForRequest}
-                  currentUserId={currentUserId}
-                  hasMenteeProfile={hasMenteeProfile}
-                  latestStatus={getLatestStatus(user.userId)}
-                  latestStatusLoading={latestRequestStatusLoading}
-                  buttonClassName="w-full"
-                  sendRequestLabel="Request Mentorship"
-                  triggerStart={<HandshakeIcon className="size-3.5" />}
+                <MentorDetailsForm
+                  user={user}
+                  onSuccess={() => setMentorshipDetailsOpen(false)}
                 />
-              </>
+              </ProfileEditDialog>
             )}
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Stat tiles */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-lg bg-muted/60 px-3 py-2.5">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                Experience
+              </p>
+              <p className="mt-1 text-sm font-semibold">
+                {profile.yearsOfExperience != null
+                  ? `${profile.yearsOfExperience} yr${profile.yearsOfExperience === 1 ? "" : "s"}`
+                  : "—"}
+              </p>
+            </div>
+            <div className="rounded-lg bg-muted/60 px-3 py-2.5">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                Mentees
+              </p>
+              <p className="mt-1 text-sm font-semibold">
+                {profile.maxMentees != null ? `${profile.maxMentees} max` : "—"}
+              </p>
+            </div>
+          </div>
+
+          {/* Availability */}
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Availability</span>
+            <Badge
+              className={`text-xs border-0 ${profile.isAvailable ? "bg-emerald-50 text-emerald-700" : "bg-muted text-muted-foreground"}`}
+            >
+              {profile.isAvailable ? AVAILABLE : UNAVAILABLE}
+            </Badge>
+          </div>
+
+          {/* CTA — only for visitor */}
+          {!isOwnProfile && mentorForRequest && (
+            <>
+              <Separator />
+              <SendRequestDialog
+                mentor={mentorForRequest}
+                currentUserId={currentUserId}
+                hasMenteeProfile={hasMenteeProfile}
+                latestStatus={getLatestStatus(user.userId)}
+                latestStatusLoading={latestRequestStatusLoading}
+                buttonClassName="w-full"
+                sendRequestLabel="Request Mentorship"
+                triggerStart={<HandshakeIcon className="size-3.5" />}
+              />
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       {/* ── Expertise & Industries ── */}
       <ProfileSectionCard

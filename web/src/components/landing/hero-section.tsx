@@ -3,11 +3,12 @@
 import { useAuth0 } from "@auth0/auth0-react";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ONBOARDING_PATHS } from "@/lib/onboarding";
 
 function UnauthenticatedCTA() {
   const { loginWithRedirect, isLoading } = useAuth0();
 
-  return (  
+  return (
     <div className="flex flex-wrap gap-4">
       <Button
         size="lg"
@@ -15,6 +16,7 @@ function UnauthenticatedCTA() {
         onClick={() => {
           if (!isLoading)
             void loginWithRedirect({
+              appState: { returnTo: ONBOARDING_PATHS.mentor },
               authorizationParams: { screen_hint: "signup" },
             });
         }}
@@ -27,7 +29,11 @@ function UnauthenticatedCTA() {
         size="lg"
         className="border-white/40 hover:bg-white/10 hover:text-white"
         onClick={() => {
-          if (!isLoading) void loginWithRedirect();
+          if (!isLoading) {
+            void loginWithRedirect({
+              appState: { returnTo: ONBOARDING_PATHS.mentee },
+            });
+          }
         }}
       >
         Find a Mentor
@@ -41,16 +47,16 @@ export function HeroSection() {
     <section className="bg-gradient-to-br from-primary via-[#001A4D] to-[#002F6C] py-32 sm:py-40">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="max-w-xl">
-        <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
-          Give Back. Guide Forward.
-        </h1>
-        <p className="mt-6 text-lg leading-8 text-white/70">
-          Connect with fellow ACS alumni for mentorship, career advice, and
-          shared wisdom. Your experience can shape the next generation.
-        </p>
-        <div className="mt-10">
-          <UnauthenticatedCTA />
-        </div>
+          <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
+            Give Back. Guide Forward.
+          </h1>
+          <p className="mt-6 text-lg leading-8 text-white/70">
+            Connect with fellow ACS alumni for mentorship, career advice, and
+            shared wisdom. Your experience can shape the next generation.
+          </p>
+          <div className="mt-10">
+            <UnauthenticatedCTA />
+          </div>
         </div>
       </div>
     </section>

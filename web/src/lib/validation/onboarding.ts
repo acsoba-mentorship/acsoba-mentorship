@@ -7,7 +7,9 @@ import {
   ONBOARDING_TAG_MAX,
   ONBOARDING_TAG_MIN,
   PREFERRED_COMMUNICATION_MODE_OPTIONS,
+  type CommitmentLevelValue,
   type GenderValue,
+  type PreferredCommunicationModeValue,
 } from "@/lib/onboarding/constants";
 import { experienceEntryFieldsSchema } from "@/lib/validation/profile";
 
@@ -79,10 +81,13 @@ export const interestsChapterSchema = z.object({
 
 export type InterestsChapterFormValues = z.infer<typeof interestsChapterSchema>;
 
-const commitmentValues = [...COMMITMENT_LEVEL_OPTIONS] as [string, ...string[]];
+const commitmentValues = [...COMMITMENT_LEVEL_OPTIONS] as [
+  CommitmentLevelValue,
+  ...CommitmentLevelValue[],
+];
 const communicationValues = [...PREFERRED_COMMUNICATION_MODE_OPTIONS] as [
-  string,
-  ...string[],
+  PreferredCommunicationModeValue,
+  ...PreferredCommunicationModeValue[],
 ];
 
 export const mentoringChapterSchema = z.object({
@@ -98,3 +103,37 @@ export const mentoringChapterSchema = z.object({
 });
 
 export type MentoringChapterFormValues = z.infer<typeof mentoringChapterSchema>;
+
+export const mentorChapterSchema = z.object({
+  yearsOfExperience: z
+    .number()
+    .int("Years of experience must be a whole number")
+    .min(0)
+    .max(80),
+  maxMentees: z
+    .number()
+    .int("Maximum mentees must be a whole number")
+    .min(1)
+    .max(100),
+  isAvailable: z.boolean(),
+  expertise: z
+    .array(z.string().trim().min(1).max(80))
+    .min(1, "Add at least one area of expertise")
+    .max(20, "Add at most 20 areas of expertise"),
+  industries: tagSelectionSchema,
+});
+
+export type MentorChapterFormValues = z.infer<typeof mentorChapterSchema>;
+
+export const menteeEnrollmentSchema = z.object({
+  interests: tagSelectionSchema,
+  industries: tagSelectionSchema,
+  commitmentLevel: mentoringChapterSchema.shape.commitmentLevel,
+  preferredCommunicationModes:
+    mentoringChapterSchema.shape.preferredCommunicationModes,
+  goals: mentoringChapterSchema.shape.goals,
+});
+
+export type MenteeEnrollmentFormValues = z.infer<
+  typeof menteeEnrollmentSchema
+>;

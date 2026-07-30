@@ -6,7 +6,11 @@ import { useMutation, useQuery } from "convex/react";
 
 import { api } from "../../../convex/_generated/api";
 import { useCurrentUser } from "@/app/CurrentUserProvider";
-import { ONBOARDING_START_PATH, ONBOARDING_STATUS } from "@/lib/onboarding";
+import {
+  getPrimaryAppPath,
+  ONBOARDING_START_PATH,
+  ONBOARDING_STATUS,
+} from "@/lib/onboarding";
 
 export function RedirectToLanding() {
   const router = useRouter();
@@ -52,14 +56,14 @@ export function RedirectToDashboard() {
 
         router.replace(
           currentUser.onboardingStatus === ONBOARDING_STATUS.COMPLETE
-            ? "/dashboard"
+            ? getPrimaryAppPath(currentUser)
             : ONBOARDING_START_PATH
         );
       })
       .catch(() => {
         router.replace(
           currentUser.onboardingStatus === ONBOARDING_STATUS.COMPLETE
-            ? "/dashboard"
+            ? getPrimaryAppPath(currentUser)
             : ONBOARDING_START_PATH
         );
       });

@@ -7,11 +7,10 @@ import { OnboardingShell } from "@/components/onboarding/onboarding-shell";
 import { PresetMultiSelect } from "@/components/onboarding/preset-multi-select";
 import { useOnboardingDraft } from "@/components/onboarding/onboarding-provider";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   ONBOARDING_TAG_MAX,
   ONBOARDING_TAG_MIN,
-  PRESET_INDUSTRIES,
-  PRESET_INTERESTS,
 } from "@/lib/onboarding/constants";
 import { interestsChapterSchema } from "@/lib/validation/onboarding";
 
@@ -21,9 +20,9 @@ export function InterestsStep() {
     api.programSettings.getOnboardingOptions
   );
   const industryOptions: readonly string[] =
-    configuredOptions?.industries ?? PRESET_INDUSTRIES;
+    configuredOptions?.industries ?? [];
   const interestOptions: readonly string[] =
-    configuredOptions?.interests ?? PRESET_INTERESTS;
+    configuredOptions?.interests ?? [];
   const [industries, setIndustries] = useState<string[]>(
     draft.interestsChapter?.industries ?? []
   );
@@ -59,6 +58,20 @@ export function InterestsStep() {
     industries.length <= ONBOARDING_TAG_MAX &&
     interests.length >= ONBOARDING_TAG_MIN &&
     interests.length <= ONBOARDING_TAG_MAX;
+
+  if (configuredOptions === undefined) {
+    return (
+      <OnboardingShell
+        title="Let's know more about your interests"
+        description="Loading the available options…"
+      >
+        <div className="space-y-5">
+          <Skeleton className="h-36 w-full rounded-xl" />
+          <Skeleton className="h-36 w-full rounded-xl" />
+        </div>
+      </OnboardingShell>
+    );
+  }
 
   return (
     <OnboardingShell
