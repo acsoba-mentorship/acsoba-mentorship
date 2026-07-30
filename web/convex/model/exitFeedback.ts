@@ -7,6 +7,7 @@ import {
 } from "./auth";
 import { getEffectiveProgramSettings } from "./programSettings";
 import { createNotification } from "./notifications";
+import { fetchUsersById } from "./helper";
 
 type RespondentRole = "mentor" | "mentee";
 
@@ -261,22 +262,63 @@ export async function listForAdmin(ctx: QueryCtx) {
     .withIndex("by_status_dueAt", (q) => q.eq("status", "submitted"))
     .order("desc")
     .collect();
-  const respondents = await Promise.all(
-    feedback.map((item) => ctx.db.get("users", item.respondentId))
+  const mentorshipIds = [
+    ...new Set(feedback.map((item) => item.mentorshipId)),
+  ];
+  const mentorships = await Promise.all(
+    mentorshipIds.map((mentorshipId) =>
+      ctx.db.get("mentorships", mentorshipId)
+    )
   );
+  const mentorshipById = new Map(
+    mentorshipIds.map((mentorshipId, index) => [
+      mentorshipId,
+      mentorships[index] ?? null,
+    ])
+  );
+  const counterpartIds = feedback.flatMap((item) => {
+    const mentorship = mentorshipById.get(item.mentorshipId);
+    if (!mentorship) return [];
+    return [
+      item.respondentRole === "mentor"
+        ? mentorship.menteeId
+        : mentorship.mentorId,
+    ];
+  });
+  const userById = await fetchUsersById(ctx, [
+    ...feedback.map((item) => item.respondentId),
+    ...counterpartIds,
+  ]);
 
-  return feedback.map((item, index) => ({
-    _id: item._id,
-    mentorshipId: item.mentorshipId,
-    respondentName: respondents[index]?.name ?? "Unknown user",
-    respondentRole: item.respondentRole,
-    reason: item.reason ?? null,
-    overallRating: item.overallRating ?? null,
-    goalsAchieved: item.goalsAchieved ?? null,
-    wouldRecommend: item.wouldRecommend ?? null,
-    highlights: item.highlights ?? null,
-    improvements: item.improvements ?? null,
-    additionalComments: item.additionalComments ?? null,
-    submittedAt: item.submittedAt ?? null,
-  }));
+  return feedback.map((item) => {
+    const mentorship = mentorshipById.get(item.mentorshipId);
+    const counterpartId = mentorship
+      ? item.respondentRole === "mentor"
+        ? mentorship.menteeId
+        : mentorship.mentorId
+      : null;
+
+    return {
+      _id: item._id,
+      mentorshipId: item.mentorshipId,
+      respondentName:
+        userById.get(item.respondentId)?.name ?? "Unknown user",
+      respondentRole: item.respondentRole,
+      counterpartName:
+        (counterpartId ? userById.get(counterpartId)?.name : null) ??
+        "Unknown user",
+      counterpartRole:
+        item.respondentRole === "mentor"
+          ? ("mentee" as const)
+          : ("mentor" as const),
+      reason: item.reason ?? null,
+      overallRating: item.overallRating ?? null,
+      goalsAchieved: item.goalsAchieved ?? null,
+      wouldRecommend: item.wouldRecommend ?? null,
+      highlights: item.highlights ?? null,
+      improvements: item.improvements ?? null,
+      additionalComments: item.additionalComments ?? null,
+      submittedAt: item.submittedAt ?? null,
+    };
+  });
 }

@@ -56,7 +56,7 @@ export function OutstandingFormsSection() {
                 <TableRow>
                   <TableHead className="pl-5">Form</TableHead>
                   <TableHead>Respondent</TableHead>
-                  <TableHead>Role</TableHead>
+                  <TableHead>Counterpart</TableHead>
                   <TableHead>Due date</TableHead>
                   <TableHead className="pr-5 text-right">Status</TableHead>
                 </TableRow>
@@ -79,11 +79,17 @@ export function OutstandingFormsSection() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="font-medium">
-                      {form.respondentName}
+                    <TableCell>
+                      <p className="font-medium">{form.respondentName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatAdminLabel(form.respondentRole)}
+                      </p>
                     </TableCell>
                     <TableCell>
-                      {formatAdminLabel(form.respondentRole)}
+                      <p className="font-medium">{form.counterpartName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatAdminLabel(form.counterpartRole)}
+                      </p>
                     </TableCell>
                     <TableCell>{formatAdminDate(form.dueAt)}</TableCell>
                     <TableCell className="pr-5 text-right">

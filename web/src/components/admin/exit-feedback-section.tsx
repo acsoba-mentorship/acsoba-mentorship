@@ -136,7 +136,9 @@ export function ExitFeedbackSection() {
                       {item.respondentName}
                     </CardTitle>
                     <CardDescription className="mt-1">
-                      {formatAdminLabel(item.respondentRole)} · Submitted{" "}
+                      {formatAdminLabel(item.respondentRole)} · With{" "}
+                      {item.counterpartName} (
+                      {formatAdminLabel(item.counterpartRole)}) · Submitted{" "}
                       {formatAdminDate(item.submittedAt)}
                     </CardDescription>
                   </div>

@@ -1,4 +1,4 @@
-import type { Id } from "../_generated/dataModel";
+import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import {
   getAuthenticatedUser,
@@ -11,8 +11,54 @@ import {
   syncAuthenticatedEmailAndAdminAccess,
 } from "./admin/bootstrap";
 import { writeAdminAuditLog } from "./admin/audit";
+import { fetchUsersById } from "./helper";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+type ProgrammeFormReference = {
+  mentorshipId: Id<"mentorships">;
+  respondentId: Id<"users">;
+  respondentRole: "mentor" | "mentee";
+};
+
+function getCounterpartId(
+  form: ProgrammeFormReference,
+  mentorshipById: Map<Id<"mentorships">, Doc<"mentorships"> | null>
+) {
+  const mentorship = mentorshipById.get(form.mentorshipId);
+  if (!mentorship) return null;
+
+  return form.respondentRole === "mentor"
+    ? mentorship.menteeId
+    : mentorship.mentorId;
+}
+
+async function loadProgrammeFormPeople(
+  ctx: QueryCtx,
+  forms: ProgrammeFormReference[]
+) {
+  const mentorshipIds = [...new Set(forms.map((form) => form.mentorshipId))];
+  const mentorships = await Promise.all(
+    mentorshipIds.map((mentorshipId) =>
+      ctx.db.get("mentorships", mentorshipId)
+    )
+  );
+  const mentorshipById = new Map(
+    mentorshipIds.map((mentorshipId, index) => [
+      mentorshipId,
+      mentorships[index] ?? null,
+    ])
+  );
+  const counterpartIds = forms
+    .map((form) => getCounterpartId(form, mentorshipById))
+    .filter((userId): userId is Id<"users"> => userId !== null);
+  const userById = await fetchUsersById(ctx, [
+    ...forms.map((form) => form.respondentId),
+    ...counterpartIds,
+  ]);
+
+  return { mentorshipById, userById };
+}
 
 export async function getMyAccess(ctx: QueryCtx) {
   const identity = await ctx.auth.getUserIdentity();
@@ -310,38 +356,51 @@ export async function listOutstandingForms(ctx: QueryCtx) {
       .collect(),
   ]);
 
-  const respondentIds = [
-    ...pulseForms.map((form) => form.respondentId),
-    ...exitForms.map((form) => form.respondentId),
-  ];
-  const respondents = await Promise.all(
-    respondentIds.map((userId) => ctx.db.get("users", userId))
-  );
-  const respondentById = new Map(
-    respondents.filter(Boolean).map((user) => [String(user!._id), user!])
+  const forms = [...pulseForms, ...exitForms];
+  const { mentorshipById, userById } = await loadProgrammeFormPeople(
+    ctx,
+    forms
   );
 
   return [
-    ...pulseForms.map((form) => ({
-      id: String(form._id),
-      type: "pulse_survey" as const,
-      mentorshipId: form.mentorshipId,
-      respondentRole: form.respondentRole,
-      respondentName:
-        respondentById.get(String(form.respondentId))?.name ?? "Unknown user",
-      dueAt: form.dueAt,
-      createdAt: form.createdAt,
-    })),
-    ...exitForms.map((form) => ({
-      id: String(form._id),
-      type: "exit_feedback" as const,
-      mentorshipId: form.mentorshipId,
-      respondentRole: form.respondentRole,
-      respondentName:
-        respondentById.get(String(form.respondentId))?.name ?? "Unknown user",
-      dueAt: form.dueAt,
-      createdAt: form.createdAt,
-    })),
+    ...pulseForms.map((form) => {
+      const counterpartId = getCounterpartId(form, mentorshipById);
+      return {
+        id: String(form._id),
+        type: "pulse_survey" as const,
+        mentorshipId: form.mentorshipId,
+        respondentRole: form.respondentRole,
+        respondentName: userById.get(form.respondentId)?.name ?? "Unknown user",
+        counterpartRole:
+          form.respondentRole === "mentor"
+            ? ("mentee" as const)
+            : ("mentor" as const),
+        counterpartName:
+          (counterpartId ? userById.get(counterpartId)?.name : null) ??
+          "Unknown user",
+        dueAt: form.dueAt,
+        createdAt: form.createdAt,
+      };
+    }),
+    ...exitForms.map((form) => {
+      const counterpartId = getCounterpartId(form, mentorshipById);
+      return {
+        id: String(form._id),
+        type: "exit_feedback" as const,
+        mentorshipId: form.mentorshipId,
+        respondentRole: form.respondentRole,
+        respondentName: userById.get(form.respondentId)?.name ?? "Unknown user",
+        counterpartRole:
+          form.respondentRole === "mentor"
+            ? ("mentee" as const)
+            : ("mentor" as const),
+        counterpartName:
+          (counterpartId ? userById.get(counterpartId)?.name : null) ??
+          "Unknown user",
+        dueAt: form.dueAt,
+        createdAt: form.createdAt,
+      };
+    }),
   ]
     .sort((a, b) => a.dueAt - b.dueAt);
 }
@@ -353,23 +412,35 @@ export async function listPulseSurveys(ctx: QueryCtx) {
     .withIndex("by_status_dueAt", (q) => q.eq("status", "submitted"))
     .order("desc")
     .collect();
-  const respondents = await Promise.all(
-    surveys.map((survey) => ctx.db.get("users", survey.respondentId))
+  const { mentorshipById, userById } = await loadProgrammeFormPeople(
+    ctx,
+    surveys
   );
 
-  return surveys.map((survey, index) => ({
-    _id: survey._id,
-    mentorshipId: survey.mentorshipId,
-    respondentRole: survey.respondentRole,
-    respondentName: respondents[index]?.name ?? "Unknown user",
-    cycleNumber: survey.cycleNumber,
-    relationshipRating: survey.relationshipRating ?? null,
-    communicationRating: survey.communicationRating ?? null,
-    progressRating: survey.progressRating ?? null,
-    needsSupport: survey.needsSupport ?? false,
-    comments: survey.comments ?? null,
-    submittedAt: survey.submittedAt ?? null,
-  }));
+  return surveys.map((survey) => {
+    const counterpartId = getCounterpartId(survey, mentorshipById);
+    return {
+      _id: survey._id,
+      mentorshipId: survey.mentorshipId,
+      respondentRole: survey.respondentRole,
+      respondentName:
+        userById.get(survey.respondentId)?.name ?? "Unknown user",
+      counterpartRole:
+        survey.respondentRole === "mentor"
+          ? ("mentee" as const)
+          : ("mentor" as const),
+      counterpartName:
+        (counterpartId ? userById.get(counterpartId)?.name : null) ??
+        "Unknown user",
+      cycleNumber: survey.cycleNumber,
+      relationshipRating: survey.relationshipRating ?? null,
+      communicationRating: survey.communicationRating ?? null,
+      progressRating: survey.progressRating ?? null,
+      needsSupport: survey.needsSupport ?? false,
+      comments: survey.comments ?? null,
+      submittedAt: survey.submittedAt ?? null,
+    };
+  });
 }
 
 export async function listAuditLog(ctx: QueryCtx) {

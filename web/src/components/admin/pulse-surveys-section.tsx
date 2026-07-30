@@ -125,6 +125,7 @@ export function PulseSurveysSection() {
                 <TableHeader className="bg-[#f2efe5]">
                   <TableRow>
                     <TableHead className="pl-5">Respondent</TableHead>
+                    <TableHead>Counterpart</TableHead>
                     <TableHead>Cycle</TableHead>
                     <TableHead>Relationship</TableHead>
                     <TableHead>Communication</TableHead>
@@ -143,6 +144,14 @@ export function PulseSurveysSection() {
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {formatAdminLabel(survey.respondentRole)}
+                        </p>
+                      </TableCell>
+                      <TableCell>
+                        <p className="font-semibold text-primary">
+                          {survey.counterpartName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatAdminLabel(survey.counterpartRole)}
                         </p>
                       </TableCell>
                       <TableCell>#{survey.cycleNumber}</TableCell>
