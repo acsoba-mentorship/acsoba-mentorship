@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { useMutation, useQuery } from "convex/react";
-import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { useAction, useMutation, useQuery } from "convex/react";
+import { ArrowLeft, CheckCircle2, FileText, Loader2 } from "lucide-react";
 
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -17,8 +17,19 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { formatDate } from "@/lib/utils";
+
+const CV_MAX_BYTES = 5 * 1024 * 1024;
+const CV_CONTENT_TYPE_BY_EXTENSION = {
+  pdf: "application/pdf",
+  doc: "application/msword",
+  docx:
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+} as const;
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error
@@ -32,7 +43,13 @@ export function InternshipDetails({
   internshipId: Id<"internships">;
 }) {
   const internship = useQuery(api.internships.getPosting, { internshipId });
-  const expressInterest = useMutation(api.internships.expressInterest);
+  const generateCvUploadUrl = useMutation(
+    api.internships.generateCvUploadUrl
+  );
+  const submitApplication = useAction(api.internships.submitApplication);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [note, setNote] = useState("");
+  const [cvFile, setCvFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +65,70 @@ export function InternshipDetails({
 
   const applicationSent =
     submitted || internship.alreadyExpressedInterest;
+
+  async function handleApply() {
+    if (!cvFile) {
+      setError("Attach your CV before submitting.");
+      return;
+    }
+
+    const extension = cvFile.name.split(".").pop()?.toLowerCase();
+    const expectedContentType =
+      extension &&
+      CV_CONTENT_TYPE_BY_EXTENSION[
+        extension as keyof typeof CV_CONTENT_TYPE_BY_EXTENSION
+      ];
+
+    if (!expectedContentType) {
+      setError("CV must be a PDF, DOC, or DOCX file.");
+      return;
+    }
+    if (
+      cvFile.type &&
+      cvFile.type !== expectedContentType
+    ) {
+      setError("CV file type does not match its extension.");
+      return;
+    }
+    if (cvFile.size <= 0 || cvFile.size > CV_MAX_BYTES) {
+      setError("CV must be a non-empty file no larger than 5 MiB.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const uploadUrl = await generateCvUploadUrl();
+      const uploadResponse = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": expectedContentType },
+        body: cvFile,
+      });
+      if (!uploadResponse.ok) {
+        throw new Error("CV upload failed. Please try again.");
+      }
+
+      const { storageId } = (await uploadResponse.json()) as {
+        storageId: Id<"_storage">;
+      };
+      await submitApplication({
+        internshipId,
+        note: note.trim() || undefined,
+        cvStorageId: storageId,
+        cvFileName: cvFile.name,
+      });
+      setSubmitted(true);
+      setNote("");
+      setCvFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    } catch (mutationError) {
+      setError(getErrorMessage(mutationError));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
@@ -98,30 +179,63 @@ export function InternshipDetails({
                 Application sent
               </span>
             ) : internship.isOpen ? (
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Review the full posting above before indicating interest.
-                </p>
+              <div className="max-w-xl space-y-5">
+                <div>
+                  <h2 className="font-semibold">Apply for this internship</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Include an optional message and attach your CV. The
+                    internship offeror will receive both with your application.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="internship-application-message">
+                    Message <span className="text-muted-foreground">(optional)</span>
+                  </Label>
+                  <Textarea
+                    id="internship-application-message"
+                    value={note}
+                    onChange={(event) => setNote(event.target.value)}
+                    rows={4}
+                    maxLength={1000}
+                    placeholder="Share why you're interested or add any useful context..."
+                    disabled={isSubmitting}
+                  />
+                  <p className="text-right text-xs text-muted-foreground">
+                    {note.length}/1000
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="internship-application-cv">
+                    CV <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    ref={fileInputRef}
+                    id="internship-application-cv"
+                    type="file"
+                    accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    required
+                    disabled={isSubmitting}
+                    onChange={(event) =>
+                      setCvFile(event.target.files?.[0] ?? null)
+                    }
+                  />
+                  <p className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <FileText className="size-3.5" />
+                    PDF, DOC, or DOCX · 5 MiB maximum
+                  </p>
+                </div>
+
                 <Button
                   type="button"
                   disabled={isSubmitting}
-                  onClick={async () => {
-                    setIsSubmitting(true);
-                    setError(null);
-                    try {
-                      await expressInterest({ internshipId });
-                      setSubmitted(true);
-                    } catch (mutationError) {
-                      setError(getErrorMessage(mutationError));
-                    } finally {
-                      setIsSubmitting(false);
-                    }
-                  }}
+                  onClick={handleApply}
                 >
                   {isSubmitting ? (
                     <Loader2 className="size-4 animate-spin" />
                   ) : null}
-                  Indicate interest
+                  Submit application
                 </Button>
               </div>
             ) : (

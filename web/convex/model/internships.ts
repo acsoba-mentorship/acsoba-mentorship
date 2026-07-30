@@ -10,6 +10,14 @@ const DESCRIPTION_MIN = 20;
 const DESCRIPTION_MAX = 4000;
 const START_PERIOD_MAX = 80;
 const NOTE_MAX = 1000;
+const CV_FILE_NAME_MAX = 255;
+const CV_MAX_BYTES = 5 * 1024 * 1024;
+const CV_CONTENT_TYPE_BY_EXTENSION = {
+  ".pdf": "application/pdf",
+  ".doc": "application/msword",
+  ".docx":
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+} as const;
 
 function clampLimit(limit?: number) {
   return Math.min(Math.max(Math.floor(limit ?? 50), 1), 200);
@@ -24,6 +32,27 @@ function normalizeRequiredText(value: string, label: string, max: number, min = 
     throw new Error(`${label} must be ${max} characters or fewer`);
   }
   return trimmed;
+}
+
+function normalizeCvFileName(fileName: string) {
+  const normalized = fileName.trim().split(/[\\/]/).pop() ?? "";
+  if (!normalized || normalized.length > CV_FILE_NAME_MAX) {
+    throw new Error(
+      `CV file name must be between 1 and ${CV_FILE_NAME_MAX} characters`
+    );
+  }
+  return normalized;
+}
+
+function expectedCvContentType(fileName: string) {
+  const extension = fileName
+    .slice(fileName.lastIndexOf("."))
+    .toLowerCase() as keyof typeof CV_CONTENT_TYPE_BY_EXTENSION;
+  const contentType = CV_CONTENT_TYPE_BY_EXTENSION[extension];
+  if (!contentType) {
+    throw new Error("CV must be a PDF, DOC, or DOCX file");
+  }
+  return contentType;
 }
 
 /**
@@ -246,9 +275,33 @@ export async function updateStatus(
   return internshipId;
 }
 
-export async function expressInterest(
+export async function generateCvUploadUrl(ctx: MutationCtx) {
+  const applicant = requireOnboardingComplete(await getAuthenticatedUser(ctx));
+  if (!isEligibleForInternshipInterest(applicant)) {
+    throw new Error(
+      "Only ACSOBA members who are still in school or not employed can apply for internships"
+    );
+  }
+  return ctx.storage.generateUploadUrl();
+}
+
+export async function persistApplication(
   ctx: MutationCtx,
-  { internshipId, note }: { internshipId: Id<"internships">; note?: string }
+  {
+    internshipId,
+    note,
+    cvStorageId,
+    cvFileName,
+    cvContentType,
+    cvSize,
+  }: {
+    internshipId: Id<"internships">;
+    note?: string;
+    cvStorageId: Id<"_storage">;
+    cvFileName: string;
+    cvContentType: string;
+    cvSize: number;
+  }
 ) {
   const applicant = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
@@ -279,9 +332,33 @@ export async function expressInterest(
     throw new Error("You have already indicated interest in this internship");
   }
 
+  const existingCvReference = await ctx.db
+    .query("internshipInterests")
+    .withIndex("by_cvStorageId", (q) => q.eq("cvStorageId", cvStorageId))
+    .first();
+  if (existingCvReference) {
+    throw new Error("This CV upload has already been used");
+  }
+
+  const cvMetadata = await ctx.db.system.get(cvStorageId);
+  if (!cvMetadata) {
+    throw new Error("Uploaded CV could not be found");
+  }
+
   const trimmedNote = note?.trim();
   if (trimmedNote && trimmedNote.length > NOTE_MAX) {
     throw new Error(`Note must be ${NOTE_MAX} characters or fewer`);
+  }
+
+  const normalizedCvFileName = normalizeCvFileName(cvFileName);
+  const expectedContentType = expectedCvContentType(normalizedCvFileName);
+  if (cvSize <= 0 || cvSize > CV_MAX_BYTES) {
+    throw new Error("CV must be a non-empty file no larger than 5 MiB");
+  }
+  if (cvContentType !== expectedContentType) {
+    throw new Error(
+      "CV file type does not match its extension; upload a PDF, DOC, or DOCX file"
+    );
   }
 
   const now = Date.now();
@@ -289,6 +366,10 @@ export async function expressInterest(
     internshipId,
     applicantId: applicant._id,
     note: trimmedNote || undefined,
+    cvStorageId,
+    cvFileName: normalizedCvFileName,
+    cvContentType,
+    cvSize,
     status: "submitted",
     createdAt: now,
   });
@@ -302,6 +383,28 @@ export async function expressInterest(
   });
 
   return interestId;
+}
+
+export async function deleteUnreferencedCvUpload(
+  ctx: MutationCtx,
+  { cvStorageId }: { cvStorageId: Id<"_storage"> }
+) {
+  const existingCvReference = await ctx.db
+    .query("internshipInterests")
+    .withIndex("by_cvStorageId", (q) => q.eq("cvStorageId", cvStorageId))
+    .first();
+
+  if (existingCvReference) {
+    return false;
+  }
+
+  const cvMetadata = await ctx.db.system.get(cvStorageId);
+  if (!cvMetadata) {
+    return false;
+  }
+
+  await ctx.storage.delete(cvStorageId);
+  return true;
 }
 
 export async function listInterestsForPosting(

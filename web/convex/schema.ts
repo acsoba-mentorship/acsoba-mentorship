@@ -121,6 +121,7 @@ const internships = defineTable(internshipsTableFields)
 const internshipInterests = defineTable(internshipInterestsTableFields)
   .index("by_internshipId", ["internshipId"])
   .index("by_applicantId", ["applicantId"])
+  .index("by_cvStorageId", ["cvStorageId"])
   .index("by_internshipId_applicantId", ["internshipId", "applicantId"])
   .index("by_internshipId_status", ["internshipId", "status"]);
 
