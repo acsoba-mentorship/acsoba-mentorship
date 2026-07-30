@@ -5,16 +5,10 @@ import {
   requireOnboardingComplete,
 } from "./auth";
 import { fetchUsersById } from "./helper";
-import {
-  DEFAULT_PROGRAM_SETTINGS,
-  getEffectiveProgramSettings,
-} from "./programSettings";
+import { getEffectiveProgramSettings } from "./programSettings";
 import { createNotification } from "./notifications";
 
 type Ctx = QueryCtx | MutationCtx;
-
-export const PULSE_SURVEY_INTERVAL_DAYS =
-  DEFAULT_PROGRAM_SETTINGS.pulseSurveyIntervalDays;
 
 type RespondentRole = "mentor" | "mentee";
 
