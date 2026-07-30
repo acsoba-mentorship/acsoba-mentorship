@@ -9,10 +9,14 @@ import {
   PREFERRED_COMMUNICATION_MODE_OPTIONS,
   PRESET_INDUSTRIES,
   PRESET_INTERESTS,
+  type GenderValue,
 } from "@/lib/onboarding/constants";
 import { experienceEntryFieldsSchema } from "@/lib/validation/profile";
 
-const genderValues = GENDER_OPTIONS.map((o) => o.value) as [string, ...string[]];
+const genderValues = GENDER_OPTIONS.map((o) => o.value) as [
+  GenderValue,
+  ...GenderValue[],
+];
 const nationalityValues = [...NATIONALITY_OPTIONS] as [string, ...string[]];
 const industryValues = [...PRESET_INDUSTRIES] as [string, ...string[]];
 const interestValues = [...PRESET_INTERESTS] as [string, ...string[]];
@@ -36,7 +40,11 @@ export type PersonalDetailsFormValues = z.infer<typeof personalDetailsSchema>;
 export type PersonalDetailsFormInput = z.input<typeof personalDetailsSchema>;
 
 export const careerStageSchema = z.object({
-  careerStage: z.enum(["student", "professional"]),
+  careerStage: z.enum([
+    "student",
+    "professional",
+    "between_study_and_work",
+  ]),
 });
 
 export type CareerStageFormValues = z.infer<typeof careerStageSchema>;

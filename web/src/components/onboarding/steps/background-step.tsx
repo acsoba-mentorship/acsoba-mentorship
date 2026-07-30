@@ -6,10 +6,15 @@ import { ChoiceButtons } from "@/components/onboarding/choice-buttons";
 import { useOnboardingDraft } from "@/components/onboarding/onboarding-provider";
 import { Button } from "@/components/ui/button";
 import { CAREER_STAGE_UI } from "@/lib/onboarding/constants";
+import { careerStageSchema } from "@/lib/validation/onboarding";
 
 const CAREER_OPTIONS = [
   { value: CAREER_STAGE_UI.STUDENT, label: "I'm a student" },
   { value: CAREER_STAGE_UI.WORKING, label: "I'm currently working" },
+  {
+    value: CAREER_STAGE_UI.BETWEEN_STUDY_AND_WORK,
+    label: "I'm looking for opportunities",
+  },
 ] as const;
 
 export function BackgroundStep() {
@@ -19,13 +24,14 @@ export function BackgroundStep() {
   );
 
   const handleContinue = () => {
-    if (!selected || (selected !== "student" && selected !== "professional")) {
+    const parsed = careerStageSchema.safeParse({ careerStage: selected });
+    if (!parsed.success) {
       return;
     }
 
     const nextDraft = {
       ...draft,
-      career: { careerStage: selected as "student" | "professional" },
+      career: parsed.data,
       studentBackground: undefined,
       workingBackground: undefined,
     };

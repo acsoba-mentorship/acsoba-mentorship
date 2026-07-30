@@ -13,6 +13,7 @@ export const membershipVerificationStatusValidator = v.union(
 export const CAREER_STAGE = {
   STUDENT: "student",
   PROFESSIONAL: "professional",
+  BETWEEN_STUDY_AND_WORK: "between_study_and_work",
 } as const;
 
 export const COMMITMENT_LEVEL = {
@@ -52,7 +53,8 @@ export const onboardingStatusValidator = v.union(
 
 export const careerStageValidator = v.union(
   v.literal(CAREER_STAGE.STUDENT),
-  v.literal(CAREER_STAGE.PROFESSIONAL)
+  v.literal(CAREER_STAGE.PROFESSIONAL),
+  v.literal(CAREER_STAGE.BETWEEN_STUDY_AND_WORK)
 );
 
 export const commitmentLevelValidator = v.union(

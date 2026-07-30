@@ -18,7 +18,6 @@ export const PREFERRED_COMMUNICATION_MODE_OPTIONS = [
 export const GENDER_OPTIONS = [
   { value: "male", label: "Male" },
   { value: "female", label: "Female" },
-  { value: "non_binary", label: "Non-binary" },
 ] as const;
 
 export type GenderValue = (typeof GENDER_OPTIONS)[number]["value"];
@@ -26,6 +25,7 @@ export type GenderValue = (typeof GENDER_OPTIONS)[number]["value"];
 export const CAREER_STAGE_UI = {
   STUDENT: "student",
   WORKING: "professional",
+  BETWEEN_STUDY_AND_WORK: "between_study_and_work",
 } as const;
 
 export const PRESET_INDUSTRIES = [

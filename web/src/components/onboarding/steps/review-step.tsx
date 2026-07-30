@@ -112,6 +112,9 @@ export function ReviewStep() {
               </li>
             </ul>
           ) : null}
+          {career?.careerStage === "between_study_and_work" ? (
+            <p className="text-muted-foreground">Looking for Opportunities</p>
+          ) : null}
         </section>
 
         <section className="rounded-xl border p-4">

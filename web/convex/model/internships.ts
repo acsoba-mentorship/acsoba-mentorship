@@ -27,11 +27,9 @@ function normalizeRequiredText(value: string, label: string, max: number, min = 
 
 /**
  * FR17 restricts expressing interest in an internship to "ACSOBA members
- * who are still in school or not employed". The current profile schema
- * tracks this via `careerStage`: students are always eligible, and a
- * professional is assumed to be employed. If the programme blueprint adds
- * a dedicated employment-status field later, this is the single place to
- * update the rule.
+ * who are still in school or not employed". Students and members between
+ * study and work are eligible; a professional is assumed to be employed.
+ * Records created before career stage was introduced remain eligible.
  */
 export function isEligibleForInternshipInterest(user: Doc<"users">) {
   return user.careerStage !== CAREER_STAGE.PROFESSIONAL;

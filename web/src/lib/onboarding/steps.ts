@@ -15,11 +15,13 @@ export type OnboardingStepId = (typeof ONBOARDING_STEPS)[number]["id"];
 
 const TOTAL_PROGRESS_STEPS = 7;
 
-export function getBranchStepId(
+function getBackgroundDetailStepId(
   draft: OnboardingDraft
 ): "education" | "career" | null {
   if (!draft.career) return null;
-  return draft.career.careerStage === "student" ? "education" : "career";
+  if (draft.career.careerStage === "student") return "education";
+  if (draft.career.careerStage === "professional") return "career";
+  return null;
 }
 
 export function getNextStep(
@@ -32,7 +34,7 @@ export function getNextStep(
     case "verify":
       return "background";
     case "background":
-      return getBranchStepId(draft);
+      return getBackgroundDetailStepId(draft) ?? "interests";
     case "education":
     case "career":
       return "interests";
@@ -58,7 +60,7 @@ export function getPreviousStep(
     case "career":
       return "background";
     case "interests":
-      return getBranchStepId(draft) ?? "background";
+      return getBackgroundDetailStepId(draft) ?? "background";
     case "mentoring":
       return "interests";
     case "review":

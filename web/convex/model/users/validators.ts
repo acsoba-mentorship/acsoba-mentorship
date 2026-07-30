@@ -20,6 +20,11 @@ const userProfileFieldsValidator = v.object({
   title: v.optional(usersTableFields.title),
 });
 
+const onboardingGenderValidator = v.union(
+  v.literal("male"),
+  v.literal("female")
+);
+
 export const updateUserProfileArgsValidator = userProfileFieldsValidator.pick(
   "name",
   "gender",
@@ -36,7 +41,7 @@ export const updateMentorPrivacySettingsArgsValidator =
 export const setUserOnboardingCompleteArgsValidator = v.object({
   personalDetails: v.object({
     name: usersTableFields.name,
-    gender: usersTableFields.gender,
+    gender: onboardingGenderValidator,
     nationality: usersTableFields.nationality,
     phoneNumber: usersTableFields.phoneNumber,
     dateOfBirth: usersTableFields.dateOfBirth,
