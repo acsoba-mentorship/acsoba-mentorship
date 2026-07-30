@@ -73,14 +73,16 @@ export function buildOnboardingSubmitPayload(
     }
     return {
       ...background,
-      role,
-      industries: draft.mentor.industries,
-      mentorProfile: {
-        yearsOfExperience: draft.mentor.yearsOfExperience,
-        expertise: draft.mentor.expertise,
-        maxMentees: draft.mentor.maxMentees,
-        isAvailable: draft.mentor.isAvailable,
-        isVisible: true,
+      profile: {
+        role,
+        industries: draft.mentor.industries,
+        mentorProfile: {
+          yearsOfExperience: draft.mentor.yearsOfExperience,
+          expertise: draft.mentor.expertise,
+          maxMentees: draft.mentor.maxMentees,
+          isAvailable: draft.mentor.isAvailable,
+          isVisible: true,
+        },
       },
     };
   }
@@ -91,19 +93,21 @@ export function buildOnboardingSubmitPayload(
 
   return {
     ...background,
-    role,
-    interests: draft.interestsChapter.interests,
-    industries: draft.interestsChapter.industries,
-    menteeProfile: {
-      goals: draft.mentoring.goals,
-      commitmentLevel:
-        draft.mentoring.commitmentLevel as Infer<
-          typeof menteeProfileValidator.fields.commitmentLevel
-        >,
-      preferredCommunicationModes:
-        draft.mentoring.preferredCommunicationModes as Infer<
-          typeof menteeProfileValidator.fields.preferredCommunicationModes
-        >,
+    profile: {
+      role,
+      interests: draft.interestsChapter.interests,
+      industries: draft.interestsChapter.industries,
+      menteeProfile: {
+        goals: draft.mentoring.goals,
+        commitmentLevel:
+          draft.mentoring.commitmentLevel as Infer<
+            typeof menteeProfileValidator.fields.commitmentLevel
+          >,
+        preferredCommunicationModes:
+          draft.mentoring.preferredCommunicationModes as Infer<
+            typeof menteeProfileValidator.fields.preferredCommunicationModes
+          >,
+      },
     },
   };
 }
