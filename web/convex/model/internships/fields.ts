@@ -31,7 +31,17 @@ export const internshipsTableFields = {
 
 export const internshipInterestStatusValidator = v.union(
   v.literal("submitted"),
-  v.literal("acknowledged")
+  // Retained so existing records migrate without a destructive rewrite.
+  v.literal("acknowledged"),
+  v.literal("accepted"),
+  v.literal("rejected")
+);
+
+export const internshipAcceptanceContactMethodValidator = v.union(
+  v.literal("email"),
+  v.literal("phone"),
+  v.literal("whatsapp"),
+  v.literal("other")
 );
 
 export const internshipInterestsTableFields = {
@@ -45,4 +55,11 @@ export const internshipInterestsTableFields = {
   status: internshipInterestStatusValidator,
   createdAt: v.number(),
   acknowledgedAt: v.optional(v.number()),
+  decisionMessage: v.optional(v.string()),
+  acceptanceContactMethod: v.optional(
+    internshipAcceptanceContactMethodValidator
+  ),
+  acceptanceContactDetails: v.optional(v.string()),
+  acceptanceStartArrangements: v.optional(v.string()),
+  decidedAt: v.optional(v.number()),
 };

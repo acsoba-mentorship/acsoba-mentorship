@@ -24,7 +24,7 @@ export async function createNotification(
     userId,
     type,
     title: title.trim().slice(0, 120),
-    message: message.trim().slice(0, 500),
+    message: message.trim().slice(0, 2000),
     href: href?.trim().slice(0, 300),
     createdAt: Date.now(),
   });

@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
-import { CheckCircle2, ChevronDown, ChevronUp, Loader2, Mail, Phone } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -44,11 +45,6 @@ function InterestsInbox({ internshipId }: { internshipId: Id<"internships"> }) {
   const interests = useQuery(api.internships.listInterestsForPosting, {
     internshipId,
   });
-  const acknowledgeInterest = useMutation(api.internships.acknowledgeInterest);
-  const [pendingId, setPendingId] = useState<Id<"internshipInterests"> | null>(
-    null
-  );
-  const [error, setError] = useState<string | null>(null);
 
   if (interests === undefined) {
     return <Skeleton className="h-16 w-full" />;
@@ -57,14 +53,13 @@ function InterestsInbox({ internshipId }: { internshipId: Id<"internships"> }) {
   if (interests.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        No one has indicated interest yet.
+        No one has applied yet.
       </p>
     );
   }
 
   return (
     <div className="space-y-3">
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
       {interests.map((interest) => (
         <div
           key={interest._id}
@@ -74,65 +69,29 @@ function InterestsInbox({ internshipId }: { internshipId: Id<"internships"> }) {
             <div>
               <p className="font-medium">{interest.applicantName}</p>
               <p className="text-xs text-muted-foreground">
-                Indicated interest {formatDateTime(interest.createdAt)}
+                Applied {formatDateTime(interest.createdAt)}
               </p>
-              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                {interest.applicantEmail && (
-                  <span className="inline-flex items-center gap-1.5">
-                    <Mail className="size-3.5 text-muted-foreground" />
-                    {interest.applicantEmail}
-                  </span>
-                )}
-                {interest.applicantPhoneNumber && (
-                  <span className="inline-flex items-center gap-1.5">
-                    <Phone className="size-3.5 text-muted-foreground" />
-                    {interest.applicantPhoneNumber}
-                  </span>
-                )}
-              </div>
-              {interest.note && (
-                <p className="mt-2 text-sm text-muted-foreground">
-                  &quot;{interest.note}&quot;
-                </p>
-              )}
             </div>
 
-            {interest.status === "acknowledged" ? (
-              <span className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-emerald-700">
-                <CheckCircle2 className="size-4" />
-                Acknowledged
-              </span>
-            ) : (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={pendingId === interest._id}
-                onClick={async () => {
-                  setPendingId(interest._id);
-                  setError(null);
-                  try {
-                    await acknowledgeInterest({ interestId: interest._id });
-                  } catch (mutationError) {
-                    setError(getErrorMessage(mutationError));
-                  } finally {
-                    setPendingId(null);
-                  }
-                }}
-              >
-                {pendingId === interest._id ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : null}
-                Acknowledge
+            <div className="flex items-center gap-2">
+              {interest.status === "accepted" ? (
+                <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
+                  Accepted
+                </Badge>
+              ) : interest.status === "rejected" ? (
+                <Badge variant="destructive">Rejected</Badge>
+              ) : (
+                <Badge variant="secondary">Pending</Badge>
+              )}
+              <Button asChild size="sm" variant="outline">
+                <Link href={`/internships/applications/${interest._id}`}>
+                  See application
+                </Link>
               </Button>
-            )}
+            </div>
           </div>
         </div>
       ))}
-      <p className="text-xs text-muted-foreground">
-        Further interaction with interested members happens outside the app,
-        using the contact details above.
-      </p>
     </div>
   );
 }
@@ -153,9 +112,9 @@ function MyInternshipCard({ internship }: { internship: MyInternship }) {
           </CardDescription>
         </div>
         <div className="flex items-center gap-2">
-          {internship.unacknowledgedCount > 0 && (
+          {internship.pendingApplicationCount > 0 && (
             <Badge variant="destructive">
-              {internship.unacknowledgedCount} new
+              {internship.pendingApplicationCount} pending
             </Badge>
           )}
           <Badge variant={statusVariant(internship.status)}>
@@ -166,8 +125,8 @@ function MyInternshipCard({ internship }: { internship: MyInternship }) {
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">
-            {internship.interestCount} member
-            {internship.interestCount === 1 ? "" : "s"} interested
+            {internship.interestCount} application
+            {internship.interestCount === 1 ? "" : "s"}
           </p>
 
           <div className="flex items-center gap-2">
@@ -206,7 +165,7 @@ function MyInternshipCard({ internship }: { internship: MyInternship }) {
               onClick={() => setExpanded((value) => !value)}
             >
               {expanded ? <ChevronUp /> : <ChevronDown />}
-              Interest
+              Applications
             </Button>
           </div>
         </div>
@@ -224,8 +183,9 @@ function MyInternshipCard({ internship }: { internship: MyInternship }) {
 }
 
 /**
- * FR17: offeror-facing view of postings they've made, along with the
- * indications of interest (and contact details) each one has received.
+ * Offeror-facing view of internship postings and their applications.
+ * Applicant contact details and CV URLs are loaded only in the owner-guarded
+ * application review page.
  */
 export function MyInternshipPostings() {
   const postings = useQuery(api.internships.myOffered);

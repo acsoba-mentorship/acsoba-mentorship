@@ -10,6 +10,11 @@ const DESCRIPTION_MIN = 20;
 const DESCRIPTION_MAX = 4000;
 const START_PERIOD_MAX = 80;
 const NOTE_MAX = 1000;
+const DECISION_MESSAGE_MAX = 2000;
+const ACCEPTANCE_MESSAGE_MIN = 20;
+const ACCEPTANCE_MESSAGE_MAX = 500;
+const CONTACT_DETAILS_MAX = 300;
+const START_ARRANGEMENTS_MAX = 500;
 const CV_FILE_NAME_MAX = 255;
 const CV_MAX_BYTES = 5 * 1024 * 1024;
 const CV_CONTENT_TYPE_BY_EXTENSION = {
@@ -17,6 +22,12 @@ const CV_CONTENT_TYPE_BY_EXTENSION = {
   ".doc": "application/msword",
   ".docx":
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+} as const;
+const CONTACT_METHOD_LABELS = {
+  email: "email",
+  phone: "phone",
+  whatsapp: "WhatsApp",
+  other: "the provided contact method",
 } as const;
 
 function clampLimit(limit?: number) {
@@ -247,8 +258,9 @@ export async function myOffered(ctx: QueryCtx) {
     ...posting,
     status: isPostingOpen(posting, now) ? posting.status : "closed",
     interestCount: counts[index].length,
-    unacknowledgedCount: counts[index].filter(
-      (interest) => interest.status === "submitted"
+    pendingApplicationCount: counts[index].filter(
+      (interest) =>
+        interest.status === "submitted" || interest.status === "acknowledged"
     ).length,
   }));
 }
@@ -379,7 +391,7 @@ export async function persistApplication(
     type: "internship_interest_received",
     title: "New internship interest",
     message: `${applicant.name} is interested in the ${internship.role} internship you offered.`,
-    href: "/internships",
+    href: "/internships?tab=my-postings",
   });
 
   return interestId;
@@ -429,55 +441,176 @@ export async function listInterestsForPosting(
     interests.map((interest) => interest.applicantId)
   );
 
-  // FR17: "Internship offeror shall receive indications of interest and
-  // contact details of member interested" — contact info is only exposed
-  // here, to the offeror, and only for members who applied.
   return interests.map((interest) => {
     const applicant = applicantById.get(interest.applicantId);
     return {
       _id: interest._id,
       applicantName: applicant?.name ?? "Unknown member",
-      applicantEmail: applicant?.email ?? null,
-      applicantPhoneNumber: applicant?.phoneNumber ?? null,
-      note: interest.note ?? null,
-      status: interest.status,
+      status:
+        interest.status === "acknowledged" ? "submitted" : interest.status,
       createdAt: interest.createdAt,
-      acknowledgedAt: interest.acknowledgedAt ?? null,
     };
   });
 }
 
-export async function acknowledgeInterest(
-  ctx: MutationCtx,
+export async function getApplicationForOwner(
+  ctx: QueryCtx,
   { interestId }: { interestId: Id<"internshipInterests"> }
 ) {
   const offeror = requireOnboardingComplete(await getAuthenticatedUser(ctx));
   const interest = await ctx.db.get("internshipInterests", interestId);
   if (!interest) {
-    throw new Error("Interest not found");
+    throw new Error("Application not found");
   }
 
   const internship = await ctx.db.get("internships", interest.internshipId);
   if (!internship || internship.offerorId !== offeror._id) {
-    throw new Error("Interest not found");
+    throw new Error("Application not found");
   }
 
-  if (interest.status !== "acknowledged") {
-    await ctx.db.patch("internshipInterests", interestId, {
-      status: "acknowledged",
-      acknowledgedAt: Date.now(),
-    });
+  const applicant = await ctx.db.get("users", interest.applicantId);
+  const cvDownloadUrl = interest.cvStorageId
+    ? await ctx.storage.getUrl(interest.cvStorageId)
+    : null;
 
-    // FR17: "Internship offeror should then respond through the app to
-    // acknowledge. Further interaction shall not be on the app."
-    await createNotification(ctx, {
-      userId: interest.applicantId,
-      type: "internship_interest_acknowledged",
-      title: "Internship offeror responded",
-      message: `${offeror.name} acknowledged your interest in the ${internship.role} internship. They'll be in touch using the contact details you have on file.`,
-      href: "/internships",
-    });
+  return {
+    _id: interest._id,
+    internshipRole: internship.role,
+    internshipStartPeriod: internship.startPeriod ?? null,
+    applicantName: applicant?.name ?? "Unknown member",
+    applicantEmail: applicant?.email ?? null,
+    applicantPhoneNumber: applicant?.phoneNumber ?? null,
+    note: interest.note ?? null,
+    cvFileName: interest.cvFileName ?? null,
+    cvContentType: interest.cvContentType ?? null,
+    cvSize: interest.cvSize ?? null,
+    cvDownloadUrl,
+    hasCv: interest.cvStorageId !== undefined && cvDownloadUrl !== null,
+    status:
+      interest.status === "acknowledged" ? "submitted" : interest.status,
+    createdAt: interest.createdAt,
+    decisionMessage: interest.decisionMessage ?? null,
+    acceptanceContactMethod: interest.acceptanceContactMethod ?? null,
+    acceptanceContactDetails: interest.acceptanceContactDetails ?? null,
+    acceptanceStartArrangements:
+      interest.acceptanceStartArrangements ?? null,
+    decidedAt: interest.decidedAt ?? null,
+  };
+}
+
+export async function decideApplication(
+  ctx: MutationCtx,
+  {
+    interestId,
+    decision,
+    message,
+    contactMethod,
+    contactDetails,
+    startArrangements,
+  }: {
+    interestId: Id<"internshipInterests">;
+    decision: "accepted" | "rejected";
+    message?: string;
+    contactMethod?: "email" | "phone" | "whatsapp" | "other";
+    contactDetails?: string;
+    startArrangements?: string;
   }
+) {
+  const offeror = requireOnboardingComplete(await getAuthenticatedUser(ctx));
+  const interest = await ctx.db.get("internshipInterests", interestId);
+  if (!interest) {
+    throw new Error("Application not found");
+  }
+
+  const internship = await ctx.db.get("internships", interest.internshipId);
+  if (!internship || internship.offerorId !== offeror._id) {
+    throw new Error("Application not found");
+  }
+
+  if (interest.status === "accepted" || interest.status === "rejected") {
+    throw new Error("This application has already been decided");
+  }
+
+  const accepted = decision === "accepted";
+  let normalizedMessage = message?.trim() ?? "";
+  let normalizedContactDetails: string | undefined;
+  let normalizedStartArrangements: string | undefined;
+
+  if (accepted) {
+    if (!interest.cvStorageId) {
+      throw new Error(
+        "Legacy applications without a CV cannot be accepted; reject this application instead"
+      );
+    }
+    const cvMetadata = await ctx.db.system.get(
+      "_storage",
+      interest.cvStorageId
+    );
+    if (!cvMetadata) {
+      throw new Error(
+        "This application's CV is unavailable, so it cannot be accepted"
+      );
+    }
+    normalizedMessage = normalizeRequiredText(
+      normalizedMessage,
+      "Acceptance message",
+      ACCEPTANCE_MESSAGE_MAX,
+      ACCEPTANCE_MESSAGE_MIN
+    );
+    if (!contactMethod) {
+      throw new Error("Choose a contact method for the applicant");
+    }
+    normalizedContactDetails = normalizeRequiredText(
+      contactDetails ?? "",
+      "Contact details",
+      CONTACT_DETAILS_MAX,
+      3
+    );
+    normalizedStartArrangements = normalizeRequiredText(
+      startArrangements ?? "",
+      "Start arrangements",
+      START_ARRANGEMENTS_MAX,
+      10
+    );
+  } else if (normalizedMessage.length > DECISION_MESSAGE_MAX) {
+    throw new Error(
+      `Decision message must be ${DECISION_MESSAGE_MAX} characters or fewer`
+    );
+  }
+
+  const decidedAt = Date.now();
+  await ctx.db.patch("internshipInterests", interestId, {
+    status: decision,
+    decisionMessage: normalizedMessage || undefined,
+    acceptanceContactMethod: accepted ? contactMethod : undefined,
+    acceptanceContactDetails: accepted
+      ? normalizedContactDetails
+      : undefined,
+    acceptanceStartArrangements: accepted
+      ? normalizedStartArrangements
+      : undefined,
+    decidedAt,
+  });
+
+  const postingStartPeriod =
+    internship.startPeriod ?? "To be confirmed with the offeror";
+  const notificationMessage = accepted
+    ? `Your application for ${internship.role} was accepted. Posting start: ${postingStartPeriod}. Start arrangements: ${normalizedStartArrangements}. Contact via ${CONTACT_METHOD_LABELS[contactMethod!]}: ${normalizedContactDetails}. Message: ${normalizedMessage}`
+    : `Your application for the ${internship.role} internship was not selected.${
+        normalizedMessage ? ` ${normalizedMessage}` : ""
+      }`;
+
+  await createNotification(ctx, {
+    userId: interest.applicantId,
+    type: accepted
+      ? "internship_application_accepted"
+      : "internship_application_rejected",
+    title: accepted
+      ? "Internship application accepted"
+      : "Internship application update",
+    message: notificationMessage,
+    href: "/internships?tab=my-interests",
+  });
 
   return interestId;
 }
@@ -504,10 +637,18 @@ export async function myInterests(ctx: QueryCtx) {
       const internship = internshipById.get(interest.internshipId);
       return {
         _id: interest._id,
-        status: interest.status,
+        status:
+          interest.status === "acknowledged" ? "submitted" : interest.status,
         createdAt: interest.createdAt,
+        decisionMessage: interest.decisionMessage ?? null,
+        acceptanceContactMethod: interest.acceptanceContactMethod ?? null,
+        acceptanceContactDetails: interest.acceptanceContactDetails ?? null,
+        acceptanceStartArrangements:
+          interest.acceptanceStartArrangements ?? null,
+        decidedAt: interest.decidedAt ?? null,
         internshipRole: internship?.role ?? "Internship no longer available",
         internshipCompany: internship?.companyName ?? "",
+        internshipStartPeriod: internship?.startPeriod ?? null,
         internshipStatus: internship
           ? await effectiveStatus(internship)
           : "closed",

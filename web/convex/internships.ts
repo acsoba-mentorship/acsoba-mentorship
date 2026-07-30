@@ -3,7 +3,10 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { action, internalMutation, mutation, query } from "./_generated/server";
 import * as InternshipsModel from "./model/internships";
-import { internshipStatusValidator } from "./model/internships/fields";
+import {
+  internshipAcceptanceContactMethodValidator,
+  internshipStatusValidator,
+} from "./model/internships/fields";
 
 const CV_MAX_BYTES = 5 * 1024 * 1024;
 const CV_FILE_NAME_MAX = 255;
@@ -180,9 +183,21 @@ export const listInterestsForPosting = query({
   handler: (ctx, args) => InternshipsModel.listInterestsForPosting(ctx, args),
 });
 
-export const acknowledgeInterest = mutation({
+export const getApplicationForOwner = query({
   args: { interestId: v.id("internshipInterests") },
-  handler: (ctx, args) => InternshipsModel.acknowledgeInterest(ctx, args),
+  handler: (ctx, args) => InternshipsModel.getApplicationForOwner(ctx, args),
+});
+
+export const decideApplication = mutation({
+  args: {
+    interestId: v.id("internshipInterests"),
+    decision: v.union(v.literal("accepted"), v.literal("rejected")),
+    message: v.optional(v.string()),
+    contactMethod: v.optional(internshipAcceptanceContactMethodValidator),
+    contactDetails: v.optional(v.string()),
+    startArrangements: v.optional(v.string()),
+  },
+  handler: (ctx, args) => InternshipsModel.decideApplication(ctx, args),
 });
 
 export const myInterests = query({

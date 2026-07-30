@@ -1,19 +1,29 @@
-"use client";
-
 import { Briefcase } from "lucide-react";
 
-import { OfferInternshipDialog } from "@/components/internships/offer-internship-dialog";
-import { BrowseInternships } from "@/components/internships/browse-internships";
-import { MyInternshipPostings } from "@/components/internships/my-internship-postings";
-import { MyInternshipInterests } from "@/components/internships/my-internship-interests";
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+  InternshipsTabs,
+  type InternshipTab,
+} from "@/components/internships/internships-tabs";
+import { OfferInternshipDialog } from "@/components/internships/offer-internship-dialog";
 
-export default function InternshipsPage() {
+const INTERNSHIP_TABS = new Set<InternshipTab>([
+  "browse",
+  "my-postings",
+  "my-interests",
+]);
+
+export default async function InternshipsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string | string[] }>;
+}) {
+  const requestedTab = (await searchParams).tab;
+  const tabValue = Array.isArray(requestedTab) ? requestedTab[0] : requestedTab;
+  const activeTab: InternshipTab =
+    tabValue && INTERNSHIP_TABS.has(tabValue as InternshipTab)
+      ? (tabValue as InternshipTab)
+      : "browse";
+
   return (
     <div className="mx-auto max-w-5xl space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -32,23 +42,7 @@ export default function InternshipsPage() {
         <OfferInternshipDialog />
       </div>
 
-      <Tabs defaultValue="browse">
-        <TabsList>
-          <TabsTrigger value="browse">Browse</TabsTrigger>
-          <TabsTrigger value="my-postings">My Postings</TabsTrigger>
-          <TabsTrigger value="my-interests">My Interests</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="browse" className="mt-6">
-          <BrowseInternships />
-        </TabsContent>
-        <TabsContent value="my-postings" className="mt-6">
-          <MyInternshipPostings />
-        </TabsContent>
-        <TabsContent value="my-interests" className="mt-6">
-          <MyInternshipInterests />
-        </TabsContent>
-      </Tabs>
+      <InternshipsTabs activeTab={activeTab} />
     </div>
   );
 }
