@@ -8,6 +8,7 @@ import { createNotification } from "./notifications";
 const TITLE_MAX = 120;
 const DESCRIPTION_MIN = 20;
 const DESCRIPTION_MAX = 4000;
+const START_PERIOD_MAX = 80;
 const NOTE_MAX = 1000;
 
 function clampLimit(limit?: number) {
@@ -52,6 +53,7 @@ export async function offer(
     companyName,
     role,
     description,
+    startPeriod,
     duration,
     isPaid,
     closingDate,
@@ -60,6 +62,7 @@ export async function offer(
     companyName: string;
     role: string;
     description: string;
+    startPeriod: string;
     duration: string;
     isPaid: boolean;
     closingDate: number;
@@ -88,6 +91,11 @@ export async function offer(
       "Description",
       DESCRIPTION_MAX,
       DESCRIPTION_MIN
+    ),
+    startPeriod: normalizeRequiredText(
+      startPeriod,
+      "Approximate start period",
+      START_PERIOD_MAX
     ),
     duration: normalizeRequiredText(duration, "Duration", 60),
     isPaid,
@@ -131,6 +139,7 @@ export async function listOpen(ctx: QueryCtx, { limit }: { limit?: number }) {
       companyName: posting.companyName,
       role: posting.role,
       description: posting.description,
+      startPeriod: posting.startPeriod ?? null,
       duration: posting.duration,
       isPaid: posting.isPaid,
       closingDate: posting.closingDate,
@@ -140,6 +149,50 @@ export async function listOpen(ctx: QueryCtx, { limit }: { limit?: number }) {
       createdAt: posting.createdAt,
     };
   });
+}
+
+/**
+ * Return a full posting to its owner, or to any onboarded member while the
+ * posting remains open. Closed and expired postings are not discoverable by
+ * other members through a guessed document ID.
+ */
+export async function getPosting(
+  ctx: QueryCtx,
+  { internshipId }: { internshipId: Id<"internships"> }
+) {
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
+  const posting = await ctx.db.get("internships", internshipId);
+
+  if (
+    !posting ||
+    (posting.offerorId !== user._id && !isPostingOpen(posting))
+  ) {
+    throw new Error("Internship posting not found");
+  }
+
+  const offeror = await ctx.db.get("users", posting.offerorId);
+  const existingInterest = await ctx.db
+    .query("internshipInterests")
+    .withIndex("by_internshipId_applicantId", (q) =>
+      q.eq("internshipId", internshipId).eq("applicantId", user._id)
+    )
+    .unique();
+
+  return {
+    _id: posting._id,
+    companyName: posting.companyName,
+    role: posting.role,
+    description: posting.description,
+    startPeriod: posting.startPeriod ?? null,
+    duration: posting.duration,
+    isPaid: posting.isPaid,
+    closingDate: posting.closingDate,
+    offerorName: offeror?.name ?? "Unknown member",
+    isMine: posting.offerorId === user._id,
+    isOpen: isPostingOpen(posting),
+    alreadyExpressedInterest: existingInterest !== null,
+    createdAt: posting.createdAt,
+  };
 }
 
 export async function myOffered(ctx: QueryCtx) {

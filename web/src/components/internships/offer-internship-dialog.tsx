@@ -39,6 +39,7 @@ export function OfferInternshipDialog() {
   const [companyName, setCompanyName] = useState("");
   const [role, setRole] = useState("");
   const [description, setDescription] = useState("");
+  const [startPeriod, setStartPeriod] = useState("");
   const [duration, setDuration] = useState("");
   const [isPaid, setIsPaid] = useState(false);
   const [closingDate, setClosingDate] = useState("");
@@ -51,6 +52,7 @@ export function OfferInternshipDialog() {
     setCompanyName("");
     setRole("");
     setDescription("");
+    setStartPeriod("");
     setDuration("");
     setIsPaid(false);
     setClosingDate("");
@@ -99,6 +101,7 @@ export function OfferInternshipDialog() {
         companyName: companyName.trim(),
         role: role.trim(),
         description: cleanDescription,
+        startPeriod: startPeriod.trim(),
         duration: duration.trim(),
         isPaid,
         closingDate: closingDateMs,
@@ -182,6 +185,19 @@ export function OfferInternshipDialog() {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
+                  <Label htmlFor="internship-start-period">
+                    Approximate start period
+                  </Label>
+                  <Input
+                    id="internship-start-period"
+                    value={startPeriod}
+                    onChange={(event) => setStartPeriod(event.target.value)}
+                    placeholder="e.g. May to July 2027"
+                    maxLength={80}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="internship-duration">Duration</Label>
                   <Input
                     id="internship-duration"
@@ -192,6 +208,9 @@ export function OfferInternshipDialog() {
                     required
                   />
                 </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="internship-closing-date">
                     Closing date to apply

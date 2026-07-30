@@ -8,6 +8,7 @@ export const offer = mutation({
     companyName: v.string(),
     role: v.string(),
     description: v.string(),
+    startPeriod: v.string(),
     duration: v.string(),
     isPaid: v.boolean(),
     closingDate: v.number(),
@@ -19,6 +20,11 @@ export const offer = mutation({
 export const listOpen = query({
   args: { limit: v.optional(v.number()) },
   handler: (ctx, args) => InternshipsModel.listOpen(ctx, args),
+});
+
+export const getPosting = query({
+  args: { internshipId: v.id("internships") },
+  handler: (ctx, args) => InternshipsModel.getPosting(ctx, args),
 });
 
 export const myOffered = query({

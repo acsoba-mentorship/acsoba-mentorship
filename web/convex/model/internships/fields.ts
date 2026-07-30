@@ -19,6 +19,7 @@ export const internshipsTableFields = {
   companyName: v.string(),
   role: v.string(),
   description: v.string(),
+  startPeriod: v.optional(v.string()),
   duration: v.string(),
   isPaid: v.boolean(),
   closingDate: v.number(),
