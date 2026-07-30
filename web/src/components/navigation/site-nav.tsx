@@ -191,7 +191,13 @@ function UserMenu({ hasAdminAccess }: { hasAdminAccess: boolean }) {
           </DropdownMenuItem>
         )}
         <DropdownMenuItem asChild>
-          <Link href="/report-incident">
+          <Link
+            href={
+              currentUser?.mentorProfile && !currentUser.menteeProfile
+                ? "/mentor/report-incident"
+                : "/report-incident"
+            }
+          >
             <Flag />
             Report an Incident
           </Link>

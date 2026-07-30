@@ -40,7 +40,11 @@ const mentorNavLinks = [
   { href: "/mentor/mentorships", label: "Mentorships", icon: Users },
   { href: "/mentor/mentorships/timeline", label: "Timeline", icon: CalendarDays },
   { href: "/profile", label: "Mentor Profile", icon: UserCog },
-  { href: "/report-incident", label: "Report Incident", icon: Flag },
+  {
+    href: "/mentor/report-incident",
+    label: "Report Incident",
+    icon: Flag,
+  },
 ] as const;
 
 function isActive(pathname: string, href: string) {

@@ -128,7 +128,11 @@ function IncidentCard({ report }: { report: IncidentReport }) {
           </div>
           <div className="rounded-lg bg-[#f7f6f2] px-4 py-3 text-sm">
             <p className="font-semibold text-primary">{report.reporterName}</p>
-            <p className="text-xs text-muted-foreground">Reporter</p>
+            <p className="text-xs text-muted-foreground">
+              {report.reporterRole
+                ? `${formatAdminLabel(report.reporterRole)} reporter`
+                : "Reporter"}
+            </p>
           </div>
         </div>
       </CardHeader>

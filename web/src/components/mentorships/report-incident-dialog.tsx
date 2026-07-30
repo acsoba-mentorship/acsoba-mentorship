@@ -59,8 +59,12 @@ function getErrorMessage(error: unknown) {
 
 export function ReportIncidentDialog({
   mentorshipId,
+  reporterRole,
+  participantName,
 }: {
   mentorshipId?: Id<"mentorships">;
+  reporterRole: "mentor" | "mentee";
+  participantName?: string | null;
 }) {
   const submitIncident = useMutation(api.incidentReports.submit);
   const isMentorshipIncident = Boolean(mentorshipId);
@@ -136,6 +140,7 @@ export function ReportIncidentDialog({
 
     try {
       await submitIncident({
+        reporterRole,
         ...(mentorshipId ? { mentorshipId } : {}),
         category,
         severity,
@@ -168,8 +173,10 @@ export function ReportIncidentDialog({
           <DialogTitle>Report an incident</DialogTitle>
           <DialogDescription>
             {isMentorshipIncident
-              ? "Share a private concern about this mentorship with authorised programme admins. The relevant participant is identified securely from this mentorship."
-              : "Share a private concern about the Shepherds Programme with authorised programme admins. This report will not be linked to a specific mentorship."}
+              ? `Share a private concern about this mentorship${
+                  participantName ? ` with ${participantName}` : ""
+                } with authorised programme admins. The reported participant is derived securely from the relationship you selected.`
+              : "Share a private general concern about the Shepherds Programme with authorised programme admins. This report will not be linked to a specific participant."}
           </DialogDescription>
         </DialogHeader>
 

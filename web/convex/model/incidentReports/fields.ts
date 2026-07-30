@@ -22,8 +22,15 @@ export const incidentStatusValidator = v.union(
   v.literal("dismissed")
 );
 
+export const incidentReporterRoleValidator = v.union(
+  v.literal("mentor"),
+  v.literal("mentee")
+);
+
 export const incidentReportsTableFields = {
   reporterId: v.id("users"),
+  // Optional so incident reports created before role-scoped reporting remain valid.
+  reporterRole: v.optional(incidentReporterRoleValidator),
   reportedUserId: v.optional(v.id("users")),
   mentorshipId: v.optional(v.id("mentorships")),
   category: incidentCategoryValidator,

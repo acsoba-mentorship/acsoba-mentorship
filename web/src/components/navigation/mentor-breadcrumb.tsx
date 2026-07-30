@@ -17,6 +17,7 @@ const labelMap: Record<string, string> = {
   requests: "Requests",
   mentorships: "Mentorships",
   timeline: "Timeline",
+  "report-incident": "Report Incident",
 };
 
 export function MentorBreadcrumb() {

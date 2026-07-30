@@ -64,7 +64,11 @@ export function MentorshipWorkspace({
           </div>
         </div>
 
-        <ReportIncidentDialog mentorshipId={mentorshipId} />
+        <ReportIncidentDialog
+          mentorshipId={mentorshipId}
+          reporterRole={workspace.role}
+          participantName={participant?.name}
+        />
       </section>
 
       <MentorshipMeetingsPanel

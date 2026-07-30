@@ -3,12 +3,14 @@ import { mutation, query } from "./_generated/server";
 import * as IncidentReportsModel from "./model/incidentReports";
 import {
   incidentCategoryValidator,
+  incidentReporterRoleValidator,
   incidentSeverityValidator,
   incidentStatusValidator,
 } from "./model/incidentReports/fields";
 
 export const submit = mutation({
   args: {
+    reporterRole: incidentReporterRoleValidator,
     mentorshipId: v.optional(v.id("mentorships")),
     category: incidentCategoryValidator,
     severity: incidentSeverityValidator,
@@ -17,6 +19,11 @@ export const submit = mutation({
     allowContact: v.boolean(),
   },
   handler: (ctx, args) => IncidentReportsModel.submit(ctx, args),
+});
+
+export const listReportTargets = query({
+  args: { role: incidentReporterRoleValidator },
+  handler: (ctx, args) => IncidentReportsModel.listReportTargets(ctx, args),
 });
 
 export const listMine = query({
