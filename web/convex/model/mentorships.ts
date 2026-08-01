@@ -246,6 +246,84 @@ export async function activeByMentee(
 }
 
 /**
+ * Returns non-active (completed/cancelled) mentorships for the current
+ * mentor, most recent first. This powers the "History" tab.
+ */
+export async function historyByMentor(
+  ctx: QueryCtx,
+  { mentorId }: { mentorId: Id<"users"> }
+) {
+  const currentUser = requireMentorProfile(
+    requireOnboardingComplete(await getAuthenticatedUser(ctx))
+  );
+
+  if (currentUser._id !== mentorId) {
+    throw new ConvexError("Unauthorized to view this mentor's mentorships");
+  }
+
+  const mentorships = await ctx.db
+    .query("mentorships")
+    .withIndex("by_mentorId", (q) => q.eq("mentorId", mentorId))
+    .order("desc")
+    .collect();
+
+  const history = mentorships.filter(
+    (mentorship) => mentorship.status !== "active"
+  );
+
+  const menteeById = await fetchUsersById(
+    ctx,
+    history.map((mentorship) => mentorship.menteeId)
+  );
+
+  return history.map((mentorship) =>
+    buildMentorMentorshipView(
+      mentorship,
+      menteeById.get(mentorship.menteeId) ?? null
+    )
+  );
+}
+
+/**
+ * Returns non-active (completed/cancelled) mentorships for the current
+ * mentee, most recent first. This powers the "History" tab.
+ */
+export async function historyByMentee(
+  ctx: QueryCtx,
+  { menteeId }: { menteeId: Id<"users"> }
+) {
+  const currentUser = requireMenteeProfile(
+    requireOnboardingComplete(await getAuthenticatedUser(ctx))
+  );
+
+  if (currentUser._id !== menteeId) {
+    throw new ConvexError("Unauthorized to view this mentee's mentorships");
+  }
+
+  const mentorships = await ctx.db
+    .query("mentorships")
+    .withIndex("by_menteeId", (q) => q.eq("menteeId", menteeId))
+    .order("desc")
+    .collect();
+
+  const history = mentorships.filter(
+    (mentorship) => mentorship.status !== "active"
+  );
+
+  const mentorById = await fetchUsersById(
+    ctx,
+    history.map((mentorship) => mentorship.mentorId)
+  );
+
+  return history.map((mentorship) =>
+    buildMenteeMentorshipView(
+      mentorship,
+      mentorById.get(mentorship.mentorId) ?? null
+    )
+  );
+}
+
+/**
  * Admin view of every active mentorship, used by the "end a mentorship
  * immediately" workflow.
  */

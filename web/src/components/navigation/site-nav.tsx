@@ -169,7 +169,7 @@ function UserMenu({ hasAdminAccess }: { hasAdminAccess: boolean }) {
         </DropdownMenuItem>
         {currentUser?.menteeProfile && (
           <DropdownMenuItem asChild>
-            <Link href="/requests">
+            <Link href="/mentorships?tab=requests">
               <Inbox />
               My Requests
             </Link>
@@ -263,7 +263,6 @@ export function SiteNav() {
     ...(currentUser?.menteeProfile
       ? [
           { href: "/mentorships", label: "My Mentorships", icon: Users },
-          { href: "/requests", label: "My Requests", icon: Inbox },
           { href: "/mentorships/timeline", label: "Timeline", icon: CalendarDays },
         ]
       : []),
