@@ -1,3 +1,4 @@
+import { ConvexError } from "convex/values";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { CAREER_STAGE } from "./users/fields";
@@ -37,10 +38,10 @@ function clampLimit(limit?: number) {
 function normalizeRequiredText(value: string, label: string, max: number, min = 1) {
   const trimmed = value.trim();
   if (trimmed.length < min) {
-    throw new Error(`${label} must be at least ${min} characters`);
+    throw new ConvexError(`${label} must be at least ${min} characters`);
   }
   if (trimmed.length > max) {
-    throw new Error(`${label} must be ${max} characters or fewer`);
+    throw new ConvexError(`${label} must be ${max} characters or fewer`);
   }
   return trimmed;
 }
@@ -48,7 +49,7 @@ function normalizeRequiredText(value: string, label: string, max: number, min = 
 function normalizeCvFileName(fileName: string) {
   const normalized = fileName.trim().split(/[\\/]/).pop() ?? "";
   if (!normalized || normalized.length > CV_FILE_NAME_MAX) {
-    throw new Error(
+    throw new ConvexError(
       `CV file name must be between 1 and ${CV_FILE_NAME_MAX} characters`
     );
   }
@@ -61,7 +62,7 @@ function expectedCvContentType(fileName: string) {
     .toLowerCase() as keyof typeof CV_CONTENT_TYPE_BY_EXTENSION;
   const contentType = CV_CONTENT_TYPE_BY_EXTENSION[extension];
   if (!contentType) {
-    throw new Error("CV must be a PDF, DOC, or DOCX file");
+    throw new ConvexError("CV must be a PDF, DOC, or DOCX file");
   }
   return contentType;
 }
@@ -112,14 +113,14 @@ export async function offer(
   const offeror = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   if (!confirmedAuthority) {
-    throw new Error(
+    throw new ConvexError(
       "You must confirm you have the authority to offer this internship"
     );
   }
 
   const now = Date.now();
   if (!Number.isFinite(closingDate) || closingDate <= now) {
-    throw new Error("Closing date to apply must be in the future");
+    throw new ConvexError("Closing date to apply must be in the future");
   }
 
   return ctx.db.insert("internships", {
@@ -207,7 +208,7 @@ export async function getPosting(
     !posting ||
     (posting.offerorId !== user._id && !isPostingOpen(posting))
   ) {
-    throw new Error("Internship posting not found");
+    throw new ConvexError("Internship posting not found");
   }
 
   const offeror = await ctx.db.get("users", posting.offerorId);
@@ -276,7 +277,7 @@ export async function updateStatus(
   const internship = await ctx.db.get("internships", internshipId);
 
   if (!internship || internship.offerorId !== offeror._id) {
-    throw new Error("Internship posting not found");
+    throw new ConvexError("Internship posting not found");
   }
 
   await ctx.db.patch("internships", internshipId, {
@@ -290,7 +291,7 @@ export async function updateStatus(
 export async function generateCvUploadUrl(ctx: MutationCtx) {
   const applicant = requireOnboardingComplete(await getAuthenticatedUser(ctx));
   if (!isEligibleForInternshipInterest(applicant)) {
-    throw new Error(
+    throw new ConvexError(
       "Only ACSOBA members who are still in school or not employed can apply for internships"
     );
   }
@@ -318,20 +319,20 @@ export async function persistApplication(
   const applicant = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   if (!isEligibleForInternshipInterest(applicant)) {
-    throw new Error(
+    throw new ConvexError(
       "Only ACSOBA members who are still in school or not employed can indicate interest in internships"
     );
   }
 
   const internship = await ctx.db.get("internships", internshipId);
   if (!internship) {
-    throw new Error("Internship posting not found");
+    throw new ConvexError("Internship posting not found");
   }
   if (internship.offerorId === applicant._id) {
-    throw new Error("You cannot express interest in your own posting");
+    throw new ConvexError("You cannot express interest in your own posting");
   }
   if (!isPostingOpen(internship)) {
-    throw new Error("This internship is no longer accepting interest");
+    throw new ConvexError("This internship is no longer accepting interest");
   }
 
   const existing = await ctx.db
@@ -341,7 +342,7 @@ export async function persistApplication(
     )
     .unique();
   if (existing) {
-    throw new Error("You have already indicated interest in this internship");
+    throw new ConvexError("You have already indicated interest in this internship");
   }
 
   const existingCvReference = await ctx.db
@@ -349,26 +350,26 @@ export async function persistApplication(
     .withIndex("by_cvStorageId", (q) => q.eq("cvStorageId", cvStorageId))
     .first();
   if (existingCvReference) {
-    throw new Error("This CV upload has already been used");
+    throw new ConvexError("This CV upload has already been used");
   }
 
   const cvMetadata = await ctx.db.system.get(cvStorageId);
   if (!cvMetadata) {
-    throw new Error("Uploaded CV could not be found");
+    throw new ConvexError("Uploaded CV could not be found");
   }
 
   const trimmedNote = note?.trim();
   if (trimmedNote && trimmedNote.length > NOTE_MAX) {
-    throw new Error(`Note must be ${NOTE_MAX} characters or fewer`);
+    throw new ConvexError(`Note must be ${NOTE_MAX} characters or fewer`);
   }
 
   const normalizedCvFileName = normalizeCvFileName(cvFileName);
   const expectedContentType = expectedCvContentType(normalizedCvFileName);
   if (cvSize <= 0 || cvSize > CV_MAX_BYTES) {
-    throw new Error("CV must be a non-empty file no larger than 5 MiB");
+    throw new ConvexError("CV must be a non-empty file no larger than 5 MiB");
   }
   if (cvContentType !== expectedContentType) {
-    throw new Error(
+    throw new ConvexError(
       "CV file type does not match its extension; upload a PDF, DOC, or DOCX file"
     );
   }
@@ -427,7 +428,7 @@ export async function listInterestsForPosting(
   const internship = await ctx.db.get("internships", internshipId);
 
   if (!internship || internship.offerorId !== offeror._id) {
-    throw new Error("Internship posting not found");
+    throw new ConvexError("Internship posting not found");
   }
 
   const interests = await ctx.db
@@ -460,12 +461,12 @@ export async function getApplicationForOwner(
   const offeror = requireOnboardingComplete(await getAuthenticatedUser(ctx));
   const interest = await ctx.db.get("internshipInterests", interestId);
   if (!interest) {
-    throw new Error("Application not found");
+    throw new ConvexError("Application not found");
   }
 
   const internship = await ctx.db.get("internships", interest.internshipId);
   if (!internship || internship.offerorId !== offeror._id) {
-    throw new Error("Application not found");
+    throw new ConvexError("Application not found");
   }
 
   const applicant = await ctx.db.get("users", interest.applicantId);
@@ -519,16 +520,16 @@ export async function decideApplication(
   const offeror = requireOnboardingComplete(await getAuthenticatedUser(ctx));
   const interest = await ctx.db.get("internshipInterests", interestId);
   if (!interest) {
-    throw new Error("Application not found");
+    throw new ConvexError("Application not found");
   }
 
   const internship = await ctx.db.get("internships", interest.internshipId);
   if (!internship || internship.offerorId !== offeror._id) {
-    throw new Error("Application not found");
+    throw new ConvexError("Application not found");
   }
 
   if (interest.status === "accepted" || interest.status === "rejected") {
-    throw new Error("This application has already been decided");
+    throw new ConvexError("This application has already been decided");
   }
 
   const accepted = decision === "accepted";
@@ -538,7 +539,7 @@ export async function decideApplication(
 
   if (accepted) {
     if (!interest.cvStorageId) {
-      throw new Error(
+      throw new ConvexError(
         "Legacy applications without a CV cannot be accepted; reject this application instead"
       );
     }
@@ -547,7 +548,7 @@ export async function decideApplication(
       interest.cvStorageId
     );
     if (!cvMetadata) {
-      throw new Error(
+      throw new ConvexError(
         "This application's CV is unavailable, so it cannot be accepted"
       );
     }
@@ -558,7 +559,7 @@ export async function decideApplication(
       ACCEPTANCE_MESSAGE_MIN
     );
     if (!contactMethod) {
-      throw new Error("Choose a contact method for the applicant");
+      throw new ConvexError("Choose a contact method for the applicant");
     }
     normalizedContactDetails = normalizeRequiredText(
       contactDetails ?? "",
@@ -573,7 +574,7 @@ export async function decideApplication(
       10
     );
   } else if (normalizedMessage.length > DECISION_MESSAGE_MAX) {
-    throw new Error(
+    throw new ConvexError(
       `Decision message must be ${DECISION_MESSAGE_MAX} characters or fewer`
     );
   }

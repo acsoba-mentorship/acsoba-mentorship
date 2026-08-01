@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
+import { ConvexError } from "convex/values";
 import { ArrowLeft, CheckCircle2, FileText, Loader2 } from "lucide-react";
 
 import { api } from "../../../convex/_generated/api";
@@ -24,6 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { formatDate } from "@/lib/utils";
 
 const CV_MAX_BYTES = 5 * 1024 * 1024;
+const CV_FILE_NAME_MAX = 255;
 const CV_CONTENT_TYPE_BY_EXTENSION = {
   pdf: "application/pdf",
   doc: "application/msword",
@@ -31,10 +33,22 @@ const CV_CONTENT_TYPE_BY_EXTENSION = {
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 } as const;
 
+/**
+ * Convex actions/mutations throw a `ConvexError` for expected, user-facing
+ * validation failures (e.g. wrong file type, not eligible to apply). Those
+ * carry a friendly message in `.data` that's safe to show as-is. Anything
+ * else is an unexpected server error - Convex already logs the details to
+ * the console for debugging, so we only ever show the user a generic,
+ * non-alarming message here and never let it crash the page or bubble up
+ * as a Next.js error overlay.
+ */
 function getErrorMessage(error: unknown) {
-  return error instanceof Error
-    ? error.message
-    : "Something went wrong. Please try again.";
+  if (error instanceof ConvexError) {
+    return typeof error.data === "string"
+      ? error.data
+      : "Something went wrong. Please try again.";
+  }
+  return "Something went wrong. Please try again.";
 }
 
 export function InternshipDetails({
@@ -79,6 +93,12 @@ export function InternshipDetails({
         extension as keyof typeof CV_CONTENT_TYPE_BY_EXTENSION
       ];
 
+    if (cvFile.name.length > CV_FILE_NAME_MAX) {
+      setError(
+        `CV file name is too long (max ${CV_FILE_NAME_MAX} characters). Rename the file and try again.`
+      );
+      return;
+    }
     if (!expectedContentType) {
       setError("CV must be a PDF, DOC, or DOCX file.");
       return;
@@ -105,7 +125,9 @@ export function InternshipDetails({
         body: cvFile,
       });
       if (!uploadResponse.ok) {
-        throw new Error("CV upload failed. Please try again.");
+        throw new Error(
+          "CV upload failed. Please check your connection and try again."
+        );
       }
 
       const { storageId } = (await uploadResponse.json()) as {

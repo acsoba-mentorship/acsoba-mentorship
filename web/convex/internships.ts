@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { action, internalMutation, mutation, query } from "./_generated/server";
@@ -32,18 +32,21 @@ function getCvDefinition(fileName: string) {
     normalizedFileName.length === 0 ||
     normalizedFileName.length > CV_FILE_NAME_MAX
   ) {
-    throw new Error(
-      `CV file name must be between 1 and ${CV_FILE_NAME_MAX} characters`
+    throw new ConvexError(
+      `CV file name must be between 1 and ${CV_FILE_NAME_MAX} characters.`
     );
   }
 
   const dotIndex = normalizedFileName.lastIndexOf(".");
+  if (dotIndex <= 0) {
+    throw new ConvexError("CV must be a PDF, DOC, or DOCX file.");
+  }
   const extension = normalizedFileName
     .slice(dotIndex)
     .toLowerCase() as keyof typeof CV_DEFINITIONS;
   const definition = CV_DEFINITIONS[extension];
   if (!definition) {
-    throw new Error("CV must be a PDF, DOC, or DOCX file");
+    throw new ConvexError("CV must be a PDF, DOC, or DOCX file.");
   }
 
   return { normalizedFileName, definition };
@@ -130,7 +133,9 @@ export const submitApplication = action({
 
     const cvBlob = await ctx.storage.get(args.cvStorageId);
     if (!cvBlob) {
-      throw new Error("Uploaded CV could not be found");
+      throw new ConvexError(
+        "We couldn't find the uploaded CV. Please choose the file again and resubmit."
+      );
     }
 
     try {
@@ -138,20 +143,29 @@ export const submitApplication = action({
         args.cvFileName
       );
       if (cvBlob.size <= 0 || cvBlob.size > CV_MAX_BYTES) {
-        throw new Error("CV must be a non-empty file no larger than 5 MiB");
+        throw new ConvexError(
+          "CV must be a non-empty file no larger than 5 MiB."
+        );
       }
       if (cvBlob.type !== definition.contentType) {
-        throw new Error(
-          "CV file type does not match its extension; upload a PDF, DOC, or DOCX file"
+        throw new ConvexError(
+          "CV file type does not match its extension. Upload a PDF, DOC, or DOCX file."
         );
       }
 
-      const signatureBytes = new Uint8Array(
-        await cvBlob.slice(0, definition.signature.length).arrayBuffer()
+      // Read the whole file once and slice the resulting Uint8Array rather
+      // than calling Blob#slice().arrayBuffer(): slicing a Blob before
+      // reading it can throw "RangeError: offset is out of bounds" for some
+      // storage-backed blobs in the action runtime. Working from a single
+      // materialized buffer avoids that failure mode entirely.
+      const fileBytes = new Uint8Array(await cvBlob.arrayBuffer());
+      const signatureBytes = fileBytes.subarray(
+        0,
+        definition.signature.length
       );
       if (!startsWithSignature(signatureBytes, definition.signature)) {
-        throw new Error(
-          "CV content does not match its file type; upload a valid PDF, DOC, or DOCX file"
+        throw new ConvexError(
+          "CV content does not match its file type. Upload a valid PDF, DOC, or DOCX file."
         );
       }
 
@@ -173,7 +187,16 @@ export const submitApplication = action({
           cvStorageId: args.cvStorageId,
         }
       );
-      throw error;
+      if (error instanceof ConvexError) {
+        throw error;
+      }
+      // Don't leak internal error details (stack traces, storage internals)
+      // to the client. Log server-side for debugging and surface a generic,
+      // friendly message instead.
+      console.error("submitApplication failed unexpectedly", error);
+      throw new ConvexError(
+        "We couldn't submit your application. Please try again, and if the problem continues, try a different CV file."
+      );
     }
   },
 });
