@@ -4,12 +4,18 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
-import { ArrowRight, Briefcase, Search } from "lucide-react";
+import { Briefcase, Building2, CalendarClock, Search } from "lucide-react";
 
 import { api } from "../../../convex/_generated/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate } from "@/lib/utils";
@@ -21,54 +27,66 @@ type PayFilter = "all" | "paid" | "unpaid";
 
 /**
  * FR17: browse card intentionally omits the description on the /internships
- * list view — the four rows below (title, company, pay/duration, dates +
- * action) are all that's shown here. The full description lives on the
- * details page.
+ * list view — the details shown here are enough to decide whether to open
+ * the posting. The full description lives on the details page. Styled to
+ * match the mentor search card (icon header, status badges, footer action).
  */
 function InternshipCard({ internship }: { internship: OpenInternship }) {
   return (
-    <Card className="h-full">
-      <CardHeader className="space-y-0 pb-3">
-        {/* Row 1: role title */}
-        <CardTitle className="line-clamp-1 text-base">
-          {internship.role}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex h-full flex-col gap-2.5">
-        {/* Row 2: company + offeror */}
-        <p className="line-clamp-1 text-sm text-muted-foreground">
-          {internship.companyName} · Offered by {internship.offerorName}
-        </p>
+    <Card className="flex flex-col transition-shadow hover:shadow-[0_20px_50px_rgba(0,15,51,0.05)]">
+      <CardHeader className="border-b border-border/50 pb-3">
+        <div className="flex items-start gap-3 overflow-hidden">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Briefcase className="size-4.5" />
+          </span>
 
-        {/* Row 3: paid/unpaid + duration */}
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <Badge variant={internship.isPaid ? "default" : "outline"}>
-            {internship.isPaid ? "Paid" : "Unpaid"}
-          </Badge>
-          <span>Duration: {internship.duration}</span>
-        </div>
+          <div className="min-w-0 flex-1">
+            <CardTitle className="line-clamp-1 text-base">
+              {internship.role}
+            </CardTitle>
+            <CardDescription className="line-clamp-1">
+              {internship.companyName}
+            </CardDescription>
+          </div>
 
-        {/* Row 4: closing date + status/action */}
-        <div className="mt-auto flex items-center justify-between gap-3 pt-1">
-          <div className="text-xs text-muted-foreground">
-            <span>Closes {formatDate(internship.closingDate)}</span>
+          <div className="flex shrink-0 flex-col items-end gap-1.5">
+            <Badge
+              className={
+                internship.isPaid
+                  ? "border-0 bg-emerald-50 text-emerald-700"
+                  : "border-0 bg-muted text-muted-foreground"
+              }
+            >
+              {internship.isPaid ? "Paid" : "Unpaid"}
+            </Badge>
             {internship.isMine ? (
-              <Badge variant="secondary" className="ml-2">
-                Your posting
-              </Badge>
+              <Badge variant="secondary">Your posting</Badge>
             ) : internship.alreadyExpressedInterest ? (
-              <Badge variant="secondary" className="ml-2">
-                Applied
-              </Badge>
+              <Badge variant="secondary">Applied</Badge>
             ) : null}
           </div>
-          <Button asChild type="button" size="sm">
-            <Link href={`/internships/${internship._id}`}>
-              View details
-              <ArrowRight />
-            </Link>
-          </Button>
         </div>
+      </CardHeader>
+
+      <CardContent className="flex flex-1 flex-col gap-3 pt-0">
+        <p className="line-clamp-1 text-sm text-muted-foreground">
+          Offered by {internship.offerorName}
+        </p>
+
+        <div className="mt-auto grid gap-1.5 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <Building2 className="size-3.5 shrink-0" />
+            <span className="truncate">Duration: {internship.duration}</span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <CalendarClock className="size-3.5 shrink-0" />
+            Closes {formatDate(internship.closingDate)}
+          </span>
+        </div>
+
+        <Button asChild type="button" size="sm" className="mt-2 w-full">
+          <Link href={`/internships/${internship._id}`}>View details</Link>
+        </Button>
       </CardContent>
     </Card>
   );
@@ -179,7 +197,7 @@ export function BrowseInternships() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {filtered?.map((internship) => (
             <InternshipCard key={internship._id} internship={internship} />
           ))}
