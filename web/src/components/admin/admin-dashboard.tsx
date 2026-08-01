@@ -6,6 +6,7 @@ import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import {
   ArrowLeft,
+  Ban,
   ClipboardList,
   HeartPulse,
   LayoutDashboard,
@@ -16,6 +17,7 @@ import {
   Siren,
   SlidersHorizontal,
   UserCog,
+  Users,
   Users2,
 } from "lucide-react";
 
@@ -24,10 +26,12 @@ import { AdminManagementSection } from "@/components/admin/admin-management-sect
 import { AuditLogSection } from "@/components/admin/audit-log-section";
 import { ExitFeedbackSection } from "@/components/admin/exit-feedback-section";
 import { IncidentReviewSection } from "@/components/admin/incident-review-section";
+import { ListingsSection } from "@/components/admin/listings-section";
 import { OutstandingFormsSection } from "@/components/admin/outstanding-forms-section";
 import { OverviewSection } from "@/components/admin/overview-section";
 import { ProgrammeSettingsSection } from "@/components/admin/programme-settings-section";
 import { PulseSurveysSection } from "@/components/admin/pulse-surveys-section";
+import { UsersSection } from "@/components/admin/users-section";
 import { VolunteeringSection } from "@/components/admin/volunteering-section";
 import { AdminStatusBadge } from "@/components/admin/admin-shared";
 import { NotificationMenu } from "@/components/navigation/notification-menu";
@@ -54,6 +58,8 @@ type AdminSection =
   | "incidents"
   | "settings"
   | "volunteering"
+  | "users"
+  | "listings"
   | "admins"
   | "audit";
 
@@ -99,6 +105,18 @@ const operationalSections = [
     label: "Volunteering",
     description: "Manage activities",
     icon: Users2,
+  },
+  {
+    value: "users",
+    label: "Users",
+    description: "Search, message, suspend",
+    icon: Users,
+  },
+  {
+    value: "listings",
+    label: "Listings & mentorships",
+    description: "Take down, end mentorships",
+    icon: Ban,
   },
 ] as const;
 
@@ -267,6 +285,10 @@ function SectionContent({
       return <ProgrammeSettingsSection />;
     case "volunteering":
       return <VolunteeringSection />;
+    case "users":
+      return <UsersSection />;
+    case "listings":
+      return <ListingsSection />;
     case "admins":
       return isHeadAdmin ? <AdminManagementSection /> : null;
     case "audit":

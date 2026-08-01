@@ -17,3 +17,8 @@ export const activeByMentee = query({
   args: { menteeId: mentorshipsTableFields.menteeId },
   handler: (ctx, args) => MentorshipsModel.activeByMentee(ctx, args),
 });
+
+export const listActiveForAdmin = query({
+  args: {},
+  handler: (ctx) => MentorshipsModel.listActiveForAdmin(ctx),
+});

@@ -2,9 +2,14 @@ import { ConvexError } from "convex/values";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { CAREER_STAGE } from "./users/fields";
-import { getAuthenticatedUser, requireOnboardingComplete } from "./auth";
+import {
+  getAuthenticatedUser,
+  requireAdmin,
+  requireOnboardingComplete,
+} from "./auth";
 import { fetchUsersById } from "./helper";
 import { createNotification } from "./notifications";
+import { writeAdminAuditLog } from "./admin/audit";
 
 const TITLE_MAX = 120;
 const DESCRIPTION_MIN = 20;
@@ -284,6 +289,96 @@ export async function updateStatus(
     status,
     updatedAt: Date.now(),
   });
+
+  return internshipId;
+}
+
+/**
+ * Admin view of every internship posting regardless of status, used by the
+ * admin "take down" workflow.
+ */
+export async function listAllForAdmin(ctx: QueryCtx) {
+  await requireAdmin(ctx);
+  const postings = await ctx.db.query("internships").order("desc").collect();
+
+  const offerorById = await fetchUsersById(
+    ctx,
+    postings.map((posting) => posting.offerorId)
+  );
+
+  return postings.map((posting) => ({
+    _id: posting._id,
+    companyName: posting.companyName,
+    role: posting.role,
+    isPaid: posting.isPaid,
+    status: posting.status,
+    closingDate: posting.closingDate,
+    offerorName: offerorById.get(posting.offerorId)?.name ?? "Unknown user",
+    createdAt: posting._creationTime,
+  }));
+}
+
+/**
+ * FR: "Admins are able to take down internships/volunteering activities...
+ * All users affected will be notified (such as the person who set up the
+ * internship/volunteer, the mentee and the mentor)." Closes the posting and
+ * notifies the offeror plus everyone who had already applied.
+ */
+export async function adminTakeDown(
+  ctx: MutationCtx,
+  { internshipId, reason }: { internshipId: Id<"internships">; reason?: string }
+) {
+  const { user: admin } = await requireAdmin(ctx);
+  const internship = await ctx.db.get("internships", internshipId);
+  if (!internship) {
+    throw new ConvexError("Internship posting not found");
+  }
+  if (internship.status === "closed") {
+    return internshipId;
+  }
+
+  const cleanReason = reason?.trim();
+  if (cleanReason && cleanReason.length > 500) {
+    throw new ConvexError("Reason must be 500 characters or fewer");
+  }
+
+  await ctx.db.patch("internships", internshipId, {
+    status: "closed",
+    updatedAt: Date.now(),
+  });
+
+  await writeAdminAuditLog(ctx, {
+    actorId: admin._id,
+    action: "internship.taken_down",
+    targetType: "internship",
+    targetId: String(internshipId),
+    reason: cleanReason,
+  });
+
+  const interests = await ctx.db
+    .query("internshipInterests")
+    .withIndex("by_internshipId", (q) => q.eq("internshipId", internshipId))
+    .collect();
+
+  const notifyMessage = cleanReason
+    ? `An administrator has taken down "${internship.role}" at ${internship.companyName}: ${cleanReason}`
+    : `An administrator has taken down "${internship.role}" at ${internship.companyName}.`;
+
+  const notifiedUserIds = new Set<Id<"users">>([internship.offerorId]);
+  for (const interest of interests) {
+    notifiedUserIds.add(interest.applicantId);
+  }
+
+  await Promise.all(
+    Array.from(notifiedUserIds).map((userId) =>
+      createNotification(ctx, {
+        userId,
+        type: "internship_taken_down",
+        title: "Internship posting taken down",
+        message: notifyMessage,
+      })
+    )
+  );
 
   return internshipId;
 }

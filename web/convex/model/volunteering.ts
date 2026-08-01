@@ -1,8 +1,10 @@
 import type { Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
+import { ConvexError } from "convex/values";
 import { getAuthenticatedUser, requireAdmin, requireOnboardingComplete } from "./auth";
 import { fetchUsersById } from "./helper";
 import { writeAdminAuditLog } from "./admin/audit";
+import { createNotification } from "./notifications";
 
 const NAME_MAX = 120;
 const DESCRIPTION_MAX = 500;
@@ -10,10 +12,10 @@ const DESCRIPTION_MAX = 500;
 function normalizeName(name: string) {
   const trimmed = name.trim();
   if (trimmed.length < 2) {
-    throw new Error("Activity name must be at least 2 characters");
+    throw new ConvexError("Activity name must be at least 2 characters");
   }
   if (trimmed.length > NAME_MAX) {
-    throw new Error(`Activity name must be ${NAME_MAX} characters or fewer`);
+    throw new ConvexError(`Activity name must be ${NAME_MAX} characters or fewer`);
   }
   return trimmed;
 }
@@ -21,7 +23,7 @@ function normalizeName(name: string) {
 function normalizeDescription(description?: string) {
   const trimmed = description?.trim();
   if (trimmed && trimmed.length > DESCRIPTION_MAX) {
-    throw new Error(
+    throw new ConvexError(
       `Activity description must be ${DESCRIPTION_MAX} characters or fewer`
     );
   }
@@ -69,7 +71,7 @@ export async function toggleSignup(
   const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
   const activity = await ctx.db.get("volunteerActivities", activityId);
   if (!activity || !activity.isActive) {
-    throw new Error("Volunteering activity not found");
+    throw new ConvexError("Volunteering activity not found");
   }
 
   const existing = await ctx.db
@@ -157,8 +159,10 @@ export async function updateActivity(
   const { user: admin } = await requireAdmin(ctx);
   const activity = await ctx.db.get("volunteerActivities", activityId);
   if (!activity) {
-    throw new Error("Volunteering activity not found");
+    throw new ConvexError("Volunteering activity not found");
   }
+
+  const isBeingTakenDown = isActive === false && activity.isActive === true;
 
   await ctx.db.patch("volunteerActivities", activityId, {
     name: name !== undefined ? normalizeName(name) : undefined,
@@ -176,6 +180,24 @@ export async function updateActivity(
     metadata: { name, isActive },
   });
 
+  if (isBeingTakenDown) {
+    const signups = await ctx.db
+      .query("volunteerSignups")
+      .withIndex("by_activityId", (q) => q.eq("activityId", activityId))
+      .collect();
+
+    await Promise.all(
+      signups.map((signup) =>
+        createNotification(ctx, {
+          userId: signup.userId,
+          type: "volunteer_activity_taken_down",
+          title: "Volunteering activity taken down",
+          message: `An administrator has taken down the "${activity.name}" volunteering activity. You no longer need to worry about it.`,
+        })
+      )
+    );
+  }
+
   return activityId;
 }
 
@@ -186,7 +208,7 @@ export async function listSignupsForActivity(
   await requireAdmin(ctx);
   const activity = await ctx.db.get("volunteerActivities", activityId);
   if (!activity) {
-    throw new Error("Volunteering activity not found");
+    throw new ConvexError("Volunteering activity not found");
   }
 
   const signups = await ctx.db

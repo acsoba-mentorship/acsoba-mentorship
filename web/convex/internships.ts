@@ -93,6 +93,19 @@ export const updateStatus = mutation({
   handler: (ctx, args) => InternshipsModel.updateStatus(ctx, args),
 });
 
+export const adminTakeDown = mutation({
+  args: {
+    internshipId: v.id("internships"),
+    reason: v.optional(v.string()),
+  },
+  handler: (ctx, args) => InternshipsModel.adminTakeDown(ctx, args),
+});
+
+export const listAllForAdmin = query({
+  args: {},
+  handler: (ctx) => InternshipsModel.listAllForAdmin(ctx),
+});
+
 export const generateCvUploadUrl = mutation({
   args: {},
   handler: (ctx) => InternshipsModel.generateCvUploadUrl(ctx),

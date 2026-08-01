@@ -49,3 +49,38 @@ export const listAuditLog = query({
   args: {},
   handler: (ctx) => AdminModel.listAuditLog(ctx),
 });
+
+export const listUsers = query({
+  args: { search: v.optional(v.string()) },
+  handler: (ctx, args) => AdminModel.listUsers(ctx, args),
+});
+
+export const suspendUser = mutation({
+  args: {
+    userId: v.id("users"),
+    reason: v.optional(v.string()),
+  },
+  handler: (ctx, args) => AdminModel.suspendUser(ctx, args),
+});
+
+export const reactivateUser = mutation({
+  args: { userId: v.id("users") },
+  handler: (ctx, args) => AdminModel.reactivateUser(ctx, args),
+});
+
+export const sendUserMessage = mutation({
+  args: {
+    userId: v.id("users"),
+    subject: v.string(),
+    message: v.string(),
+  },
+  handler: (ctx, args) => AdminModel.sendUserMessage(ctx, args),
+});
+
+export const endMentorshipImmediately = mutation({
+  args: {
+    mentorshipId: v.id("mentorships"),
+    reason: v.optional(v.string()),
+  },
+  handler: (ctx, args) => AdminModel.endMentorshipImmediately(ctx, args),
+});

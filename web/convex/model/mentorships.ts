@@ -1,8 +1,10 @@
+import { ConvexError } from "convex/values";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { getInitials, toPublicMentorDTO } from "../helper";
 import {
   getAuthenticatedUser,
+  requireAdmin,
   requireMenteeProfile,
   requireMentorProfile,
   requireOnboardingComplete,
@@ -109,11 +111,11 @@ export async function createMentorshipFromAcceptedRequest(
   const request = await ctx.db.get("mentorshipRequests", requestId);
 
   if (!request) {
-    throw new Error("Request not found");
+    throw new ConvexError("Request not found");
   }
 
   if (request.status !== "accepted") {
-    throw new Error("Only accepted requests can create mentorships");
+    throw new ConvexError("Only accepted requests can create mentorships");
   }
 
   const now = Date.now();
@@ -153,7 +155,7 @@ export async function createMentorshipFromAcceptedRequest(
   );
 
   if (existingActiveMentorship) {
-    throw new Error(
+    throw new ConvexError(
       "An active mentorship already exists between this mentor and mentee"
     );
   }
@@ -183,7 +185,7 @@ export async function activeByMentor(
   );
 
   if (currentUser._id !== mentorId) {
-    throw new Error("Unauthorized to view this mentor's mentorships");
+    throw new ConvexError("Unauthorized to view this mentor's mentorships");
   }
 
   const mentorships = await ctx.db
@@ -219,7 +221,7 @@ export async function activeByMentee(
   );
 
   if (currentUser._id !== menteeId) {
-    throw new Error("Unauthorized to view this mentee's mentorships");
+    throw new ConvexError("Unauthorized to view this mentee's mentorships");
   }
 
   const mentorships = await ctx.db
@@ -241,4 +243,32 @@ export async function activeByMentee(
       mentorById.get(mentorship.mentorId) ?? null
     )
   );
+}
+
+/**
+ * Admin view of every active mentorship, used by the "end a mentorship
+ * immediately" workflow.
+ */
+export async function listActiveForAdmin(ctx: QueryCtx) {
+  await requireAdmin(ctx);
+
+  const mentorships = await ctx.db
+    .query("mentorships")
+    .withIndex("by_status", (q) => q.eq("status", "active"))
+    .order("desc")
+    .collect();
+
+  const userIds = mentorships.flatMap((mentorship) => [
+    mentorship.mentorId,
+    mentorship.menteeId,
+  ]);
+  const userById = await fetchUsersById(ctx, userIds);
+
+  return mentorships.map((mentorship) => ({
+    _id: mentorship._id,
+    startDate: mentorship.startDate,
+    plannedEndDate: mentorship.plannedEndDate ?? null,
+    mentorName: userById.get(mentorship.mentorId)?.name ?? "Unknown user",
+    menteeName: userById.get(mentorship.menteeId)?.name ?? "Unknown user",
+  }));
 }

@@ -5,6 +5,16 @@ export const ONBOARDING_STATUS = {
   COMPLETE: "complete",
 } as const;
 
+export const ACCOUNT_STATUS = {
+  ACTIVE: "active",
+  SUSPENDED: "suspended",
+} as const;
+
+export const accountStatusValidator = v.union(
+  v.literal(ACCOUNT_STATUS.ACTIVE),
+  v.literal(ACCOUNT_STATUS.SUSPENDED)
+);
+
 export const membershipVerificationStatusValidator = v.union(
   v.literal("acsoba_verified"),
   v.literal("auth0_fallback")
@@ -154,4 +164,9 @@ export const usersTableFields = {
   mentorSettings: v.optional(mentorSettingsValidator),
   onboardingStatus: onboardingStatusValidator,
   createdAt: v.number(),
+  // Optional: absent/undefined is treated as "active". Set by admins via
+  // convex/model/admin.ts suspendUser/reactivateUser.
+  accountStatus: v.optional(accountStatusValidator),
+  suspendedAt: v.optional(v.number()),
+  suspendedReason: v.optional(v.string()),
 };

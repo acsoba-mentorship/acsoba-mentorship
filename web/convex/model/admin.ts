@@ -1,5 +1,6 @@
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
+import { ConvexError } from "convex/values";
 import {
   getAuthenticatedUser,
   requireAdmin,
@@ -12,6 +13,8 @@ import {
 } from "./admin/bootstrap";
 import { writeAdminAuditLog } from "./admin/audit";
 import { fetchUsersById } from "./helper";
+import { createNotification } from "./notifications";
+import { ACCOUNT_STATUS } from "./users/fields";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -98,7 +101,7 @@ export async function getMyAccess(ctx: QueryCtx) {
 export async function claimMyAccess(ctx: MutationCtx) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) {
-    throw new Error("Not authenticated");
+    throw new ConvexError("Not authenticated");
   }
 
   const user = await getAuthenticatedUser(ctx);
@@ -160,11 +163,11 @@ export async function inviteAdmin(
   const email = normalizeAdminEmail(rawEmail);
 
   if (email.length > 320 || !EMAIL_PATTERN.test(email)) {
-    throw new Error("Enter a valid administrator email address");
+    throw new ConvexError("Enter a valid administrator email address");
   }
 
   if (email === getConfiguredHeadAdminEmail()) {
-    throw new Error("The configured head administrator is already managed");
+    throw new ConvexError("The configured head administrator is already managed");
   }
 
   const existing = await ctx.db
@@ -173,11 +176,11 @@ export async function inviteAdmin(
     .unique();
 
   if (existing?.role === "head_admin") {
-    throw new Error("The head administrator membership cannot be changed");
+    throw new ConvexError("The head administrator membership cannot be changed");
   }
 
   if (existing?.status === "active") {
-    throw new Error("This email already has active administrator access");
+    throw new ConvexError("This email already has active administrator access");
   }
 
   const now = Date.now();
@@ -240,11 +243,11 @@ export async function revokeAdmin(
   const target = await ctx.db.get("adminMemberships", membershipId);
 
   if (!target || target.role === "head_admin") {
-    throw new Error("Only ordinary administrator memberships can be revoked");
+    throw new ConvexError("Only ordinary administrator memberships can be revoked");
   }
 
   if (target.userId === headAdmin._id || target._id === headMembership._id) {
-    throw new Error("You cannot revoke your own administrator access");
+    throw new ConvexError("You cannot revoke your own administrator access");
   }
 
   if (target.status === "revoked") {
@@ -253,7 +256,7 @@ export async function revokeAdmin(
 
   const cleanReason = reason?.trim();
   if (cleanReason && cleanReason.length > 500) {
-    throw new Error("Revocation reason must be 500 characters or fewer");
+    throw new ConvexError("Revocation reason must be 500 characters or fewer");
   }
 
   const now = Date.now();
@@ -462,4 +465,286 @@ export async function listAuditLog(ctx: QueryCtx) {
     reason: log.reason ?? null,
     createdAt: log.createdAt,
   }));
+}
+
+const MESSAGE_SUBJECT_MAX = 150;
+const MESSAGE_BODY_MAX = 2000;
+const SUSPENSION_REASON_MAX = 500;
+
+function matchesUserSearch(user: Doc<"users">, search: string) {
+  if (!search) return true;
+  const haystack = [
+    user.name,
+    user.username,
+    user.email,
+    user.phoneNumber,
+  ]
+    .filter((value): value is string => Boolean(value))
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes(search);
+}
+
+function toAdminUserSummary(user: Doc<"users">) {
+  return {
+    _id: user._id,
+    name: user.name,
+    username: user.username,
+    email: user.email,
+    phoneNumber: user.phoneNumber,
+    accountStatus: user.accountStatus ?? ACCOUNT_STATUS.ACTIVE,
+    suspendedAt: user.suspendedAt ?? null,
+    suspendedReason: user.suspendedReason ?? null,
+    onboardingStatus: user.onboardingStatus,
+    isMentor: Boolean(user.mentorProfile),
+    isMentee: Boolean(user.menteeProfile),
+    createdAt: user.createdAt,
+  };
+}
+
+/**
+ * FR: "Admins should be able to close a user account temporarily and be
+ * able to activate it. For this tab, admin should be able to search for
+ * users also." Search matches name, username, email, or phone number.
+ */
+export async function listUsers(
+  ctx: QueryCtx,
+  { search }: { search?: string }
+) {
+  await requireAdmin(ctx);
+  const normalizedSearch = (search ?? "").trim().toLowerCase();
+
+  const users = await ctx.db.query("users").collect();
+
+  return users
+    .filter((user) => matchesUserSearch(user, normalizedSearch))
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .slice(0, 200)
+    .map(toAdminUserSummary);
+}
+
+export async function suspendUser(
+  ctx: MutationCtx,
+  { userId, reason }: { userId: Id<"users">; reason?: string }
+) {
+  const { user: admin } = await requireAdmin(ctx);
+  if (userId === admin._id) {
+    throw new ConvexError("You cannot suspend your own account");
+  }
+
+  const target = await ctx.db.get("users", userId);
+  if (!target) {
+    throw new ConvexError("User not found");
+  }
+
+  const targetMembership = await ctx.db
+    .query("adminMemberships")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .unique();
+  if (targetMembership && targetMembership.status === "active") {
+    throw new ConvexError(
+      "This user is an administrator. Revoke their administrator access first."
+    );
+  }
+
+  if (target.accountStatus === ACCOUNT_STATUS.SUSPENDED) {
+    return target._id;
+  }
+
+  const cleanReason = reason?.trim();
+  if (cleanReason && cleanReason.length > SUSPENSION_REASON_MAX) {
+    throw new ConvexError(
+      `Suspension reason must be ${SUSPENSION_REASON_MAX} characters or fewer`
+    );
+  }
+
+  const now = Date.now();
+  await ctx.db.patch("users", userId, {
+    accountStatus: ACCOUNT_STATUS.SUSPENDED,
+    suspendedAt: now,
+    suspendedReason: cleanReason,
+  });
+
+  await writeAdminAuditLog(ctx, {
+    actorId: admin._id,
+    action: "user.suspended",
+    targetType: "user",
+    targetId: String(userId),
+    targetUserId: userId,
+    targetEmail: target.email,
+    reason: cleanReason,
+  });
+
+  await createNotification(ctx, {
+    userId,
+    type: "account_suspended",
+    title: "Your account has been temporarily suspended",
+    message: cleanReason
+      ? `An administrator has temporarily suspended your account: ${cleanReason}`
+      : "An administrator has temporarily suspended your account. Contact ACSOBA support for more information.",
+  });
+
+  return target._id;
+}
+
+export async function reactivateUser(
+  ctx: MutationCtx,
+  { userId }: { userId: Id<"users"> }
+) {
+  const { user: admin } = await requireAdmin(ctx);
+  const target = await ctx.db.get("users", userId);
+  if (!target) {
+    throw new ConvexError("User not found");
+  }
+
+  if (
+    !target.accountStatus ||
+    target.accountStatus === ACCOUNT_STATUS.ACTIVE
+  ) {
+    return target._id;
+  }
+
+  await ctx.db.patch("users", userId, {
+    accountStatus: ACCOUNT_STATUS.ACTIVE,
+    suspendedAt: undefined,
+    suspendedReason: undefined,
+  });
+
+  await writeAdminAuditLog(ctx, {
+    actorId: admin._id,
+    action: "user.reactivated",
+    targetType: "user",
+    targetId: String(userId),
+    targetUserId: userId,
+    targetEmail: target.email,
+  });
+
+  await createNotification(ctx, {
+    userId,
+    type: "account_reactivated",
+    title: "Your account has been reactivated",
+    message: "An administrator has reactivated your account. Welcome back!",
+  });
+
+  return target._id;
+}
+
+/**
+ * FR: "Admins should be able to contact users regarding volunteering
+ * activities, this includes sending messages in general (also even if
+ * there is no volunteering activities, admin should still be able to
+ * contact users)." A general-purpose message delivered as a notification.
+ */
+export async function sendUserMessage(
+  ctx: MutationCtx,
+  {
+    userId,
+    subject,
+    message,
+  }: { userId: Id<"users">; subject: string; message: string }
+) {
+  const { user: admin } = await requireAdmin(ctx);
+  const target = await ctx.db.get("users", userId);
+  if (!target) {
+    throw new ConvexError("User not found");
+  }
+
+  const cleanSubject = subject.trim();
+  const cleanMessage = message.trim();
+  if (!cleanSubject) {
+    throw new ConvexError("Message subject is required");
+  }
+  if (cleanSubject.length > MESSAGE_SUBJECT_MAX) {
+    throw new ConvexError(
+      `Message subject must be ${MESSAGE_SUBJECT_MAX} characters or fewer`
+    );
+  }
+  if (!cleanMessage) {
+    throw new ConvexError("Message body is required");
+  }
+  if (cleanMessage.length > MESSAGE_BODY_MAX) {
+    throw new ConvexError(
+      `Message body must be ${MESSAGE_BODY_MAX} characters or fewer`
+    );
+  }
+
+  await createNotification(ctx, {
+    userId,
+    type: "admin_message",
+    title: cleanSubject,
+    message: cleanMessage,
+  });
+
+  await writeAdminAuditLog(ctx, {
+    actorId: admin._id,
+    action: "user.messaged",
+    targetType: "user",
+    targetId: String(userId),
+    targetUserId: userId,
+    targetEmail: target.email,
+    metadata: { subject: cleanSubject },
+  });
+
+  return { ok: true };
+}
+
+/**
+ * FR: "Admins ... [are] able to end a mentorship immediately. All users
+ * affected will be notified (such as the person who set up the
+ * internship/volunteer, the mentee and the mentor)." This bypasses the
+ * normal two-sided exit-feedback flow and ends the mentorship right away.
+ */
+export async function endMentorshipImmediately(
+  ctx: MutationCtx,
+  { mentorshipId, reason }: { mentorshipId: Id<"mentorships">; reason?: string }
+) {
+  const { user: admin } = await requireAdmin(ctx);
+  const mentorship = await ctx.db.get("mentorships", mentorshipId);
+  if (!mentorship) {
+    throw new ConvexError("Mentorship not found");
+  }
+  if (mentorship.status !== "active") {
+    throw new ConvexError("This mentorship has already ended");
+  }
+
+  const cleanReason = reason?.trim();
+  if (cleanReason && cleanReason.length > 500) {
+    throw new ConvexError("Reason must be 500 characters or fewer");
+  }
+
+  const now = Date.now();
+  await ctx.db.patch("mentorships", mentorshipId, {
+    status: "cancelled",
+    endDate: now,
+    updatedAt: now,
+  });
+
+  await writeAdminAuditLog(ctx, {
+    actorId: admin._id,
+    action: "mentorship.ended_by_admin",
+    targetType: "mentorship",
+    targetId: String(mentorshipId),
+    reason: cleanReason,
+  });
+
+  const notifyMessage = cleanReason
+    ? `An administrator has ended this mentorship: ${cleanReason}`
+    : "An administrator has ended this mentorship immediately.";
+
+  await Promise.all([
+    createNotification(ctx, {
+      userId: mentorship.mentorId,
+      type: "mentorship_ended_by_admin",
+      title: "Mentorship ended by an administrator",
+      message: notifyMessage,
+    }),
+    createNotification(ctx, {
+      userId: mentorship.menteeId,
+      type: "mentorship_ended_by_admin",
+      title: "Mentorship ended by an administrator",
+      message: notifyMessage,
+    }),
+  ]);
+
+  return mentorshipId;
 }
