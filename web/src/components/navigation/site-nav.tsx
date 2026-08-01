@@ -15,6 +15,7 @@ import {
   CalendarDays,
   Briefcase,
   Flag,
+  HandHeart,
   Inbox,
   LayoutDashboard,
   LogOut,
@@ -258,6 +259,7 @@ export function SiteNav() {
       : { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/search", label: "Find Mentors", icon: Search },
     { href: "/internships", label: "Internships", icon: Briefcase },
+    { href: "/volunteering", label: "Volunteering", icon: HandHeart },
     ...(currentUser?.menteeProfile
       ? [
           { href: "/mentorships", label: "My Mentorships", icon: Users },
@@ -276,6 +278,7 @@ export function SiteNav() {
     pathname.startsWith("/report-incident") ||
     pathname.startsWith("/search") ||
     pathname.startsWith("/internships") ||
+    pathname.startsWith("/volunteering") ||
     pathname.startsWith("/profile");
 
   return (

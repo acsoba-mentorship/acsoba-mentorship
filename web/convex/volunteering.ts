@@ -12,6 +12,11 @@ export const toggleSignup = mutation({
   handler: (ctx, args) => VolunteeringModel.toggleSignup(ctx, args),
 });
 
+export const setSignups = mutation({
+  args: { activityIds: v.array(v.id("volunteerActivities")) },
+  handler: (ctx, args) => VolunteeringModel.setSignups(ctx, args),
+});
+
 export const listActivitiesForAdmin = query({
   args: {},
   handler: (ctx) => VolunteeringModel.listActivitiesForAdmin(ctx),

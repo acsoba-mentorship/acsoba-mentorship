@@ -94,6 +94,57 @@ export async function toggleSignup(
   return { isSignedUp: true };
 }
 
+/**
+ * FR: "After users click the checkbox for volunteering, there should be
+ * [a] save button to lock it in." Reconciles the full desired set of
+ * signed-up activity ids in one mutation, rather than toggling on every
+ * checkbox click.
+ */
+export async function setSignups(
+  ctx: MutationCtx,
+  { activityIds }: { activityIds: Id<"volunteerActivities">[] }
+) {
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
+
+  const activeActivities = await ctx.db
+    .query("volunteerActivities")
+    .withIndex("by_isActive", (q) => q.eq("isActive", true))
+    .collect();
+  const activeActivityIds = new Set(
+    activeActivities.map((activity) => activity._id)
+  );
+
+  const desiredIds = new Set(
+    activityIds.filter((id) => activeActivityIds.has(id))
+  );
+
+  const existingSignups = await ctx.db
+    .query("volunteerSignups")
+    .withIndex("by_userId", (q) => q.eq("userId", user._id))
+    .collect();
+  const existingByActivityId = new Map(
+    existingSignups.map((signup) => [signup.activityId, signup])
+  );
+
+  const now = Date.now();
+  await Promise.all([
+    ...Array.from(desiredIds)
+      .filter((activityId) => !existingByActivityId.has(activityId))
+      .map((activityId) =>
+        ctx.db.insert("volunteerSignups", {
+          activityId,
+          userId: user._id,
+          createdAt: now,
+        })
+      ),
+    ...existingSignups
+      .filter((signup) => !desiredIds.has(signup.activityId))
+      .map((signup) => ctx.db.delete("volunteerSignups", signup._id)),
+  ]);
+
+  return { signedUpActivityIds: Array.from(desiredIds) };
+}
+
 export async function listActivitiesForAdmin(ctx: QueryCtx) {
   await requireAdmin(ctx);
   const activities = await ctx.db.query("volunteerActivities").collect();
@@ -164,13 +215,23 @@ export async function updateActivity(
 
   const isBeingTakenDown = isActive === false && activity.isActive === true;
 
-  await ctx.db.patch("volunteerActivities", activityId, {
-    name: name !== undefined ? normalizeName(name) : undefined,
-    description:
-      description !== undefined ? normalizeDescription(description) : undefined,
-    isActive: isActive !== undefined ? isActive : undefined,
-    updatedAt: Date.now(),
-  });
+  const patch: {
+    name?: string;
+    description?: string;
+    isActive?: boolean;
+    updatedAt: number;
+  } = { updatedAt: Date.now() };
+  if (name !== undefined) {
+    patch.name = normalizeName(name);
+  }
+  if (description !== undefined) {
+    patch.description = normalizeDescription(description);
+  }
+  if (isActive !== undefined) {
+    patch.isActive = isActive;
+  }
+
+  await ctx.db.patch("volunteerActivities", activityId, patch);
 
   await writeAdminAuditLog(ctx, {
     actorId: admin._id,
