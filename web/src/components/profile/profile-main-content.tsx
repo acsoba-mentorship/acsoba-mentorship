@@ -104,9 +104,9 @@ export function ProfileMainContent({
 
       {mentee ? (
         <>
-          {/* Goals */}
+          {/* Mentee preferences: goals, commitment level, preferred contact */}
           <ProfileSectionCard
-            title="Goals"
+            title="Mentee Preferences"
             icon={<Target className="size-3.5 text-muted-foreground" />}
             showEdit={isOwnProfile}
             editTrigger={
@@ -118,13 +118,13 @@ export function ProfileMainContent({
                     variant="ghost"
                     size="icon"
                     className="size-8"
-                    aria-label="Edit Goals"
+                    aria-label="Edit mentee preferences"
                   >
                     <Pencil className="size-3.5" />
                   </Button>
                 }
-                title="Edit Goals"
-                description="Describe your mentee goals."
+                title="Edit mentee preferences"
+                description="Your goals, commitment level, and preferred way to be contacted."
               >
                 <GoalsSectionForm
                   user={user}
@@ -133,15 +133,27 @@ export function ProfileMainContent({
               </ProfileEditDialog>
             }
           >
-            {mentee.goals ? (
-              <p className="text-sm leading-relaxed text-muted-foreground">
-                {mentee.goals}
-              </p>
-            ) : (
-              <p className="text-sm text-muted-foreground italic">
-                No goals added yet.
-              </p>
-            )}
+            <div className="space-y-3">
+              {mentee.goals ? (
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {mentee.goals}
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">
+                  No goals added yet.
+                </p>
+              )}
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                {mentee.commitmentLevel ? (
+                  <Badge variant="outline">{mentee.commitmentLevel}</Badge>
+                ) : null}
+                {(mentee.preferredCommunicationModes ?? []).map((mode) => (
+                  <Badge key={mode} variant="outline">
+                    {mode}
+                  </Badge>
+                ))}
+              </div>
+            </div>
           </ProfileSectionCard>
 
           {/* Interests */}

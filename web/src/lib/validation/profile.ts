@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { GOALS_MAX_CHARACTERS } from "@/lib/onboarding/constants";
+import {
+  COMMITMENT_LEVEL_OPTIONS,
+  GOALS_MAX_CHARACTERS,
+  PREFERRED_COMMUNICATION_MODE_OPTIONS,
+} from "@/lib/onboarding/constants";
 import { toStartOfMonth } from "@/lib/utils";
 
 const usernameRegex = /^[a-z0-9](?:[a-z0-9_]*[a-z0-9])?$/;
@@ -8,6 +12,11 @@ export const aboutSchema = z.object({
   bio: z.string().max(2000).default(""),
   location: z.string().max(200).default(""),
   title: z.string().max(200).default(""),
+  phoneNumber: z
+    .string()
+    .trim()
+    .min(1, "Phone number is required")
+    .max(32, "Phone number must be at most 32 characters"),
   username: z
     .string()
     .trim()
@@ -32,6 +41,39 @@ export const goalsSchema = z.object({
 });
 
 export type GoalsFormValues = z.infer<typeof goalsSchema>;
+
+const commitmentLevelValues = [...COMMITMENT_LEVEL_OPTIONS] as [
+  (typeof COMMITMENT_LEVEL_OPTIONS)[number],
+  ...(typeof COMMITMENT_LEVEL_OPTIONS)[number][],
+];
+const communicationModeValues = [...PREFERRED_COMMUNICATION_MODE_OPTIONS] as [
+  (typeof PREFERRED_COMMUNICATION_MODE_OPTIONS)[number],
+  ...(typeof PREFERRED_COMMUNICATION_MODE_OPTIONS)[number][],
+];
+
+/**
+ * Editable mentee preferences: goals, commitment level, and preferred way
+ * to be contacted. Same shape as onboarding's mentoringChapterSchema
+ * (src/lib/validation/onboarding.ts), defined locally rather than imported
+ * from there to avoid a circular import between the two validation
+ * modules (onboarding.ts already imports experienceEntryFieldsSchema from
+ * this file).
+ */
+export const menteePreferencesSchema = z.object({
+  commitmentLevel: z.enum(commitmentLevelValues),
+  preferredCommunicationModes: z
+    .array(z.enum(communicationModeValues))
+    .min(1, "Select at least one communication mode"),
+  goals: z
+    .string()
+    .trim()
+    .min(1, "Tell us a little about your goals")
+    .max(GOALS_MAX_CHARACTERS, `Maximum ${GOALS_MAX_CHARACTERS} characters`),
+});
+
+export type MenteePreferencesFormValues = z.infer<
+  typeof menteePreferencesSchema
+>;
 
 export const interestsSchema = z.object({
   interests: z.array(z.string().min(1)),

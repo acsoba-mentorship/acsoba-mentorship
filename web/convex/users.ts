@@ -133,6 +133,7 @@ export const updateUserProfileBasics = mutation({
     bio: v.optional(usersTableFields.bio),
     location: v.optional(usersTableFields.location),
     title: v.optional(usersTableFields.title),
+    phoneNumber: v.optional(usersTableFields.phoneNumber),
   },
   handler: (ctx, args) => UsersModel.updateUserProfileBasics(ctx, args),
 });

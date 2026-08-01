@@ -1,6 +1,6 @@
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
-import type { Infer } from "convex/values";
+import { ConvexError, type Infer } from "convex/values";
 import {
   ANONYMOUS_MENTOR_NAME,
   buildUsernameStatus,
@@ -132,7 +132,7 @@ async function ensureUniqueTemporaryUsername(
       return candidate;
     }
   }
-  throw new Error("Failed to generate a unique temporary username");
+  throw new ConvexError("Failed to generate a unique temporary username");
 }
 
 /**
@@ -141,7 +141,7 @@ async function ensureUniqueTemporaryUsername(
 export async function storeUser(ctx: MutationCtx) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) {
-    throw new Error("Not authenticated");
+    throw new ConvexError("Not authenticated");
   }
 
   const user = await ctx.db
@@ -383,7 +383,7 @@ export async function updateUsername(
 
   const normalized = normalizeUsername(username);
   if (!isValidUsername(normalized)) {
-    throw new Error(
+    throw new ConvexError(
       "Invalid username. Use 3-20 lowercase letters, numbers, or underscores."
     );
   }
@@ -401,14 +401,14 @@ export async function updateUsername(
     .withIndex("by_username", (q) => q.eq("username", normalized))
     .unique();
   if (existing) {
-    throw new Error("Username already taken");
+    throw new ConvexError("Username already taken");
   }
 
   const now = Date.now();
   const nextAllowedAt = user.usernameUpdatedAt + USERNAME_CHANGE_COOLDOWN_MS;
   const canBypassCooldown = user.isTemporaryUsername;
   if (!canBypassCooldown && now < nextAllowedAt) {
-    throw new Error(
+    throw new ConvexError(
       `Username can be changed again on ${new Date(nextAllowedAt).toISOString()}`
     );
   }
@@ -458,7 +458,7 @@ export async function updateMenteeProfile(
 ) {
   const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
   if (!user.menteeProfile) {
-    throw new Error("Add a mentee profile before editing mentee preferences");
+    throw new ConvexError("Add a mentee profile before editing mentee preferences");
   }
 
   await ctx.db.patch("users", user._id, {
@@ -476,14 +476,14 @@ function validateCareerBackground(args: {
   experience: Infer<typeof usersTableFields.experience>;
 }) {
   if (args.careerStage === CAREER_STAGE.STUDENT && args.education.length === 0) {
-    throw new Error("At least one education entry is required for students");
+    throw new ConvexError("At least one education entry is required for students");
   }
 
   if (
     args.careerStage === CAREER_STAGE.PROFESSIONAL &&
     args.experience.length === 0
   ) {
-    throw new Error("At least one experience entry is required");
+    throw new ConvexError("At least one experience entry is required");
   }
 }
 
@@ -492,19 +492,19 @@ function validateMenteeProfile(
 ) {
   const goals = profile.goals.trim();
   if (!goals) {
-    throw new Error("Tell us a little about your goals");
+    throw new ConvexError("Tell us a little about your goals");
   }
   if (goals.length > GOALS_MAX_CHARACTERS) {
-    throw new Error(`Goals must be at most ${GOALS_MAX_CHARACTERS} characters`);
+    throw new ConvexError(`Goals must be at most ${GOALS_MAX_CHARACTERS} characters`);
   }
   if (profile.preferredCommunicationModes.length === 0) {
-    throw new Error("Select at least one communication mode");
+    throw new ConvexError("Select at least one communication mode");
   }
   if (
     new Set(profile.preferredCommunicationModes).size !==
     profile.preferredCommunicationModes.length
   ) {
-    throw new Error("Select each communication mode only once");
+    throw new ConvexError("Select each communication mode only once");
   }
 
   return {
@@ -524,7 +524,7 @@ function validateMenteeProfile(
 function normalizeProfileTags(values: string[], label: string) {
   const trimmed = values.map((item) => item.trim()).filter(Boolean);
   if (trimmed.some((item) => item.length > 80)) {
-    throw new Error(`Each ${label} entry must be at most 80 characters`);
+    throw new ConvexError(`Each ${label} entry must be at most 80 characters`);
   }
 
   const unique = new Map<string, string>();
@@ -537,7 +537,7 @@ function normalizeProfileTags(values: string[], label: string) {
 
   const normalized = Array.from(unique.values());
   if (normalized.length > 50) {
-    throw new Error(`Add at most 50 ${label} entries`);
+    throw new ConvexError(`Add at most 50 ${label} entries`);
   }
   return normalized;
 }
@@ -551,25 +551,25 @@ function normalizeMentorProfile(
     profile.yearsOfExperience < 0 ||
     profile.yearsOfExperience > 80
   ) {
-    throw new Error("Years of experience must be a whole number from 0 to 80");
+    throw new ConvexError("Years of experience must be a whole number from 0 to 80");
   }
   if (
     !Number.isInteger(profile.maxMentees) ||
     profile.maxMentees < 1 ||
     profile.maxMentees > 100
   ) {
-    throw new Error("Maximum mentees must be a whole number from 1 to 100");
+    throw new ConvexError("Maximum mentees must be a whole number from 1 to 100");
   }
 
   const expertise = normalizeProfileTags(profile.expertise, "expertise");
   if (requireExpertise && expertise.length === 0) {
-    throw new Error("Add at least one area of expertise");
+    throw new ConvexError("Add at least one area of expertise");
   }
   if (requireExpertise && expertise.length > 20) {
-    throw new Error("Add at most 20 areas of expertise");
+    throw new ConvexError("Add at most 20 areas of expertise");
   }
   if (expertise.length > 50) {
-    throw new Error("Add at most 50 areas of expertise");
+    throw new ConvexError("Add at most 50 areas of expertise");
   }
 
   return {
@@ -600,10 +600,10 @@ async function validateOnboardingSelections(
   }
 ) {
   if (interests && (interests.length < 1 || interests.length > 3)) {
-    throw new Error("Select between 1 and 3 interests");
+    throw new ConvexError("Select between 1 and 3 interests");
   }
   if (industries && (industries.length < 1 || industries.length > 3)) {
-    throw new Error("Select between 1 and 3 industries");
+    throw new ConvexError("Select between 1 and 3 industries");
   }
   if (
     interests &&
@@ -611,7 +611,7 @@ async function validateOnboardingSelections(
       interests.map((interest) => interest.toLocaleLowerCase("en-SG"))
     ).size !== interests.length
   ) {
-    throw new Error("Select each interest only once");
+    throw new ConvexError("Select each interest only once");
   }
   if (
     industries &&
@@ -619,7 +619,7 @@ async function validateOnboardingSelections(
       industries.map((industry) => industry.toLocaleLowerCase("en-SG"))
     ).size !== industries.length
   ) {
-    throw new Error("Select each industry only once");
+    throw new ConvexError("Select each industry only once");
   }
 
   const options = await getEffectiveProgramSettings(ctx);
@@ -633,7 +633,7 @@ async function validateOnboardingSelections(
       availableInterests.includes(interest)
     )
   ) {
-    throw new Error("Select interests from the available onboarding options");
+    throw new ConvexError("Select interests from the available onboarding options");
   }
   if (
     industries &&
@@ -641,7 +641,7 @@ async function validateOnboardingSelections(
       availableIndustries.includes(industry)
     )
   ) {
-    throw new Error("Select industries from the available onboarding options");
+    throw new ConvexError("Select industries from the available onboarding options");
   }
 }
 
@@ -654,7 +654,7 @@ export async function setUserOnboardingComplete(
 ) {
   const user = await getAuthenticatedUser(ctx);
   if (user.onboardingStatus === ONBOARDING_STATUS.COMPLETE) {
-    throw new Error("Onboarding is already complete");
+    throw new ConvexError("Onboarding is already complete");
   }
   const identity = await ctx.auth.getUserIdentity();
   const authenticatedEmail = identity?.email?.trim();
@@ -672,12 +672,12 @@ export async function setUserOnboardingComplete(
     (verificationRequired &&
       user.membershipVerificationStatus !== "acsoba_verified")
   ) {
-    throw new Error(
+    throw new ConvexError(
       "Complete membership verification with your signed-in email before finishing onboarding"
     );
   }
   if (args.personalDetails.email.trim().toLowerCase() !== verifiedEmail) {
-    throw new Error("Use the verified email from your signed-in account");
+    throw new ConvexError("Use the verified email from your signed-in account");
   }
 
   validateCareerBackground(args);
@@ -734,7 +734,7 @@ export async function enrollAsMentee(
 ) {
   const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
   if (user.menteeProfile) {
-    throw new Error("Your account already has a mentee profile");
+    throw new ConvexError("Your account already has a mentee profile");
   }
 
   await validateOnboardingSelections(ctx, {
@@ -757,7 +757,7 @@ export async function enrollAsMentor(
 ) {
   const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
   if (user.mentorProfile) {
-    throw new Error("Your account already has a mentor profile");
+    throw new ConvexError("Your account already has a mentor profile");
   }
 
   await validateOnboardingSelections(ctx, { industries: args.industries });
@@ -781,11 +781,14 @@ export async function updateUserProfileBasics(
     bio?: Infer<typeof usersTableFields.bio>;
     location?: Infer<typeof usersTableFields.location>;
     title?: Infer<typeof usersTableFields.title>;
+    phoneNumber?: Infer<typeof usersTableFields.phoneNumber>;
   }
 ) {
   const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
-  const patch: Partial<Pick<Doc<"users">, "bio" | "location" | "title">> = {};
+  const patch: Partial<
+    Pick<Doc<"users">, "bio" | "location" | "title" | "phoneNumber">
+  > = {};
   if (args.bio !== undefined) {
     patch.bio = args.bio;
   }
@@ -794,6 +797,16 @@ export async function updateUserProfileBasics(
   }
   if (args.title !== undefined) {
     patch.title = args.title;
+  }
+  if (args.phoneNumber !== undefined) {
+    const trimmedPhoneNumber = args.phoneNumber.trim();
+    if (trimmedPhoneNumber.length === 0) {
+      throw new ConvexError("Phone number is required");
+    }
+    if (trimmedPhoneNumber.length > 32) {
+      throw new ConvexError("Phone number must be 32 characters or fewer");
+    }
+    patch.phoneNumber = trimmedPhoneNumber;
   }
 
   if (Object.keys(patch).length === 0) {
@@ -819,7 +832,7 @@ export async function updateMenteeProfileDetails(
 ) {
   const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
   if (!user.menteeProfile) {
-    throw new Error("Add a mentee profile before editing mentee preferences");
+    throw new ConvexError("Add a mentee profile before editing mentee preferences");
   }
   const previous = user.menteeProfile;
 
@@ -827,7 +840,7 @@ export async function updateMenteeProfileDetails(
     args.goals !== undefined &&
     args.goals.trim().length > GOALS_MAX_CHARACTERS
   ) {
-    throw new Error(`Goals must be at most ${GOALS_MAX_CHARACTERS} characters`);
+    throw new ConvexError(`Goals must be at most ${GOALS_MAX_CHARACTERS} characters`);
   }
 
   const menteeProfile = {
@@ -865,7 +878,7 @@ export async function updateUserIndustries(
   const industries = normalizeProfileTags(args.industries, "industries");
 
   if (user.mentorProfile && user.menteeProfile) {
-    throw new Error(
+    throw new ConvexError(
       "Update industries from the relevant mentor or mentee profile"
     );
   }
@@ -901,7 +914,7 @@ export async function updateMentorProfile(
 ) {
   const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
   if (!user.mentorProfile) {
-    throw new Error("Add a mentor profile before editing mentor details");
+    throw new ConvexError("Add a mentor profile before editing mentor details");
   }
 
   const activeMentorships = await ctx.db
@@ -911,7 +924,7 @@ export async function updateMentorProfile(
     )
     .collect();
   if (args.maxMentees < activeMentorships.length) {
-    throw new Error(
+    throw new ConvexError(
       `Maximum mentees cannot be lower than your ${activeMentorships.length} active mentorships`
     );
   }
@@ -954,7 +967,7 @@ export async function updateEducation(
   const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   if (index < 0 || index >= user.education.length) {
-    throw new Error("Invalid education index");
+    throw new ConvexError("Invalid education index");
   }
 
   await ctx.db.patch("users", user._id, {
@@ -973,7 +986,7 @@ export async function deleteEducation(
   const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   if (index < 0 || index >= user.education.length) {
-    throw new Error("Invalid education index");
+    throw new ConvexError("Invalid education index");
   }
 
   await ctx.db.patch("users", user._id, {
@@ -1010,7 +1023,7 @@ export async function updateExperience(
   const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   if (index < 0 || index >= user.experience.length) {
-    throw new Error("Invalid experience index");
+    throw new ConvexError("Invalid experience index");
   }
 
   await ctx.db.patch("users", user._id, {
@@ -1029,7 +1042,7 @@ export async function deleteExperience(
   const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   if (index < 0 || index >= user.experience.length) {
-    throw new Error("Invalid experience index");
+    throw new ConvexError("Invalid experience index");
   }
 
   await ctx.db.patch("users", user._id, {
