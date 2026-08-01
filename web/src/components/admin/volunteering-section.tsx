@@ -12,22 +12,24 @@ import {
   AdminError,
   AdminSectionHeader,
   AdminSectionLoading,
-  AdminStatusBadge,
   AdminSuccess,
   formatAdminDate,
   getErrorMessage,
 } from "@/components/admin/admin-shared";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { VolunteerActivityCard } from "@/components/volunteering/volunteer-activity-card";
 
 type VolunteerActivity =
   FunctionReturnType<typeof api.volunteering.listActivitiesForAdmin>[number];
@@ -65,8 +67,8 @@ function NewActivityForm() {
       <CardHeader>
         <CardTitle className="text-base">Add a volunteering activity</CardTitle>
         <CardDescription>
-          New activities appear immediately on every member&apos;s dashboard
-          checklist.
+          New activities appear immediately on every member&apos;s
+          volunteering tab.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -121,13 +123,13 @@ function ActivitySignupsPanel({ activityId }: { activityId: Id<"volunteerActivit
   if (signups.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        No members have checked this activity yet.
+        No members have volunteered for this activity yet.
       </p>
     );
   }
 
   return (
-    <ul className="space-y-2 text-sm">
+    <ul className="max-h-48 space-y-2 overflow-y-auto text-sm">
       {signups.map((signup) => (
         <li
           key={signup._id}
@@ -148,14 +150,25 @@ function ActivitySignupsPanel({ activityId }: { activityId: Id<"volunteerActivit
   );
 }
 
-function ActivityCard({ activity }: { activity: VolunteerActivity }) {
+/**
+ * The full edit/retire/roster workflow, now tucked behind "Manage" so the
+ * card grid itself can stay compact and match the internship card layout.
+ */
+function ManageActivityDialog({
+  activity,
+  open,
+  onOpenChange,
+}: {
+  activity: VolunteerActivity;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const updateActivity = useMutation(api.volunteering.updateActivity);
   const [name, setName] = useState(activity.name);
   const [description, setDescription] = useState(activity.description ?? "");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [showRoster, setShowRoster] = useState(false);
 
   const handleSave = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -192,76 +205,77 @@ function ActivityCard({ activity }: { activity: VolunteerActivity }) {
   };
 
   return (
-    <Card>
-      <CardHeader className="flex-row items-start justify-between gap-4 space-y-0">
-        <div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
           <div className="flex flex-wrap items-center gap-2">
-            <CardTitle className="text-base">{activity.name}</CardTitle>
-            <AdminStatusBadge tone={activity.isActive ? "success" : "neutral"}>
+            <DialogTitle>{activity.name}</DialogTitle>
+            <Badge
+              className={
+                activity.isActive
+                  ? "border-0 bg-emerald-50 text-emerald-700"
+                  : "border-0 bg-muted text-muted-foreground"
+              }
+            >
               {activity.isActive ? "Active" : "Retired"}
-            </AdminStatusBadge>
+            </Badge>
           </div>
-          <CardDescription className="mt-1">
+          <DialogDescription>
             {activity.signupCount} member
             {activity.signupCount === 1 ? "" : "s"} volunteered
-          </CardDescription>
-        </div>
-        <Button type="button" variant="outline" size="sm" onClick={toggleActive} disabled={isSaving}>
-          {activity.isActive ? "Retire" : "Reactivate"}
-        </Button>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <form onSubmit={handleSave} className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-          <div className="space-y-3">
-            <div className="space-y-2">
-              <Label htmlFor={`activity-name-${activity._id}`}>Name</Label>
-              <Input
-                id={`activity-name-${activity._id}`}
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                maxLength={120}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={`activity-description-${activity._id}`}>
-                Description
-              </Label>
-              <Textarea
-                id={`activity-description-${activity._id}`}
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                rows={2}
-                maxLength={500}
-              />
-            </div>
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSave} className="space-y-3">
+          <div className="space-y-2">
+            <Label htmlFor={`activity-name-${activity._id}`}>Name</Label>
+            <Input
+              id={`activity-name-${activity._id}`}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              maxLength={120}
+            />
           </div>
-          <Button type="submit" disabled={isSaving}>
-            {isSaving ? <Loader2 className="animate-spin" /> : <Save />}
-            Save
-          </Button>
+          <div className="space-y-2">
+            <Label htmlFor={`activity-description-${activity._id}`}>
+              Description
+            </Label>
+            <Textarea
+              id={`activity-description-${activity._id}`}
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              rows={3}
+              maxLength={500}
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? <Loader2 className="animate-spin" /> : <Save />}
+              Save
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={toggleActive}
+              disabled={isSaving}
+            >
+              {activity.isActive ? "Retire" : "Reactivate"}
+            </Button>
+          </div>
         </form>
 
         {error && <AdminError message={error} />}
         {success && <AdminSuccess message={success} />}
 
         <div className="border-t pt-3">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowRoster((value) => !value)}
-          >
-            <Users2 />
-            {showRoster ? "Hide" : "View"} volunteers
-          </Button>
-          {showRoster && (
-            <div className="mt-3">
-              <ActivitySignupsPanel activityId={activity._id} />
-            </div>
-          )}
+          <p className="mb-2 flex items-center gap-2 text-sm font-medium">
+            <Users2 className="size-4" />
+            Volunteers
+          </p>
+          <ActivitySignupsPanel activityId={activity._id} />
         </div>
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -277,6 +291,8 @@ export function VolunteeringSection() {
   const activities = useQuery(api.volunteering.listActivitiesForAdmin);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [manageActivityId, setManageActivityId] =
+    useState<Id<"volunteerActivities"> | null>(null);
 
   const filtered = useMemo(() => {
     if (!activities) return undefined;
@@ -287,6 +303,8 @@ export function VolunteeringSection() {
     });
   }, [activities, search, statusFilter]);
 
+  const manageActivity = activities?.find((a) => a._id === manageActivityId) ?? null;
+
   if (activities === undefined) {
     return <AdminSectionLoading rows={4} />;
   }
@@ -296,7 +314,7 @@ export function VolunteeringSection() {
       <AdminSectionHeader
         eyebrow="Beyond mentoring"
         title="Volunteering activities"
-        description="Manage the list of ways members can volunteer their time. Members check the ones they're interested in from their dashboard."
+        description="Manage the list of ways members can volunteer their time. Members select the ones they're interested in from their volunteering tab."
       />
 
       <NewActivityForm />
@@ -306,11 +324,11 @@ export function VolunteeringSection() {
           <AdminEmptyState
             icon={Users2}
             title="No volunteering activities yet"
-            description="Add an activity above to make it available on every member's dashboard."
+            description="Add an activity above to make it available to every member."
           />
         </Card>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="relative w-full sm:max-w-sm">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -361,11 +379,42 @@ export function VolunteeringSection() {
               />
             </Card>
           ) : (
-            filtered?.map((activity) => (
-              <ActivityCard key={activity._id} activity={activity} />
-            ))
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {filtered?.map((activity) => (
+                <VolunteerActivityCard
+                  key={activity._id}
+                  name={activity.name}
+                  description={activity.description}
+                  isActive={activity.isActive}
+                  meta={
+                    <p className="text-xs text-muted-foreground">
+                      {activity.signupCount} member
+                      {activity.signupCount === 1 ? "" : "s"} volunteered
+                    </p>
+                  }
+                  footer={
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => setManageActivityId(activity._id)}
+                    >
+                      Manage
+                    </Button>
+                  }
+                />
+              ))}
+            </div>
           )}
         </div>
+      )}
+
+      {manageActivity && (
+        <ManageActivityDialog
+          activity={manageActivity}
+          open={manageActivityId !== null}
+          onOpenChange={(open) => !open && setManageActivityId(null)}
+        />
       )}
     </div>
   );
