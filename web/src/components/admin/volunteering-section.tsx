@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
-import { Loader2, Plus, Save, Users2 } from "lucide-react";
+import { Loader2, Plus, Save, Search, Users2 } from "lucide-react";
 
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -31,6 +31,8 @@ import { Textarea } from "@/components/ui/textarea";
 
 type VolunteerActivity =
   FunctionReturnType<typeof api.volunteering.listActivitiesForAdmin>[number];
+
+type StatusFilter = "all" | "active" | "retired";
 
 function NewActivityForm() {
   const createActivity = useMutation(api.volunteering.createActivity);
@@ -263,8 +265,27 @@ function ActivityCard({ activity }: { activity: VolunteerActivity }) {
   );
 }
 
+function matchesSearch(activity: VolunteerActivity, query: string) {
+  if (!query) return true;
+  const haystack = [activity.name, activity.description ?? ""]
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes(query.toLowerCase());
+}
+
 export function VolunteeringSection() {
   const activities = useQuery(api.volunteering.listActivitiesForAdmin);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+
+  const filtered = useMemo(() => {
+    if (!activities) return undefined;
+    return activities.filter((activity) => {
+      if (statusFilter === "active" && !activity.isActive) return false;
+      if (statusFilter === "retired" && activity.isActive) return false;
+      return matchesSearch(activity, search.trim());
+    });
+  }, [activities, search, statusFilter]);
 
   if (activities === undefined) {
     return <AdminSectionLoading rows={4} />;
@@ -290,9 +311,60 @@ export function VolunteeringSection() {
         </Card>
       ) : (
         <div className="space-y-5">
-          {activities.map((activity) => (
-            <ActivityCard key={activity._id} activity={activity} />
-          ))}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative w-full sm:max-w-sm">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search by name or description..."
+                className="pl-9"
+                aria-label="Search volunteering activities"
+              />
+            </div>
+
+            <div
+              role="group"
+              aria-label="Filter by status"
+              className="inline-flex w-fit items-center rounded-md border p-0.5"
+            >
+              {(
+                [
+                  { value: "all", label: "All" },
+                  { value: "active", label: "Active" },
+                  { value: "retired", label: "Retired" },
+                ] as const
+              ).map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setStatusFilter(option.value)}
+                  aria-pressed={statusFilter === option.value}
+                  className={`rounded-sm px-3 py-1.5 text-sm font-medium transition-colors ${
+                    statusFilter === option.value
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {filtered && filtered.length === 0 ? (
+            <Card>
+              <AdminEmptyState
+                icon={Search}
+                title="No matching activities"
+                description="Try a different search term or status filter."
+              />
+            </Card>
+          ) : (
+            filtered?.map((activity) => (
+              <ActivityCard key={activity._id} activity={activity} />
+            ))
+          )}
         </div>
       )}
     </div>
