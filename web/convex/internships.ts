@@ -101,9 +101,14 @@ export const adminTakeDown = mutation({
   handler: (ctx, args) => InternshipsModel.adminTakeDown(ctx, args),
 });
 
-export const listAllForAdmin = query({
-  args: {},
-  handler: (ctx) => InternshipsModel.listAllForAdmin(ctx),
+export const listActiveForAdmin = query({
+  args: { search: v.optional(v.string()) },
+  handler: (ctx, args) => InternshipsModel.listActiveForAdmin(ctx, args),
+});
+
+export const listTakenDownForAdmin = query({
+  args: { search: v.optional(v.string()) },
+  handler: (ctx, args) => InternshipsModel.listTakenDownForAdmin(ctx, args),
 });
 
 export const generateCvUploadUrl = mutation({

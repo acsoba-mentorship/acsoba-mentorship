@@ -1,4 +1,5 @@
 import { query } from "./_generated/server";
+import { v } from "convex/values";
 import * as MentorshipsModel from "./model/mentorships";
 import { mentorshipsTableFields } from "./model/mentorships/fields";
 
@@ -35,6 +36,6 @@ export const historyByMentee = query({
 });
 
 export const listActiveForAdmin = query({
-  args: {},
-  handler: (ctx) => MentorshipsModel.listActiveForAdmin(ctx),
+  args: { search: v.optional(v.string()) },
+  handler: (ctx, args) => MentorshipsModel.listActiveForAdmin(ctx, args),
 });

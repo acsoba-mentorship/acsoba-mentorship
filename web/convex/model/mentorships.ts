@@ -327,7 +327,10 @@ export async function historyByMentee(
  * Admin view of every active mentorship, used by the "end a mentorship
  * immediately" workflow.
  */
-export async function listActiveForAdmin(ctx: QueryCtx) {
+export async function listActiveForAdmin(
+  ctx: QueryCtx,
+  { search }: { search?: string } = {}
+) {
   await requireAdmin(ctx);
 
   const mentorships = await ctx.db
@@ -341,12 +344,19 @@ export async function listActiveForAdmin(ctx: QueryCtx) {
     mentorship.menteeId,
   ]);
   const userById = await fetchUsersById(ctx, userIds);
+  const normalizedSearch = (search ?? "").trim().toLowerCase();
 
-  return mentorships.map((mentorship) => ({
-    _id: mentorship._id,
-    startDate: mentorship.startDate,
-    plannedEndDate: mentorship.plannedEndDate ?? null,
-    mentorName: userById.get(mentorship.mentorId)?.name ?? "Unknown user",
-    menteeName: userById.get(mentorship.menteeId)?.name ?? "Unknown user",
-  }));
+  return mentorships
+    .map((mentorship) => ({
+      _id: mentorship._id,
+      startDate: mentorship.startDate,
+      plannedEndDate: mentorship.plannedEndDate ?? null,
+      mentorName: userById.get(mentorship.mentorId)?.name ?? "Unknown user",
+      menteeName: userById.get(mentorship.menteeId)?.name ?? "Unknown user",
+    }))
+    .filter((mentorship) => {
+      if (!normalizedSearch) return true;
+      const haystack = `${mentorship.mentorName} ${mentorship.menteeName}`.toLowerCase();
+      return haystack.includes(normalizedSearch);
+    });
 }

@@ -293,29 +293,94 @@ export async function updateStatus(
   return internshipId;
 }
 
+function matchesInternshipSearch(
+  posting: { companyName: string; role: string },
+  offerorName: string,
+  search: string
+) {
+  if (!search) return true;
+  const haystack = `${posting.companyName} ${posting.role} ${offerorName}`.toLowerCase();
+  return haystack.includes(search);
+}
+
 /**
- * Admin view of every internship posting regardless of status, used by the
- * admin "take down" workflow.
+ * Admin view of internship postings the admin can still act on (i.e. not
+ * already taken down by an administrator). Postings the offeror closed or
+ * marked filled themselves still show up here, since only an admin
+ * takedown moves a posting into the separate history tab.
  */
-export async function listAllForAdmin(ctx: QueryCtx) {
+export async function listActiveForAdmin(
+  ctx: QueryCtx,
+  { search }: { search?: string } = {}
+) {
   await requireAdmin(ctx);
   const postings = await ctx.db.query("internships").order("desc").collect();
+  const normalizedSearch = (search ?? "").trim().toLowerCase();
 
   const offerorById = await fetchUsersById(
     ctx,
     postings.map((posting) => posting.offerorId)
   );
 
-  return postings.map((posting) => ({
-    _id: posting._id,
-    companyName: posting.companyName,
-    role: posting.role,
-    isPaid: posting.isPaid,
-    status: posting.status,
-    closingDate: posting.closingDate,
-    offerorName: offerorById.get(posting.offerorId)?.name ?? "Unknown user",
-    createdAt: posting._creationTime,
-  }));
+  return postings
+    .filter((posting) => !posting.takenDownAt)
+    .map((posting) => ({
+      _id: posting._id,
+      companyName: posting.companyName,
+      role: posting.role,
+      isPaid: posting.isPaid,
+      status: posting.status,
+      closingDate: posting.closingDate,
+      offerorName: offerorById.get(posting.offerorId)?.name ?? "Unknown user",
+      createdAt: posting._creationTime,
+    }))
+    .filter((posting) =>
+      matchesInternshipSearch(posting, posting.offerorName, normalizedSearch)
+    );
+}
+
+/**
+ * FR: "When internship is taken down by admin, it should not remain to be
+ * shown on the same page as the active internships in the admin
+ * dashboard. It should go to a separate tab of history of internships
+ * being taken down. (also searchable)"
+ */
+export async function listTakenDownForAdmin(
+  ctx: QueryCtx,
+  { search }: { search?: string } = {}
+) {
+  await requireAdmin(ctx);
+  const postings = await ctx.db.query("internships").order("desc").collect();
+  const normalizedSearch = (search ?? "").trim().toLowerCase();
+
+  const offerorById = await fetchUsersById(
+    ctx,
+    postings.map((posting) => posting.offerorId)
+  );
+  const takenDownByIds = postings
+    .filter((posting) => posting.takenDownAt && posting.takenDownBy)
+    .map((posting) => posting.takenDownBy as Id<"users">);
+  const takenDownByUserById = await fetchUsersById(ctx, takenDownByIds);
+
+  return postings
+    .filter((posting) => posting.takenDownAt)
+    .map((posting) => ({
+      _id: posting._id,
+      companyName: posting.companyName,
+      role: posting.role,
+      isPaid: posting.isPaid,
+      closingDate: posting.closingDate,
+      offerorName: offerorById.get(posting.offerorId)?.name ?? "Unknown user",
+      createdAt: posting._creationTime,
+      takenDownAt: posting.takenDownAt ?? null,
+      takenDownReason: posting.takenDownReason ?? null,
+      takenDownByName: posting.takenDownBy
+        ? takenDownByUserById.get(posting.takenDownBy)?.name ?? "Unknown administrator"
+        : "Unknown administrator",
+    }))
+    .filter((posting) =>
+      matchesInternshipSearch(posting, posting.offerorName, normalizedSearch)
+    );
 }
 
 /**
@@ -333,7 +398,7 @@ export async function adminTakeDown(
   if (!internship) {
     throw new ConvexError("Internship posting not found");
   }
-  if (internship.status === "closed") {
+  if (internship.takenDownAt) {
     return internshipId;
   }
 
@@ -342,9 +407,13 @@ export async function adminTakeDown(
     throw new ConvexError("Reason must be 500 characters or fewer");
   }
 
+  const now = Date.now();
   await ctx.db.patch("internships", internshipId, {
     status: "closed",
-    updatedAt: Date.now(),
+    updatedAt: now,
+    takenDownAt: now,
+    takenDownReason: cleanReason,
+    takenDownBy: admin._id,
   });
 
   await writeAdminAuditLog(ctx, {

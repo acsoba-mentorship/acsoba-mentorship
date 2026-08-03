@@ -27,6 +27,12 @@ export const internshipsTableFields = {
   status: internshipStatusValidator,
   createdAt: v.number(),
   updatedAt: v.number(),
+  // Set only when an administrator takes the posting down (as opposed to
+  // the offeror closing/filling it themselves), so the admin dashboard can
+  // move it into a separate "taken down" history tab.
+  takenDownAt: v.optional(v.number()),
+  takenDownReason: v.optional(v.string()),
+  takenDownBy: v.optional(v.id("users")),
 };
 
 export const internshipInterestStatusValidator = v.union(
