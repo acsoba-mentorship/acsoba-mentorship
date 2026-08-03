@@ -353,6 +353,7 @@ export async function adminTakeDown(
     targetType: "internship",
     targetId: String(internshipId),
     reason: cleanReason,
+    metadata: { role: internship.role },
   });
 
   const interests = await ctx.db

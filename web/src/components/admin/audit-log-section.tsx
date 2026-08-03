@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "convex/react";
-import { ScrollText } from "lucide-react";
+import type { FunctionReturnType } from "convex/server";
+import { Eye, ScrollText, Search } from "lucide-react";
 
 import { api } from "../../../convex/_generated/api";
 import {
@@ -12,7 +14,16 @@ import {
   formatAdminDateTime,
   formatAdminLabel,
 } from "@/components/admin/admin-shared";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -21,6 +32,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
+type AuditLogEntry = FunctionReturnType<typeof api.admin.listAuditLog>[number];
 
 function actionTone(action: string) {
   if (action.includes("revoked")) return "danger" as const;
@@ -31,8 +44,92 @@ function actionTone(action: string) {
   return "neutral" as const;
 }
 
+/**
+ * FR: "if the account is suspended/internship taken down/incident review
+ * note, there should be more details regarding what note is taken, which
+ * internship is taken down and why, which account is suspended and why."
+ * Turns the raw log row into a readable list of detail lines specific to
+ * the kind of event that happened.
+ */
+function buildDetailLines(log: AuditLogEntry): Array<[string, string]> {
+  const lines: Array<[string, string]> = [
+    ["Administrator", log.actorName],
+    ["Event", formatAdminLabel(log.action)],
+    ["When", formatAdminDateTime(log.createdAt)],
+  ];
+
+  const metadata = (log.metadata ?? {}) as Record<string, unknown>;
+
+  if (log.action === "user.suspended" || log.action === "user.reactivated") {
+    lines.push(["Account", log.targetEmail ?? "Unknown user"]);
+    if (log.reason) lines.push(["Reason for suspension", log.reason]);
+  } else if (log.action === "internship.taken_down") {
+    lines.push(["Internship", String(metadata.role ?? log.targetId ?? "Unknown internship")]);
+    lines.push(["Reason for takedown", log.reason ?? "No reason provided"]);
+  } else if (log.action === "incident_report.updated") {
+    if (metadata.fromStatus || metadata.toStatus) {
+      lines.push([
+        "Status change",
+        `${formatAdminLabel(String(metadata.fromStatus ?? "unknown"))} → ${formatAdminLabel(String(metadata.toStatus ?? "unknown"))}`,
+      ]);
+    }
+    lines.push([
+      "Note taken",
+      metadata.adminNotes ? String(metadata.adminNotes) : "No note recorded",
+    ]);
+  } else {
+    if (log.targetType) lines.push(["Target type", formatAdminLabel(log.targetType)]);
+    if (log.targetEmail) lines.push(["Target", log.targetEmail]);
+    if (log.reason) lines.push(["Reason", log.reason]);
+    for (const [key, value] of Object.entries(metadata)) {
+      lines.push([formatAdminLabel(key), String(value)]);
+    }
+  }
+
+  return lines;
+}
+
+function AuditLogDetailDialog({
+  log,
+  open,
+  onOpenChange,
+}: {
+  log: AuditLogEntry | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Event details</DialogTitle>
+          <DialogDescription>
+            Full detail recorded for this administration event.
+          </DialogDescription>
+        </DialogHeader>
+        {log && (
+          <dl className="space-y-3 text-sm">
+            {buildDetailLines(log).map(([label, value]) => (
+              <div key={label}>
+                <dt className="text-xs font-bold tracking-wide text-muted-foreground uppercase">
+                  {label}
+                </dt>
+                <dd className="mt-1 whitespace-pre-wrap leading-6">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function AuditLogSection() {
-  const logs = useQuery(api.admin.listAuditLog);
+  const [search, setSearch] = useState("");
+  const [selectedLog, setSelectedLog] = useState<AuditLogEntry | null>(null);
+  const logs = useQuery(api.admin.listAuditLog, {
+    search: search.trim() || undefined,
+  });
 
   if (logs === undefined) {
     return <AdminSectionLoading />;
@@ -51,6 +148,16 @@ export function AuditLogSection() {
         }
       />
 
+      <div className="relative max-w-sm">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search by event, administrator, target, or reason..."
+          className="pl-9"
+        />
+      </div>
+
       <Card className="overflow-hidden py-0">
         {logs.length === 0 ? (
           <AdminEmptyState
@@ -67,7 +174,8 @@ export function AuditLogSection() {
                   <TableHead>Administrator</TableHead>
                   <TableHead>Target</TableHead>
                   <TableHead>Reason</TableHead>
-                  <TableHead className="pr-5">Timestamp</TableHead>
+                  <TableHead>Timestamp</TableHead>
+                  <TableHead className="pr-5">Details</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -89,8 +197,19 @@ export function AuditLogSection() {
                     <TableCell className="max-w-80 whitespace-normal text-muted-foreground">
                       {log.reason || "—"}
                     </TableCell>
-                    <TableCell className="pr-5">
+                    <TableCell>
                       {formatAdminDateTime(log.createdAt)}
+                    </TableCell>
+                    <TableCell className="pr-5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedLog(log)}
+                      >
+                        <Eye />
+                        View more details
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -99,6 +218,12 @@ export function AuditLogSection() {
           </CardContent>
         )}
       </Card>
+
+      <AuditLogDetailDialog
+        log={selectedLog}
+        open={selectedLog !== null}
+        onOpenChange={(open) => !open && setSelectedLog(null)}
+      />
     </div>
   );
 }

@@ -275,7 +275,7 @@ export async function updateForAdmin(
     targetType: "incident_report",
     targetId: String(report._id),
     targetUserId: report.reporterId,
-    metadata: { fromStatus: report.status, toStatus: status },
+    metadata: { fromStatus: report.status, toStatus: status, adminNotes: notes },
   });
 
   return report._id;

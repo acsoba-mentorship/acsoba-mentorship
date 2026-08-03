@@ -46,8 +46,8 @@ export const listPulseSurveys = query({
 });
 
 export const listAuditLog = query({
-  args: {},
-  handler: (ctx) => AdminModel.listAuditLog(ctx),
+  args: { search: v.optional(v.string()) },
+  handler: (ctx, args) => AdminModel.listAuditLog(ctx, args),
 });
 
 export const listUsers = query({

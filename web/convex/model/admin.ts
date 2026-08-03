@@ -446,7 +446,42 @@ export async function listPulseSurveys(ctx: QueryCtx) {
   });
 }
 
-export async function listAuditLog(ctx: QueryCtx) {
+function matchesAuditSearch(
+  log: {
+    actorName: string;
+    action: string;
+    targetType: string | null;
+    targetEmail: string | null;
+    reason: string | null;
+  },
+  search: string
+) {
+  if (!search) return true;
+  const haystack = [
+    log.actorName,
+    log.action,
+    log.targetType,
+    log.targetEmail,
+    log.reason,
+  ]
+    .filter((value): value is string => Boolean(value))
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes(search);
+}
+
+/**
+ * FR: "Audit log should be searchable. Also, there should be a button for
+ * view more details ... if the account is suspended/internship taken
+ * down/incident review note, there should be more details regarding what
+ * note is taken, which internship is taken down and why, which account is
+ * suspended and why." Returns the full detail (including parsed metadata)
+ * so the client can render a "view more details" panel per event.
+ */
+export async function listAuditLog(
+  ctx: QueryCtx,
+  { search }: { search?: string } = {}
+) {
   await requireHeadAdmin(ctx);
   const logs = await ctx.db
     .query("adminAuditLogs")
@@ -457,14 +492,32 @@ export async function listAuditLog(ctx: QueryCtx) {
     logs.map((log) => ctx.db.get("users", log.actorId))
   );
 
-  return logs.map((log, index) => ({
-    _id: log._id,
-    actorName: actors[index]?.name ?? "Unknown administrator",
-    action: log.action,
-    targetEmail: log.targetEmail ?? null,
-    reason: log.reason ?? null,
-    createdAt: log.createdAt,
-  }));
+  const normalizedSearch = (search ?? "").trim().toLowerCase();
+
+  return logs
+    .map((log, index) => {
+      let metadata: Record<string, unknown> | null = null;
+      if (log.metadata) {
+        try {
+          metadata = JSON.parse(log.metadata);
+        } catch {
+          metadata = null;
+        }
+      }
+
+      return {
+        _id: log._id,
+        actorName: actors[index]?.name ?? "Unknown administrator",
+        action: log.action,
+        targetType: log.targetType ?? null,
+        targetId: log.targetId ?? null,
+        targetEmail: log.targetEmail ?? null,
+        reason: log.reason ?? null,
+        metadata,
+        createdAt: log.createdAt,
+      };
+    })
+    .filter((log) => matchesAuditSearch(log, normalizedSearch));
 }
 
 const MESSAGE_SUBJECT_MAX = 150;
