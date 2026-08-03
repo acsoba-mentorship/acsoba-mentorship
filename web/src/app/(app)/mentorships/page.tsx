@@ -3,7 +3,11 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useQuery } from "convex/react";
 import { CalendarDays, History, Inbox, Users } from "lucide-react";
+import { api } from "../../../../convex/_generated/api";
+import { useCurrentUser } from "@/app/CurrentUserProvider";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Tabs,
@@ -29,6 +33,18 @@ function MenteeMentorshipsPageContent() {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const activeTab = isMentorshipsTab(tabParam) ? tabParam : "active";
+
+  const { currentUser } = useCurrentUser();
+  const requests = useQuery(
+    api.mentorRequests.requestsByMentee,
+    currentUser?._id && currentUser.menteeProfile
+      ? { menteeId: currentUser._id }
+      : "skip"
+  );
+  // FR: "attach the number of pending requests in the request filter (just
+  // like what the app did for pending, accepted, rejected, expired)"
+  const pendingRequestCount =
+    requests?.filter((request) => request.status === "pending").length ?? 0;
 
   return (
     <div className="space-y-8">
@@ -67,6 +83,14 @@ function MenteeMentorshipsPageContent() {
             <TabsTrigger value="requests" className="gap-2">
               <Inbox className="size-4" />
               Requests
+              {pendingRequestCount > 0 && (
+                <Badge
+                  variant="secondary"
+                  className="ml-1 h-5 min-w-5 px-1.5 text-xs"
+                >
+                  {pendingRequestCount}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="history" className="gap-2">
               <History className="size-4" />
