@@ -22,6 +22,7 @@ import {
   AdminSectionLoading,
   AdminStatusBadge,
   AdminSuccess,
+  DownloadResponseButton,
   formatAdminDate,
   formatAdminDateTime,
   formatAdminLabel,
@@ -126,13 +127,34 @@ function IncidentCard({ report }: { report: IncidentReport }) {
               Submitted {formatAdminDateTime(report.createdAt)}
             </CardDescription>
           </div>
-          <div className="rounded-lg bg-[#f7f6f2] px-4 py-3 text-sm">
-            <p className="font-semibold text-primary">{report.reporterName}</p>
-            <p className="text-xs text-muted-foreground">
-              {report.reporterRole
-                ? `${formatAdminLabel(report.reporterRole)} reporter`
-                : "Reporter"}
-            </p>
+          <div className="flex flex-col items-start gap-3 sm:items-end">
+            <div className="rounded-lg bg-[#f7f6f2] px-4 py-3 text-sm">
+              <p className="font-semibold text-primary">{report.reporterName}</p>
+              <p className="text-xs text-muted-foreground">
+                {report.reporterRole
+                  ? `${formatAdminLabel(report.reporterRole)} reporter`
+                  : "Reporter"}
+              </p>
+            </div>
+            <DownloadResponseButton
+              filenamePrefix={`incident-report-${report._id}`}
+              title="Incident report"
+              fields={[
+                ["Category", formatAdminLabel(report.category)],
+                ["Severity", formatAdminLabel(report.severity)],
+                ["Status", formatAdminLabel(report.status)],
+                ["Reporter", report.reporterName],
+                ["Reporter role", report.reporterRole ? formatAdminLabel(report.reporterRole) : null],
+                ["Reported person", report.reportedUserName],
+                ["Incident date", formatAdminDate(report.occurredAt ?? report.createdAt)],
+                ["Contact permitted", report.allowContact ? "Yes" : "No"],
+                ["Reporter email", report.allowContact ? report.reporterEmail : null],
+                ["Description", report.description],
+                ["Administrator notes", report.adminNotes],
+                ["Submitted", formatAdminDateTime(report.createdAt)],
+                ["Resolved", report.resolvedAt ? formatAdminDate(report.resolvedAt) : null],
+              ]}
+            />
           </div>
         </div>
       </CardHeader>

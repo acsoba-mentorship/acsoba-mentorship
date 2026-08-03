@@ -10,6 +10,7 @@ import {
   AdminSectionHeader,
   AdminSectionLoading,
   AdminStatusBadge,
+  DownloadResponseButton,
   formatAdminDate,
   formatAdminLabel,
 } from "@/components/admin/admin-shared";
@@ -132,7 +133,8 @@ export function PulseSurveysSection() {
                     <TableHead>Progress</TableHead>
                     <TableHead>Support</TableHead>
                     <TableHead className="min-w-72">Comments</TableHead>
-                    <TableHead className="pr-5">Submitted</TableHead>
+                    <TableHead>Submitted</TableHead>
+                    <TableHead className="pr-5">Details</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -184,8 +186,25 @@ export function PulseSurveysSection() {
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell className="pr-5">
+                      <TableCell>
                         {formatAdminDate(survey.submittedAt)}
+                      </TableCell>
+                      <TableCell className="pr-5">
+                        <DownloadResponseButton
+                          filenamePrefix={`pulse-survey-${survey.respondentName}-cycle-${survey.cycleNumber}`}
+                          title="Pulse survey response"
+                          fields={[
+                            ["Respondent", `${survey.respondentName} (${formatAdminLabel(survey.respondentRole)})`],
+                            ["Counterpart", `${survey.counterpartName} (${formatAdminLabel(survey.counterpartRole)})`],
+                            ["Cycle", survey.cycleNumber],
+                            ["Relationship rating", survey.relationshipRating],
+                            ["Communication rating", survey.communicationRating],
+                            ["Progress rating", survey.progressRating],
+                            ["Support requested", survey.needsSupport ? "Yes" : "No"],
+                            ["Comments", survey.comments],
+                            ["Submitted", formatAdminDate(survey.submittedAt)],
+                          ]}
+                        />
                       </TableCell>
                     </TableRow>
                   ))}

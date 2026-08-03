@@ -1,8 +1,9 @@
 import type { LucideIcon } from "lucide-react";
-import { CheckCircle2, Inbox, TriangleAlert } from "lucide-react";
+import { CheckCircle2, Download, Inbox, TriangleAlert } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -179,4 +180,80 @@ export function AdminRating({ value }: { value: number | null }) {
 
 export function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Something went wrong.";
+}
+
+function slugifyForFilename(value: string) {
+  return (
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "") || "response"
+  );
+}
+
+/**
+ * Builds a plain-text file from a set of labelled fields, e.g. the full
+ * detail of a pulse response, incident report, or exit feedback entry, so
+ * admins have an offline record of it.
+ */
+export function buildResponseFileContents(
+  title: string,
+  fields: Array<[label: string, value: string | number | null | undefined]>
+) {
+  const lines = [title, "=".repeat(title.length), ""];
+  for (const [label, value] of fields) {
+    lines.push(`${label}:`);
+    lines.push(
+      value === null || value === undefined || value === ""
+        ? "—"
+        : String(value)
+    );
+    lines.push("");
+  }
+  return lines.join("\n");
+}
+
+function downloadTextFile(filename: string, contents: string) {
+  const blob = new Blob([contents], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * FR: admins should be able to download the file detailing a pulse
+ * response, incident review, or exit feedback entry. Since these
+ * responses are structured text rather than uploaded files, this renders
+ * them into a downloadable plain-text record.
+ */
+export function DownloadResponseButton({
+  filenamePrefix,
+  title,
+  fields,
+}: {
+  filenamePrefix: string;
+  title: string;
+  fields: Array<[label: string, value: string | number | null | undefined]>;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={() =>
+        downloadTextFile(
+          `${slugifyForFilename(filenamePrefix)}.txt`,
+          buildResponseFileContents(title, fields)
+        )
+      }
+    >
+      <Download />
+      Download
+    </Button>
+  );
 }

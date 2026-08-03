@@ -15,6 +15,7 @@ import {
   AdminSectionHeader,
   AdminSectionLoading,
   AdminStatusBadge,
+  DownloadResponseButton,
   formatAdminDate,
   formatAdminLabel,
 } from "@/components/admin/admin-shared";
@@ -143,6 +144,24 @@ export function ExitFeedbackSection() {
                     </CardDescription>
                   </div>
                   <AdminRating value={item.overallRating} />
+                </div>
+                <div className="flex justify-end">
+                  <DownloadResponseButton
+                    filenamePrefix={`exit-feedback-${item.respondentName}-${item._id}`}
+                    title="Exit feedback response"
+                    fields={[
+                      ["Respondent", `${item.respondentName} (${formatAdminLabel(item.respondentRole)})`],
+                      ["Counterpart", `${item.counterpartName} (${formatAdminLabel(item.counterpartRole)})`],
+                      ["Overall rating", item.overallRating],
+                      ["Goals achieved", item.goalsAchieved === null ? null : item.goalsAchieved ? "Yes" : "No"],
+                      ["Would recommend", item.wouldRecommend === null ? null : item.wouldRecommend ? "Yes" : "No"],
+                      ["Reason for ending", item.reason],
+                      ["Highlights", item.highlights],
+                      ["Improvements", item.improvements],
+                      ["Additional comments", item.additionalComments],
+                      ["Submitted", formatAdminDate(item.submittedAt)],
+                    ]}
+                  />
                 </div>
               </CardHeader>
               <CardContent className="space-y-5">
