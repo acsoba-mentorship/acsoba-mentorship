@@ -174,6 +174,8 @@ export async function initiate(
 
   if (!mentorship.exitInitiatedAt) {
     await ctx.db.patch("mentorships", mentorship._id, {
+      status: "completed",
+      endDate: now,
       exitInitiatedAt: now,
       exitInitiatedBy: user._id,
       updatedAt: now,
@@ -262,18 +264,18 @@ export async function submit(
       (item) => item._id === feedback._id || item.status === "submitted"
     );
 
-  if (mentorshipCompleted) {
-    const mentorship = await ctx.db.get("mentorships", feedback.mentorshipId);
-    if (mentorship?.status === "active") {
-      await ctx.db.patch("mentorships", mentorship._id, {
-        status: "completed",
-        endDate: now,
-        updatedAt: now,
-      });
-    }
-  }
+  const remainingPending = await ctx.db
+    .query("exitFeedback")
+    .withIndex("by_respondentId_status", (q) =>
+      q.eq("respondentId", user._id).eq("status", "pending")
+    )
+    .collect();
 
-  return { feedbackId: feedback._id, mentorshipCompleted };
+  return {
+    feedbackId: feedback._id,
+    mentorshipCompleted,
+    remainingPendingCount: remainingPending.length,
+  };
 }
 
 export async function listForAdmin(ctx: QueryCtx) {

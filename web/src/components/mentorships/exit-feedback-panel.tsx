@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import {
@@ -28,109 +28,13 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { cn, formatDate } from "@/lib/utils";
-
-type Rating = 1 | 2 | 3 | 4 | 5;
-
-const ratingOptions = [1, 2, 3, 4, 5] as const;
+import { formatDate } from "@/lib/utils";
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error
     ? error.message
     : "Something went wrong. Please try again.";
-}
-
-function optionalText(value: string) {
-  return value.trim() || undefined;
-}
-
-function RatingField({
-  value,
-  onChange,
-}: {
-  value: Rating | null;
-  onChange: (value: Rating) => void;
-}) {
-  return (
-    <fieldset className="space-y-3">
-      <legend className="text-sm font-medium">Overall rating</legend>
-      <p className="-mt-2 text-xs text-muted-foreground">
-        Rate the mentorship from 1 (poor) to 5 (excellent).
-      </p>
-
-      <div className="grid grid-cols-5 gap-2">
-        {ratingOptions.map((option) => {
-          const selected = value === option;
-
-          return (
-            <button
-              key={option}
-              type="button"
-              aria-pressed={selected}
-              onClick={() => onChange(option)}
-              className={cn(
-                "h-11 rounded-md text-sm font-semibold transition",
-                selected
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "bg-muted text-foreground hover:bg-secondary"
-              )}
-            >
-              {option}
-            </button>
-          );
-        })}
-      </div>
-    </fieldset>
-  );
-}
-
-function BooleanChoice({
-  label,
-  description,
-  value,
-  onChange,
-}: {
-  label: string;
-  description: string;
-  value: boolean | null;
-  onChange: (value: boolean) => void;
-}) {
-  return (
-    <fieldset className="space-y-3">
-      <legend className="text-sm font-medium">{label}</legend>
-      <p className="-mt-2 text-xs text-muted-foreground">{description}</p>
-
-      <div className="grid grid-cols-2 gap-2">
-        {[
-          { label: "Yes", value: true },
-          { label: "No", value: false },
-        ].map((option) => {
-          const selected = value === option.value;
-
-          return (
-            <button
-              key={option.label}
-              type="button"
-              aria-pressed={selected}
-              onClick={() => onChange(option.value)}
-              className={cn(
-                "rounded-md px-3 py-2 text-sm font-medium transition",
-                selected
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-foreground hover:bg-secondary"
-              )}
-            >
-              {option.label}
-            </button>
-          );
-        })}
-      </div>
-    </fieldset>
-  );
 }
 
 export function ExitFeedbackPanel({
@@ -145,110 +49,20 @@ export function ExitFeedbackPanel({
     mentorshipId,
   });
   const initiateExit = useMutation(api.exitFeedback.initiate);
-  const submitExitFeedback = useMutation(api.exitFeedback.submit);
-
   const [confirmEndOpen, setConfirmEndOpen] = useState(false);
-  const [formOpen, setFormOpen] = useState(false);
-  const [reason, setReason] = useState("");
-  const [overallRating, setOverallRating] = useState<Rating | null>(null);
-  const [goalsAchieved, setGoalsAchieved] = useState<boolean | null>(null);
-  const [wouldRecommend, setWouldRecommend] = useState<boolean | null>(null);
-  const [highlights, setHighlights] = useState("");
-  const [improvements, setImprovements] = useState("");
-  const [additionalComments, setAdditionalComments] = useState("");
   const [isInitiating, setIsInitiating] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [initiateError, setInitiateError] = useState<string | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
 
-  const feedback = feedbackState?.feedback;
-  const listPath =
-    role === "mentor" ? "/mentor/mentorships" : "/mentorships";
-  const isPending = feedback?.status === "pending";
-  const isSubmitted = feedback?.status === "submitted";
-
-  // FR: mentee (and mentor) should be "immediately asked to fill in exit
-  // feedback" once it's due, rather than needing to notice a badge.
-  //
-  // This must run before any early return (e.g. the loading state below),
-  // otherwise this hook is skipped on the first render and called on
-  // later renders, which changes the number/order of Hooks called by this
-  // component and breaks React's Rules of Hooks.
-  useEffect(() => {
-    if (isPending) {
-      setFormOpen(true);
-    }
-  }, [isPending]);
-
-  // FR: "After agreeing to the irreversible [warning], they would have to
-  // fill in the exit feedback immediately." Ending the mentorship and
-  // opening the exit survey happen back to back for the mentor.
   async function handleConfirmEnd() {
     setIsInitiating(true);
     setInitiateError(null);
 
     try {
       await initiateExit({ mentorshipId });
-      setConfirmEndOpen(false);
-      setFormOpen(true);
+      router.replace("/exit-feedback");
     } catch (error) {
       setInitiateError(getErrorMessage(error));
-    } finally {
       setIsInitiating(false);
-    }
-  }
-
-  async function handleSubmit() {
-    if (!feedback || feedback.status !== "pending") {
-      return;
-    }
-
-    const cleanReason = reason.trim();
-    if (!cleanReason) {
-      setFormError("Please share your reason for ending the mentorship.");
-      return;
-    }
-
-    if (overallRating === null) {
-      setFormError("Please select an overall rating from 1 to 5.");
-      return;
-    }
-
-    if (goalsAchieved === null) {
-      setFormError("Please indicate whether your goals were achieved.");
-      return;
-    }
-
-    if (wouldRecommend === null) {
-      setFormError("Please indicate whether you would recommend the programme.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setFormError(null);
-
-    try {
-      const result = await submitExitFeedback({
-        feedbackId: feedback._id,
-        reason: cleanReason,
-        overallRating,
-        goalsAchieved,
-        wouldRecommend,
-        highlights: optionalText(highlights),
-        improvements: optionalText(improvements),
-        additionalComments: optionalText(additionalComments),
-      });
-
-      if (result.mentorshipCompleted) {
-        router.replace(listPath);
-        return;
-      }
-
-      setFormOpen(false);
-    } catch (error) {
-      setFormError(getErrorMessage(error));
-    } finally {
-      setIsSubmitting(false);
     }
   }
 
@@ -262,6 +76,10 @@ export function ExitFeedbackPanel({
       </Card>
     );
   }
+
+  const feedback = feedbackState.feedback;
+  const isPending = feedback?.status === "pending";
+  const isSubmitted = feedback?.status === "submitted";
 
   return (
     <Card className="overflow-hidden border-primary/10">
@@ -278,7 +96,6 @@ export function ExitFeedbackPanel({
               Close the mentorship thoughtfully and help improve the programme.
             </CardDescription>
           </div>
-
           {isPending ? <Badge variant="secondary">Action needed</Badge> : null}
           {isSubmitted ? <Badge variant="default">Submitted</Badge> : null}
         </div>
@@ -295,86 +112,82 @@ export function ExitFeedbackPanel({
         </div>
 
         {!feedback ? (
-          <div className="space-y-4">
-            {role === "mentor" ? (
-              <>
-                <div>
-                  <p className="font-medium">Ready to end this mentorship?</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Ending the mentorship creates a separate exit survey for
-                    both of you. You&apos;ll fill in yours right away, and
-                    your mentee will be notified to fill in theirs.
-                  </p>
-                </div>
+          role === "mentor" ? (
+            <div className="space-y-4">
+              <div>
+                <p className="font-medium">Ready to end this mentorship?</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  The mentorship will end immediately. Separate compulsory exit
+                  surveys will be assigned to both of you, and your mentee will
+                  be notified.
+                </p>
+              </div>
 
-                {initiateError ? (
-                  <Alert variant="destructive">
-                    <AlertDescription>{initiateError}</AlertDescription>
-                  </Alert>
-                ) : null}
+              {initiateError ? (
+                <Alert variant="destructive">
+                  <AlertDescription>{initiateError}</AlertDescription>
+                </Alert>
+              ) : null}
 
-                <Button
-                  type="button"
-                  variant="destructive"
-                  disabled={isInitiating}
-                  onClick={() => setConfirmEndOpen(true)}
-                >
-                  End mentorship
-                </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={isInitiating}
+                onClick={() => setConfirmEndOpen(true)}
+              >
+                End mentorship
+              </Button>
 
-                <Dialog
-                  open={confirmEndOpen}
-                  onOpenChange={(nextOpen) => {
-                    if (!isInitiating) setConfirmEndOpen(nextOpen);
-                  }}
-                >
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>End this mentorship?</DialogTitle>
-                      <DialogDescription>
-                        This action is irreversible. Once you end the
-                        mentorship, you&apos;ll be asked to fill in your exit
-                        feedback immediately, and your mentee will be notified
-                        to do the same.
-                      </DialogDescription>
-                    </DialogHeader>
-                    {initiateError ? (
-                      <Alert variant="destructive">
-                        <AlertDescription>{initiateError}</AlertDescription>
-                      </Alert>
-                    ) : null}
-                    <DialogFooter>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        disabled={isInitiating}
-                        onClick={() => setConfirmEndOpen(false)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        disabled={isInitiating}
-                        onClick={handleConfirmEnd}
-                      >
-                        {isInitiating ? (
-                          <Loader2 className="size-4 animate-spin" />
-                        ) : null}
-                        Yes, end mentorship
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Your mentor can end this mentorship when it concludes.
-                You&apos;ll be notified here as soon as they do, and asked to
-                complete your own independent exit survey.
-              </p>
-            )}
-          </div>
+              <Dialog
+                open={confirmEndOpen}
+                onOpenChange={(nextOpen) => {
+                  if (!isInitiating) setConfirmEndOpen(nextOpen);
+                }}
+              >
+                <DialogContent showCloseButton={!isInitiating}>
+                  <DialogHeader>
+                    <DialogTitle>End this mentorship?</DialogTitle>
+                    <DialogDescription>
+                      This action is irreversible. The mentorship will stop
+                      being active immediately, and both participants must
+                      complete exit feedback before using the rest of the app.
+                    </DialogDescription>
+                  </DialogHeader>
+                  {initiateError ? (
+                    <Alert variant="destructive">
+                      <AlertDescription>{initiateError}</AlertDescription>
+                    </Alert>
+                  ) : null}
+                  <DialogFooter>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={isInitiating}
+                      onClick={() => setConfirmEndOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      disabled={isInitiating}
+                      onClick={handleConfirmEnd}
+                    >
+                      {isInitiating ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : null}
+                      Yes, end mentorship
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Your mentor can end this mentorship when it concludes. You will
+              be notified and required to complete an independent exit survey.
+            </p>
+          )
         ) : null}
 
         {isPending ? (
@@ -385,145 +198,12 @@ export function ExitFeedbackPanel({
                 Please submit by {formatDate(feedback.dueAt)}.
               </p>
             </div>
-
-            <Dialog
-              open={formOpen}
-              onOpenChange={(nextOpen) => {
-                if (!isSubmitting) {
-                  setFormOpen(nextOpen);
-                  setFormError(null);
-                }
-              }}
+            <Button
+              type="button"
+              onClick={() => router.replace("/exit-feedback")}
             >
-              <DialogTrigger asChild>
-                <Button type="button">Complete exit survey</Button>
-              </DialogTrigger>
-
-              <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Share your exit feedback</DialogTitle>
-                  <DialogDescription>
-                    Your response is independent and visible to authorised
-                    programme admins, not the other participant.
-                  </DialogDescription>
-                </DialogHeader>
-
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="exit-reason">
-                      Reason for ending the mentorship
-                    </Label>
-                    <Textarea
-                      id="exit-reason"
-                      value={reason}
-                      onChange={(event) => setReason(event.target.value)}
-                      placeholder="Tell us why the mentorship is ending..."
-                      rows={4}
-                      maxLength={1000}
-                      required
-                    />
-                    <p className="text-right text-xs text-muted-foreground">
-                      {reason.length}/1000
-                    </p>
-                  </div>
-
-                  <RatingField
-                    value={overallRating}
-                    onChange={setOverallRating}
-                  />
-
-                  <div className="grid gap-6 sm:grid-cols-2">
-                    <BooleanChoice
-                      label="Were your goals achieved?"
-                      description="Consider the goals agreed during this mentorship."
-                      value={goalsAchieved}
-                      onChange={setGoalsAchieved}
-                    />
-
-                    <BooleanChoice
-                      label="Would you recommend the programme?"
-                      description="Tell us whether you would recommend this experience."
-                      value={wouldRecommend}
-                      onChange={setWouldRecommend}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="exit-highlights">
-                      Highlights{" "}
-                      <span className="text-muted-foreground">(optional)</span>
-                    </Label>
-                    <Textarea
-                      id="exit-highlights"
-                      value={highlights}
-                      onChange={(event) => setHighlights(event.target.value)}
-                      placeholder="What worked especially well?"
-                      rows={3}
-                      maxLength={2000}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="exit-improvements">
-                      Improvements{" "}
-                      <span className="text-muted-foreground">(optional)</span>
-                    </Label>
-                    <Textarea
-                      id="exit-improvements"
-                      value={improvements}
-                      onChange={(event) => setImprovements(event.target.value)}
-                      placeholder="What could have made the experience better?"
-                      rows={3}
-                      maxLength={2000}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="exit-comments">
-                      Additional comments{" "}
-                      <span className="text-muted-foreground">(optional)</span>
-                    </Label>
-                    <Textarea
-                      id="exit-comments"
-                      value={additionalComments}
-                      onChange={(event) =>
-                        setAdditionalComments(event.target.value)
-                      }
-                      placeholder="Anything else the programme team should know?"
-                      rows={3}
-                      maxLength={2000}
-                    />
-                  </div>
-
-                  {formError ? (
-                    <Alert variant="destructive">
-                      <AlertDescription>{formError}</AlertDescription>
-                    </Alert>
-                  ) : null}
-                </div>
-
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={isSubmitting}
-                    onClick={() => setFormOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="button"
-                    disabled={isSubmitting}
-                    onClick={handleSubmit}
-                  >
-                    {isSubmitting ? (
-                      <Loader2 className="size-4 animate-spin" />
-                    ) : null}
-                    Submit feedback
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+              Complete exit survey
+            </Button>
           </div>
         ) : null}
 
@@ -533,12 +213,7 @@ export function ExitFeedbackPanel({
             <div>
               <p className="font-medium">Your feedback has been submitted</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Submitted{" "}
-                {feedback.submittedAt
-                  ? formatDate(feedback.submittedAt)
-                  : "successfully"}
-                . The mentorship will close when the other participant submits
-                their independent response.
+                Submitted {feedback.submittedAt ? formatDate(feedback.submittedAt) : "successfully"}.
               </p>
             </div>
           </div>
