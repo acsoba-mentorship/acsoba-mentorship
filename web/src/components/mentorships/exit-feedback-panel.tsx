@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import {
@@ -147,6 +147,7 @@ export function ExitFeedbackPanel({
   const initiateExit = useMutation(api.exitFeedback.initiate);
   const submitExitFeedback = useMutation(api.exitFeedback.submit);
 
+  const [confirmEndOpen, setConfirmEndOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [overallRating, setOverallRating] = useState<Rating | null>(null);
@@ -163,13 +164,33 @@ export function ExitFeedbackPanel({
   const feedback = feedbackState?.feedback;
   const listPath =
     role === "mentor" ? "/mentor/mentorships" : "/mentorships";
+  const isPending = feedback?.status === "pending";
+  const isSubmitted = feedback?.status === "submitted";
 
-  async function handleInitiate() {
+  // FR: mentee (and mentor) should be "immediately asked to fill in exit
+  // feedback" once it's due, rather than needing to notice a badge.
+  //
+  // This must run before any early return (e.g. the loading state below),
+  // otherwise this hook is skipped on the first render and called on
+  // later renders, which changes the number/order of Hooks called by this
+  // component and breaks React's Rules of Hooks.
+  useEffect(() => {
+    if (isPending) {
+      setFormOpen(true);
+    }
+  }, [isPending]);
+
+  // FR: "After agreeing to the irreversible [warning], they would have to
+  // fill in the exit feedback immediately." Ending the mentorship and
+  // opening the exit survey happen back to back for the mentor.
+  async function handleConfirmEnd() {
     setIsInitiating(true);
     setInitiateError(null);
 
     try {
       await initiateExit({ mentorshipId });
+      setConfirmEndOpen(false);
+      setFormOpen(true);
     } catch (error) {
       setInitiateError(getErrorMessage(error));
     } finally {
@@ -242,9 +263,6 @@ export function ExitFeedbackPanel({
     );
   }
 
-  const isPending = feedback?.status === "pending";
-  const isSubmitted = feedback?.status === "submitted";
-
   return (
     <Card className="overflow-hidden border-primary/10">
       <CardHeader>
@@ -278,32 +296,84 @@ export function ExitFeedbackPanel({
 
         {!feedback ? (
           <div className="space-y-4">
-            <div>
-              <p className="font-medium">Ready to end this mentorship?</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Starting the exit process creates a separate survey for both
-                participants. The relationship closes after both responses are
-                submitted.
+            {role === "mentor" ? (
+              <>
+                <div>
+                  <p className="font-medium">Ready to end this mentorship?</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Ending the mentorship creates a separate exit survey for
+                    both of you. You&apos;ll fill in yours right away, and
+                    your mentee will be notified to fill in theirs.
+                  </p>
+                </div>
+
+                {initiateError ? (
+                  <Alert variant="destructive">
+                    <AlertDescription>{initiateError}</AlertDescription>
+                  </Alert>
+                ) : null}
+
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={isInitiating}
+                  onClick={() => setConfirmEndOpen(true)}
+                >
+                  End mentorship
+                </Button>
+
+                <Dialog
+                  open={confirmEndOpen}
+                  onOpenChange={(nextOpen) => {
+                    if (!isInitiating) setConfirmEndOpen(nextOpen);
+                  }}
+                >
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>End this mentorship?</DialogTitle>
+                      <DialogDescription>
+                        This action is irreversible. Once you end the
+                        mentorship, you&apos;ll be asked to fill in your exit
+                        feedback immediately, and your mentee will be notified
+                        to do the same.
+                      </DialogDescription>
+                    </DialogHeader>
+                    {initiateError ? (
+                      <Alert variant="destructive">
+                        <AlertDescription>{initiateError}</AlertDescription>
+                      </Alert>
+                    ) : null}
+                    <DialogFooter>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={isInitiating}
+                        onClick={() => setConfirmEndOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        disabled={isInitiating}
+                        onClick={handleConfirmEnd}
+                      >
+                        {isInitiating ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : null}
+                        Yes, end mentorship
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Your mentor can end this mentorship when it concludes.
+                You&apos;ll be notified here as soon as they do, and asked to
+                complete your own independent exit survey.
               </p>
-            </div>
-
-            {initiateError ? (
-              <Alert variant="destructive">
-                <AlertDescription>{initiateError}</AlertDescription>
-              </Alert>
-            ) : null}
-
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isInitiating}
-              onClick={handleInitiate}
-            >
-              {isInitiating ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : null}
-              Start exit process
-            </Button>
+            )}
           </div>
         ) : null}
 

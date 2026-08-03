@@ -93,17 +93,16 @@ async function createFeedbackIfMissing(
     updatedAt: now,
   });
 
-  await createNotification(ctx, {
-    userId: respondentId,
-    type: "exit_feedback_due",
-    title: "Exit feedback requested",
-    message:
-      "Please complete your independent exit survey so the programme team can learn from this mentorship.",
-    href:
-      respondentRole === "mentor"
-        ? `/mentor/mentorships/${mentorship._id}`
-        : `/mentorships/${mentorship._id}`,
-  });
+  if (respondentRole === "mentor") {
+    await createNotification(ctx, {
+      userId: respondentId,
+      type: "exit_feedback_due",
+      title: "Exit feedback requested",
+      message:
+        "Please complete your independent exit survey so the programme team can learn from this mentorship.",
+      href: `/mentor/mentorships/${mentorship._id}`,
+    });
+  }
 
   return feedbackId;
 }
@@ -146,11 +145,24 @@ export async function listPendingMine(ctx: QueryCtx) {
     .collect();
 }
 
+/**
+ * FR: "only mentors should be allowed to end the mentorship" - this
+ * avoids the mentor and mentee racing to independently start the exit
+ * process. Ending immediately queues an independent exit survey for
+ * both participants; the mentee is notified their mentor ended the
+ * mentorship and asked to complete their survey right away.
+ */
 export async function initiate(
   ctx: MutationCtx,
   { mentorshipId }: { mentorshipId: Id<"mentorships"> }
 ) {
-  const { user, mentorship } = await getAuthorizedMentorship(ctx, mentorshipId);
+  const { user, mentorship, role } = await getAuthorizedMentorship(
+    ctx,
+    mentorshipId
+  );
+  if (role !== "mentor") {
+    throw new Error("Only the mentor can end a mentorship");
+  }
   if (mentorship.status !== "active") {
     throw new Error("Only an active mentorship can enter the exit process");
   }
@@ -179,6 +191,15 @@ export async function initiate(
     respondentRole: "mentee",
     dueAt,
     now,
+  });
+
+  await createNotification(ctx, {
+    userId: mentorship.menteeId,
+    type: "exit_feedback_due",
+    title: "Your mentor has ended the mentorship",
+    message:
+      "Your mentor has ended this mentorship. Please complete your independent exit survey now.",
+    href: `/mentorships/${mentorship._id}`,
   });
 
   return mentorship._id;
