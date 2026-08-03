@@ -25,10 +25,14 @@ function SuspendedAccountNotice({ reason }: { reason: string | null }) {
         Your account has been temporarily suspended
       </h1>
       <p className="max-w-md text-sm text-muted-foreground">
-        {reason
-          ? reason
-          : "An administrator has temporarily suspended your account. Contact ACSOBA support if you believe this is a mistake."}
+        An administrator has temporarily suspended your account. Contact
+        ACS OBA support if you believe this is a mistake.
       </p>
+      {reason && (
+        <p className="max-w-md text-sm text-muted-foreground">
+          Reason given: {reason}
+        </p>
+      )}
       <Button
         variant="outline"
         onClick={() =>
