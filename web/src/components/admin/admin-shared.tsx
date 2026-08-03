@@ -187,34 +187,37 @@ function slugifyForFilename(value: string) {
     value
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "") || "response"
+      .replace(/(^-|-$)/g, "") || "responses"
   );
 }
 
-/**
- * Builds a plain-text file from a set of labelled fields, e.g. the full
- * detail of a pulse response, incident report, or exit feedback entry, so
- * admins have an offline record of it.
- */
-export function buildResponseFileContents(
-  title: string,
-  fields: Array<[label: string, value: string | number | null | undefined]>
-) {
-  const lines = [title, "=".repeat(title.length), ""];
-  for (const [label, value] of fields) {
-    lines.push(`${label}:`);
-    lines.push(
-      value === null || value === undefined || value === ""
-        ? "—"
-        : String(value)
-    );
-    lines.push("");
+function escapeCsvValue(value: string | number | boolean | null | undefined) {
+  const stringValue =
+    value === null || value === undefined ? "" : String(value);
+  if (/["\n,]/.test(stringValue)) {
+    return `"${stringValue.replace(/"/g, '""')}"`;
   }
+  return stringValue;
+}
+
+/**
+ * Builds CSV text from a list of column headers and rows, e.g. every
+ * pulse survey, incident report, or exit feedback response, so admins can
+ * open the whole set in a spreadsheet rather than one entry at a time.
+ */
+export function buildResponsesCsv(
+  headers: string[],
+  rows: Array<Array<string | number | boolean | null | undefined>>
+) {
+  const lines = [
+    headers.map(escapeCsvValue).join(","),
+    ...rows.map((row) => row.map(escapeCsvValue).join(",")),
+  ];
   return lines.join("\n");
 }
 
-function downloadTextFile(filename: string, contents: string) {
-  const blob = new Blob([contents], { type: "text/plain;charset=utf-8" });
+function downloadTextFile(filename: string, contents: string, mimeType: string) {
+  const blob = new Blob([contents], { type: `${mimeType};charset=utf-8` });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -226,34 +229,35 @@ function downloadTextFile(filename: string, contents: string) {
 }
 
 /**
- * FR: admins should be able to download the file detailing a pulse
- * response, incident review, or exit feedback entry. Since these
- * responses are structured text rather than uploaded files, this renders
- * them into a downloadable plain-text record.
+ * FR: "provide a button which downloads all responses" (pulse surveys,
+ * incident reviews, exit feedback) as a single CSV, rather than one file
+ * per response.
  */
-export function DownloadResponseButton({
+export function DownloadAllResponsesButton({
   filenamePrefix,
-  title,
-  fields,
+  headers,
+  rows,
 }: {
   filenamePrefix: string;
-  title: string;
-  fields: Array<[label: string, value: string | number | null | undefined]>;
+  headers: string[];
+  rows: Array<Array<string | number | boolean | null | undefined>>;
 }) {
   return (
     <Button
       type="button"
       variant="outline"
       size="sm"
+      disabled={rows.length === 0}
       onClick={() =>
         downloadTextFile(
-          `${slugifyForFilename(filenamePrefix)}.txt`,
-          buildResponseFileContents(title, fields)
+          `${slugifyForFilename(filenamePrefix)}.csv`,
+          buildResponsesCsv(headers, rows),
+          "text/csv"
         )
       }
     >
       <Download />
-      Download
+      Download all ({rows.length})
     </Button>
   );
 }

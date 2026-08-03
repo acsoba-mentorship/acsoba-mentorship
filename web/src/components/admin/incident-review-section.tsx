@@ -22,7 +22,7 @@ import {
   AdminSectionLoading,
   AdminStatusBadge,
   AdminSuccess,
-  DownloadResponseButton,
+  DownloadAllResponsesButton,
   formatAdminDate,
   formatAdminDateTime,
   formatAdminLabel,
@@ -136,25 +136,6 @@ function IncidentCard({ report }: { report: IncidentReport }) {
                   : "Reporter"}
               </p>
             </div>
-            <DownloadResponseButton
-              filenamePrefix={`incident-report-${report._id}`}
-              title="Incident report"
-              fields={[
-                ["Category", formatAdminLabel(report.category)],
-                ["Severity", formatAdminLabel(report.severity)],
-                ["Status", formatAdminLabel(report.status)],
-                ["Reporter", report.reporterName],
-                ["Reporter role", report.reporterRole ? formatAdminLabel(report.reporterRole) : null],
-                ["Reported person", report.reportedUserName],
-                ["Incident date", formatAdminDate(report.occurredAt ?? report.createdAt)],
-                ["Contact permitted", report.allowContact ? "Yes" : "No"],
-                ["Reporter email", report.allowContact ? report.reporterEmail : null],
-                ["Description", report.description],
-                ["Administrator notes", report.adminNotes],
-                ["Submitted", formatAdminDateTime(report.createdAt)],
-                ["Resolved", report.resolvedAt ? formatAdminDate(report.resolvedAt) : null],
-              ]}
-            />
           </div>
         </div>
       </CardHeader>
@@ -303,9 +284,44 @@ export function IncidentReviewSection() {
         title="Incident review"
         description="Review confidential reports, coordinate follow-up, and keep the reporter informed through controlled status updates."
         action={
-          <AdminStatusBadge tone={openCount > 0 ? "danger" : "success"}>
-            {openCount} active case{openCount === 1 ? "" : "s"}
-          </AdminStatusBadge>
+          <div className="flex flex-wrap items-center gap-2">
+            <AdminStatusBadge tone={openCount > 0 ? "danger" : "success"}>
+              {openCount} active case{openCount === 1 ? "" : "s"}
+            </AdminStatusBadge>
+            <DownloadAllResponsesButton
+              filenamePrefix="incident-reports"
+              headers={[
+                "Category",
+                "Severity",
+                "Status",
+                "Reporter",
+                "Reporter role",
+                "Reported person",
+                "Incident date",
+                "Contact permitted",
+                "Reporter email",
+                "Description",
+                "Administrator notes",
+                "Submitted",
+                "Resolved",
+              ]}
+              rows={reports.map((report) => [
+                formatAdminLabel(report.category),
+                formatAdminLabel(report.severity),
+                formatAdminLabel(report.status),
+                report.reporterName,
+                report.reporterRole ? formatAdminLabel(report.reporterRole) : null,
+                report.reportedUserName,
+                formatAdminDate(report.occurredAt ?? report.createdAt),
+                report.allowContact ? "Yes" : "No",
+                report.allowContact ? report.reporterEmail : null,
+                report.description,
+                report.adminNotes,
+                formatAdminDateTime(report.createdAt),
+                report.resolvedAt ? formatAdminDate(report.resolvedAt) : null,
+              ])}
+            />
+          </div>
         }
       />
 

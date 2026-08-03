@@ -10,7 +10,7 @@ import {
   AdminSectionHeader,
   AdminSectionLoading,
   AdminStatusBadge,
-  DownloadResponseButton,
+  DownloadAllResponsesButton,
   formatAdminDate,
   formatAdminLabel,
 } from "@/components/admin/admin-shared";
@@ -114,12 +114,43 @@ export function PulseSurveysSection() {
           />
         ) : (
           <>
-            <CardHeader className="border-b py-5">
-              <CardTitle className="text-lg">Response register</CardTitle>
-              <CardDescription>
-                Ratings use a five-point scale. Comments may contain sensitive
-                programme feedback.
-              </CardDescription>
+            <CardHeader className="flex-row items-start justify-between gap-4 border-b py-5 space-y-0">
+              <div>
+                <CardTitle className="text-lg">Response register</CardTitle>
+                <CardDescription>
+                  Ratings use a five-point scale. Comments may contain sensitive
+                  programme feedback.
+                </CardDescription>
+              </div>
+              <DownloadAllResponsesButton
+                filenamePrefix="pulse-survey-responses"
+                headers={[
+                  "Respondent",
+                  "Respondent role",
+                  "Counterpart",
+                  "Counterpart role",
+                  "Cycle",
+                  "Relationship rating",
+                  "Communication rating",
+                  "Progress rating",
+                  "Support requested",
+                  "Comments",
+                  "Submitted",
+                ]}
+                rows={surveys.map((survey) => [
+                  survey.respondentName,
+                  formatAdminLabel(survey.respondentRole),
+                  survey.counterpartName,
+                  formatAdminLabel(survey.counterpartRole),
+                  survey.cycleNumber,
+                  survey.relationshipRating,
+                  survey.communicationRating,
+                  survey.progressRating,
+                  survey.needsSupport ? "Yes" : "No",
+                  survey.comments,
+                  formatAdminDate(survey.submittedAt),
+                ])}
+              />
             </CardHeader>
             <CardContent className="p-0">
               <Table>
@@ -133,8 +164,7 @@ export function PulseSurveysSection() {
                     <TableHead>Progress</TableHead>
                     <TableHead>Support</TableHead>
                     <TableHead className="min-w-72">Comments</TableHead>
-                    <TableHead>Submitted</TableHead>
-                    <TableHead className="pr-5">Details</TableHead>
+                    <TableHead className="pr-5">Submitted</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -186,25 +216,8 @@ export function PulseSurveysSection() {
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        {formatAdminDate(survey.submittedAt)}
-                      </TableCell>
                       <TableCell className="pr-5">
-                        <DownloadResponseButton
-                          filenamePrefix={`pulse-survey-${survey.respondentName}-cycle-${survey.cycleNumber}`}
-                          title="Pulse survey response"
-                          fields={[
-                            ["Respondent", `${survey.respondentName} (${formatAdminLabel(survey.respondentRole)})`],
-                            ["Counterpart", `${survey.counterpartName} (${formatAdminLabel(survey.counterpartRole)})`],
-                            ["Cycle", survey.cycleNumber],
-                            ["Relationship rating", survey.relationshipRating],
-                            ["Communication rating", survey.communicationRating],
-                            ["Progress rating", survey.progressRating],
-                            ["Support requested", survey.needsSupport ? "Yes" : "No"],
-                            ["Comments", survey.comments],
-                            ["Submitted", formatAdminDate(survey.submittedAt)],
-                          ]}
-                        />
+                        {formatAdminDate(survey.submittedAt)}
                       </TableCell>
                     </TableRow>
                   ))}
