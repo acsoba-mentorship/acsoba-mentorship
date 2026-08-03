@@ -125,11 +125,22 @@ function AuditLogDetailDialog({
 }
 
 export function AuditLogSection() {
-  const [search, setSearch] = useState("");
+  // FR: "wait until the user fully type what they want to search, and give
+  // a search icon for the user to finalise what they are searching for."
+  // `searchInput` tracks what's typed; `committedSearch` is only updated on
+  // submit (Enter or the search button), so the (relatively expensive,
+  // full-table-scanning) audit log query doesn't re-run on every keystroke.
+  const [searchInput, setSearchInput] = useState("");
+  const [committedSearch, setCommittedSearch] = useState("");
   const [selectedLog, setSelectedLog] = useState<AuditLogEntry | null>(null);
   const logs = useQuery(api.admin.listAuditLog, {
-    search: search.trim() || undefined,
+    search: committedSearch.trim() || undefined,
   });
+
+  const handleSearchSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    setCommittedSearch(searchInput);
+  };
 
   if (logs === undefined) {
     return <AdminSectionLoading />;
@@ -148,15 +159,20 @@ export function AuditLogSection() {
         }
       />
 
-      <div className="relative max-w-sm">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search by event, administrator, target, or reason..."
-          className="pl-9"
-        />
-      </div>
+      <form onSubmit={handleSearchSubmit} className="flex max-w-sm gap-2">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+            placeholder="Search by event, administrator, target, or reason..."
+            className="pl-9"
+          />
+        </div>
+        <Button type="submit" variant="outline" size="icon" aria-label="Search audit log">
+          <Search />
+        </Button>
+      </form>
 
       <Card className="overflow-hidden py-0">
         {logs.length === 0 ? (
