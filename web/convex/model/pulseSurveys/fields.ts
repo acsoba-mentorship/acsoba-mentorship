@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { formAnswerValidator } from "../formQuestions/fields";
 
 export const pulseSurveyRespondentRoleValidator = v.union(
   v.literal("mentor"),
@@ -25,6 +26,7 @@ export const mentorshipPulseSurveysTableFields = {
   progressRating: v.optional(v.number()),
   needsSupport: v.optional(v.boolean()),
   comments: v.optional(v.string()),
+  answers: v.optional(v.array(formAnswerValidator)),
   submittedAt: v.optional(v.number()),
 
   createdAt: v.number(),

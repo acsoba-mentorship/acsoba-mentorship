@@ -7,6 +7,10 @@ import {
 import { fetchUsersById } from "./helper";
 import { getEffectiveProgramSettings } from "./programSettings";
 import { createNotification } from "./notifications";
+import {
+  type FormAnswerInput,
+  validateAndSnapshotAnswers,
+} from "./formQuestions";
 
 type Ctx = QueryCtx | MutationCtx;
 
@@ -61,28 +65,6 @@ async function getAuthorizedMentorship(
   }
 
   return { currentUser, mentorship, role };
-}
-
-function normalizeRating(value: number, fieldName: string) {
-  if (!Number.isInteger(value) || value < 1 || value > 5) {
-    throw new Error(`${fieldName} must be a whole number from 1 to 5`);
-  }
-
-  return value;
-}
-
-function normalizeOptionalComments(comments?: string) {
-  const trimmed = comments?.trim();
-
-  if (!trimmed) {
-    return undefined;
-  }
-
-  if (trimmed.length > 1000) {
-    throw new Error("Comments must be 1000 characters or fewer");
-  }
-
-  return trimmed;
 }
 
 function buildPulseSurveyView({
@@ -199,18 +181,10 @@ export async function submitPulseSurvey(
   ctx: MutationCtx,
   {
     surveyId,
-    relationshipRating,
-    communicationRating,
-    progressRating,
-    needsSupport,
-    comments,
+    answers,
   }: {
     surveyId: Id<"mentorshipPulseSurveys">;
-    relationshipRating: number;
-    communicationRating: number;
-    progressRating: number;
-    needsSupport: boolean;
-    comments?: string;
+    answers: FormAnswerInput[];
   }
 ) {
   const currentUser = requireOnboardingComplete(await getAuthenticatedUser(ctx));
@@ -236,20 +210,15 @@ export async function submitPulseSurvey(
   }
 
   const now = Date.now();
+  const validatedAnswers = await validateAndSnapshotAnswers(
+    ctx,
+    "pulse_survey",
+    answers
+  );
 
   await ctx.db.patch("mentorshipPulseSurveys", survey._id, {
     status: "submitted",
-    relationshipRating: normalizeRating(
-      relationshipRating,
-      "Relationship rating"
-    ),
-    communicationRating: normalizeRating(
-      communicationRating,
-      "Communication rating"
-    ),
-    progressRating: normalizeRating(progressRating, "Progress rating"),
-    needsSupport,
-    comments: normalizeOptionalComments(comments),
+    answers: validatedAnswers,
     submittedAt: now,
     updatedAt: now,
   });

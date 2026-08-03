@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { formAnswerValidator } from "../formQuestions/fields";
 
 export const exitFeedbackRespondentRoleValidator = v.union(
   v.literal("mentor"),
@@ -25,6 +26,7 @@ export const exitFeedbackTableFields = {
   highlights: v.optional(v.string()),
   improvements: v.optional(v.string()),
   additionalComments: v.optional(v.string()),
+  answers: v.optional(v.array(formAnswerValidator)),
   submittedAt: v.optional(v.number()),
   createdAt: v.number(),
   updatedAt: v.number(),

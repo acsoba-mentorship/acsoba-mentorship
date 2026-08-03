@@ -2,9 +2,7 @@ import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import type { Infer } from "convex/values";
 import {
-  incidentCategoryValidator,
   incidentReporterRoleValidator,
-  incidentSeverityValidator,
   incidentStatusValidator,
 } from "./incidentReports/fields";
 import {
@@ -15,19 +13,12 @@ import {
 import { createNotification } from "./notifications";
 import { writeAdminAuditLog } from "./admin/audit";
 import { fetchUsersById } from "./helper";
+import {
+  type FormAnswerInput,
+  validateAndSnapshotAnswers,
+} from "./formQuestions";
 
 type ReporterRole = Infer<typeof incidentReporterRoleValidator>;
-
-function normalizeDescription(description: string) {
-  const value = description.trim();
-  if (value.length < 20) {
-    throw new Error("Please provide at least 20 characters of incident detail");
-  }
-  if (value.length > 5000) {
-    throw new Error("Incident description must be 5000 characters or fewer");
-  }
-  return value;
-}
 
 function clampLimit(limit?: number) {
   return Math.min(Math.max(Math.floor(limit ?? 100), 1), 200);
@@ -92,19 +83,11 @@ export async function submit(
   {
     reporterRole,
     mentorshipId,
-    category,
-    severity,
-    description,
-    occurredAt,
-    allowContact,
+    answers,
   }: {
     reporterRole: ReporterRole;
     mentorshipId?: Id<"mentorships">;
-    category: Infer<typeof incidentCategoryValidator>;
-    severity: Infer<typeof incidentSeverityValidator>;
-    description: string;
-    occurredAt?: number;
-    allowContact: boolean;
+    answers: FormAnswerInput[];
   }
 ) {
   const reporter = requireOnboardingComplete(await getAuthenticatedUser(ctx));
@@ -134,20 +117,53 @@ export async function submit(
   }
 
   const now = Date.now();
-  if (occurredAt && occurredAt > now) {
-    throw new Error("Incident date cannot be in the future");
-  }
+  const validatedAnswers = await validateAndSnapshotAnswers(
+    ctx,
+    "incident_report",
+    answers
+  );
+  const answerValue = (key: string) => {
+    const answer = validatedAnswers.find((item) => item.questionKey === key);
+    return answer && !Array.isArray(answer.value) ? answer.value : undefined;
+  };
+  const categoryByLabel = {
+    Misconduct: "misconduct",
+    Harassment: "harassment",
+    "Safety concern": "safety",
+    "Privacy concern": "privacy",
+    Other: "other",
+  } as const;
+  const severityByLabel = {
+    Low: "low",
+    Medium: "medium",
+    High: "high",
+    Urgent: "urgent",
+  } as const;
+  const categoryAnswer = answerValue("incident_category");
+  const severityAnswer = answerValue("incident_severity");
+  const dateAnswer = answerValue("incident_date");
+  const parsedOccurredAt = dateAnswer ? Date.parse(dateAnswer) : Number.NaN;
+  const occurredAt =
+    Number.isFinite(parsedOccurredAt) && parsedOccurredAt <= now
+      ? parsedOccurredAt
+      : undefined;
+  const allowContact = answerValue("incident_allow_contact") === "Yes";
 
   return ctx.db.insert("incidentReports", {
     reporterId: reporter._id,
     reporterRole,
     reportedUserId,
     mentorshipId,
-    category,
-    severity,
-    description: normalizeDescription(description),
+    category: categoryAnswer
+      ? categoryByLabel[categoryAnswer as keyof typeof categoryByLabel]
+      : undefined,
+    severity: severityAnswer
+      ? severityByLabel[severityAnswer as keyof typeof severityByLabel]
+      : undefined,
+    description: answerValue("incident_description"),
     occurredAt,
     allowContact,
+    answers: validatedAnswers,
     status: "open",
     createdAt: now,
     updatedAt: now,
@@ -167,8 +183,8 @@ export async function listMine(
 
   return reports.map((report) => ({
     _id: report._id,
-    category: report.category,
-    severity: report.severity,
+    category: report.category ?? null,
+    severity: report.severity ?? null,
     status: report.status,
     reporterRole: report.reporterRole ?? null,
     mentorshipId: report.mentorshipId ?? null,
@@ -214,11 +230,53 @@ export async function listForAdmin(
       reporterRole: report.reporterRole ?? null,
       reportedUserName: reportedUser?.name ?? null,
       mentorshipId: report.mentorshipId ?? null,
-      category: report.category,
-      severity: report.severity,
-      description: report.description,
+      category: report.category ?? null,
+      severity: report.severity ?? null,
+      description: report.description ?? null,
       occurredAt: report.occurredAt ?? null,
-      allowContact: report.allowContact,
+      allowContact: report.allowContact ?? false,
+      answers:
+        report.answers ??
+        [
+          report.category
+            ? {
+                questionKey: "incident_category",
+                prompt: "Which category best describes the incident?",
+                responseType: "single_choice" as const,
+                value: report.category,
+              }
+            : null,
+          report.severity
+            ? {
+                questionKey: "incident_severity",
+                prompt: "How urgent is this concern?",
+                responseType: "single_choice" as const,
+                value: report.severity,
+              }
+            : null,
+          report.occurredAt
+            ? {
+                questionKey: "incident_date",
+                prompt: "When did the incident occur?",
+                responseType: "short_text" as const,
+                value: new Date(report.occurredAt).toISOString().slice(0, 10),
+              }
+            : null,
+          report.description
+            ? {
+                questionKey: "incident_description",
+                prompt: "What happened?",
+                responseType: "long_text" as const,
+                value: report.description,
+              }
+            : null,
+          {
+            questionKey: "incident_allow_contact",
+            prompt: "May programme admins contact you about this report?",
+            responseType: "single_choice" as const,
+            value: report.allowContact ? "Yes" : "No",
+          },
+        ].filter((answer) => answer !== null),
       status: report.status,
       assignedAdminId: report.assignedAdminId ?? null,
       adminNotes: report.adminNotes ?? null,

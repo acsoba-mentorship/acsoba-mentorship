@@ -329,7 +329,13 @@ export async function getOverview(ctx: QueryCtx) {
   ]);
 
   const supportFlags = submittedPulse.filter(
-    (survey) => survey.needsSupport === true
+    (survey) =>
+      survey.needsSupport === true ||
+      survey.answers?.some(
+        (answer) =>
+          answer.questionKey === "pulse_needs_support" &&
+          answer.value === "Yes"
+      )
   ).length;
 
   return {
@@ -441,6 +447,50 @@ export async function listPulseSurveys(ctx: QueryCtx) {
       progressRating: survey.progressRating ?? null,
       needsSupport: survey.needsSupport ?? false,
       comments: survey.comments ?? null,
+      answers:
+        survey.answers ??
+        [
+          survey.relationshipRating !== undefined
+            ? {
+                questionKey: "pulse_relationship_rating",
+                prompt: "How healthy and useful is this mentorship relationship?",
+                responseType: "single_choice" as const,
+                value: String(survey.relationshipRating),
+              }
+            : null,
+          survey.communicationRating !== undefined
+            ? {
+                questionKey: "pulse_communication_rating",
+                prompt: "How effective and consistent is the communication?",
+                responseType: "single_choice" as const,
+                value: String(survey.communicationRating),
+              }
+            : null,
+          survey.progressRating !== undefined
+            ? {
+                questionKey: "pulse_progress_rating",
+                prompt: "How well is the mentorship progressing?",
+                responseType: "single_choice" as const,
+                value: String(survey.progressRating),
+              }
+            : null,
+          survey.needsSupport !== undefined
+            ? {
+                questionKey: "pulse_needs_support",
+                prompt: "Do you need programme admin support?",
+                responseType: "single_choice" as const,
+                value: survey.needsSupport ? "Yes" : "No",
+              }
+            : null,
+          survey.comments
+            ? {
+                questionKey: "pulse_comments",
+                prompt: "Comments",
+                responseType: "long_text" as const,
+                value: survey.comments,
+              }
+            : null,
+        ].filter((answer) => answer !== null),
       submittedAt: survey.submittedAt ?? null,
     };
   });

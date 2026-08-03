@@ -11,6 +11,7 @@
 import type * as admin from "../admin.js";
 import type * as crons from "../crons.js";
 import type * as exitFeedback from "../exitFeedback.js";
+import type * as formQuestions from "../formQuestions.js";
 import type * as helper from "../helper.js";
 import type * as incidentReports from "../incidentReports.js";
 import type * as init from "../init.js";
@@ -26,6 +27,8 @@ import type * as model_admin_fields from "../model/admin/fields.js";
 import type * as model_auth from "../model/auth.js";
 import type * as model_exitFeedback from "../model/exitFeedback.js";
 import type * as model_exitFeedback_fields from "../model/exitFeedback/fields.js";
+import type * as model_formQuestions from "../model/formQuestions.js";
+import type * as model_formQuestions_fields from "../model/formQuestions/fields.js";
 import type * as model_helper from "../model/helper.js";
 import type * as model_incidentReports from "../model/incidentReports.js";
 import type * as model_incidentReports_fields from "../model/incidentReports/fields.js";
@@ -67,6 +70,7 @@ declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   crons: typeof crons;
   exitFeedback: typeof exitFeedback;
+  formQuestions: typeof formQuestions;
   helper: typeof helper;
   incidentReports: typeof incidentReports;
   init: typeof init;
@@ -82,6 +86,8 @@ declare const fullApi: ApiFromModules<{
   "model/auth": typeof model_auth;
   "model/exitFeedback": typeof model_exitFeedback;
   "model/exitFeedback/fields": typeof model_exitFeedback_fields;
+  "model/formQuestions": typeof model_formQuestions;
+  "model/formQuestions/fields": typeof model_formQuestions_fields;
   "model/helper": typeof model_helper;
   "model/incidentReports": typeof model_incidentReports;
   "model/incidentReports/fields": typeof model_incidentReports_fields;

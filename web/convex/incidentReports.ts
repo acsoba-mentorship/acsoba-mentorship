@@ -2,21 +2,16 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import * as IncidentReportsModel from "./model/incidentReports";
 import {
-  incidentCategoryValidator,
   incidentReporterRoleValidator,
-  incidentSeverityValidator,
   incidentStatusValidator,
 } from "./model/incidentReports/fields";
+import { formAnswerInputValidator } from "./model/formQuestions/fields";
 
 export const submit = mutation({
   args: {
     reporterRole: incidentReporterRoleValidator,
     mentorshipId: v.optional(v.id("mentorships")),
-    category: incidentCategoryValidator,
-    severity: incidentSeverityValidator,
-    description: v.string(),
-    occurredAt: v.optional(v.number()),
-    allowContact: v.boolean(),
+    answers: v.array(formAnswerInputValidator),
   },
   handler: (ctx, args) => IncidentReportsModel.submit(ctx, args),
 });

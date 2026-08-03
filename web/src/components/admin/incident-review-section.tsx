@@ -6,7 +6,6 @@ import type { FunctionReturnType } from "convex/server";
 import {
   CalendarDays,
   Loader2,
-  LockKeyhole,
   Mail,
   Save,
   ShieldAlert,
@@ -45,6 +44,10 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import {
+  FormAnswerList,
+  formatStoredAnswer,
+} from "@/components/admin/form-answer-list";
 
 type IncidentReport =
   FunctionReturnType<typeof api.incidentReports.listForAdmin>[number];
@@ -113,15 +116,17 @@ function IncidentCard({ report }: { report: IncidentReport }) {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <AdminStatusBadge tone={severityTone(report.severity)}>
-                {formatAdminLabel(report.severity)} severity
-              </AdminStatusBadge>
+              {report.severity ? (
+                <AdminStatusBadge tone={severityTone(report.severity)}>
+                  {formatAdminLabel(report.severity)} severity
+                </AdminStatusBadge>
+              ) : null}
               <AdminStatusBadge tone={statusTone(report.status)}>
                 {formatAdminLabel(report.status)}
               </AdminStatusBadge>
             </div>
             <CardTitle className="mt-3 text-lg text-primary">
-              {formatAdminLabel(report.category)} report
+              {report.category ? `${formatAdminLabel(report.category)} report` : "Incident report"}
             </CardTitle>
             <CardDescription className="mt-1">
               Submitted {formatAdminDateTime(report.createdAt)}
@@ -185,13 +190,10 @@ function IncidentCard({ report }: { report: IncidentReport }) {
         </div>
 
         <div className="rounded-xl border border-red-100 bg-red-50/60 p-4">
-          <div className="flex items-center gap-2 text-xs font-bold tracking-wide text-red-900 uppercase">
-            <LockKeyhole className="size-4" />
-            Confidential incident detail
-          </div>
-          <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-red-950">
-            {report.description}
+          <p className="mb-4 text-xs font-bold tracking-wide text-red-900 uppercase">
+            Confidential incident answers
           </p>
+          <FormAnswerList answers={report.answers} />
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 border-t pt-5">
@@ -276,6 +278,13 @@ export function IncidentReviewSection() {
   const openCount = reports.filter(
     (report) => report.status === "open" || report.status === "in_review"
   ).length;
+  const answerColumns = [
+    ...new Map(
+      reports.flatMap((report) =>
+        report.answers.map((answer) => [answer.questionKey, answer.prompt] as const)
+      )
+    ).entries(),
+  ];
 
   return (
     <div className="space-y-7">
@@ -291,31 +300,26 @@ export function IncidentReviewSection() {
             <DownloadAllResponsesButton
               filenamePrefix="incident-reports"
               headers={[
-                "Category",
-                "Severity",
                 "Status",
                 "Reporter",
                 "Reporter role",
                 "Reported person",
-                "Incident date",
-                "Contact permitted",
                 "Reporter email",
-                "Description",
+                ...answerColumns.map(([, prompt]) => prompt),
                 "Administrator notes",
                 "Submitted",
                 "Resolved",
               ]}
               rows={reports.map((report) => [
-                formatAdminLabel(report.category),
-                formatAdminLabel(report.severity),
                 formatAdminLabel(report.status),
                 report.reporterName,
                 report.reporterRole ? formatAdminLabel(report.reporterRole) : null,
                 report.reportedUserName,
-                formatAdminDate(report.occurredAt ?? report.createdAt),
-                report.allowContact ? "Yes" : "No",
                 report.allowContact ? report.reporterEmail : null,
-                report.description,
+                ...answerColumns.map(([key]) => {
+                  const answer = report.answers.find((item) => item.questionKey === key);
+                  return answer ? formatStoredAnswer(answer.value) : null;
+                }),
                 report.adminNotes,
                 formatAdminDateTime(report.createdAt),
                 report.resolvedAt ? formatAdminDate(report.resolvedAt) : null,

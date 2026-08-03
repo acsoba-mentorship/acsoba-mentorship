@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { formAnswerValidator } from "../formQuestions/fields";
 
 export const incidentCategoryValidator = v.union(
   v.literal("misconduct"),
@@ -33,11 +34,12 @@ export const incidentReportsTableFields = {
   reporterRole: v.optional(incidentReporterRoleValidator),
   reportedUserId: v.optional(v.id("users")),
   mentorshipId: v.optional(v.id("mentorships")),
-  category: incidentCategoryValidator,
-  severity: incidentSeverityValidator,
-  description: v.string(),
+  category: v.optional(incidentCategoryValidator),
+  severity: v.optional(incidentSeverityValidator),
+  description: v.optional(v.string()),
   occurredAt: v.optional(v.number()),
-  allowContact: v.boolean(),
+  allowContact: v.optional(v.boolean()),
+  answers: v.optional(v.array(formAnswerValidator)),
   status: incidentStatusValidator,
   assignedAdminId: v.optional(v.id("users")),
   adminNotes: v.optional(v.string()),

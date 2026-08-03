@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
 import * as PulseSurveysModel from "./model/pulseSurveys";
+import { formAnswerInputValidator } from "./model/formQuestions/fields";
 
 export const listPendingForCurrentUser = query({
   args: {},
@@ -18,11 +19,7 @@ export const listPendingByMentorship = query({
 export const submitPulseSurvey = mutation({
   args: {
     surveyId: v.id("mentorshipPulseSurveys"),
-    relationshipRating: v.number(),
-    communicationRating: v.number(),
-    progressRating: v.number(),
-    needsSupport: v.boolean(),
-    comments: v.optional(v.string()),
+    answers: v.array(formAnswerInputValidator),
   },
   handler: (ctx, args) => PulseSurveysModel.submitPulseSurvey(ctx, args),
 });

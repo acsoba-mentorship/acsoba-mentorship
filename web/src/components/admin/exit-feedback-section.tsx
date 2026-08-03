@@ -1,17 +1,10 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import {
-  CheckCircle2,
-  MessageSquareQuote,
-  Star,
-  ThumbsUp,
-} from "lucide-react";
-
+import { MessageSquareQuote } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import {
   AdminEmptyState,
-  AdminRating,
   AdminSectionHeader,
   AdminSectionLoading,
   AdminStatusBadge,
@@ -20,6 +13,10 @@ import {
   formatAdminLabel,
 } from "@/components/admin/admin-shared";
 import {
+  FormAnswerList,
+  formatStoredAnswer,
+} from "@/components/admin/form-answer-list";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -27,39 +24,24 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-function percentage(count: number, total: number) {
-  return total === 0 ? 0 : Math.round((count / total) * 100);
-}
-
 export function ExitFeedbackSection() {
   const feedback = useQuery(api.exitFeedback.listForAdmin);
+  if (feedback === undefined) return <AdminSectionLoading />;
 
-  if (feedback === undefined) {
-    return <AdminSectionLoading />;
-  }
-
-  const ratings = feedback
-    .map((item) => item.overallRating)
-    .filter((rating): rating is number => rating !== null);
-  const averageRating =
-    ratings.length > 0
-      ? (
-          ratings.reduce((total, rating) => total + rating, 0) / ratings.length
-        ).toFixed(1)
-      : "—";
-  const recommendCount = feedback.filter(
-    (item) => item.wouldRecommend === true
-  ).length;
-  const goalsCount = feedback.filter(
-    (item) => item.goalsAchieved === true
-  ).length;
+  const answerColumns = [
+    ...new Map(
+      feedback.flatMap((item) =>
+        item.answers.map((answer) => [answer.questionKey, answer.prompt] as const)
+      )
+    ).entries(),
+  ];
 
   return (
     <div className="space-y-7">
       <AdminSectionHeader
         eyebrow="Programme learning"
         title="Exit feedback"
-        description="Independent reflections from mentors and mentees after a mentorship concludes. Responses are restricted to programme administrators."
+        description="Independent reflections from mentors and mentees. Each response preserves the question wording that was live at submission time."
         action={
           <div className="flex flex-wrap items-center gap-2">
             <AdminStatusBadge tone="info">
@@ -72,13 +54,7 @@ export function ExitFeedbackSection() {
                 "Respondent role",
                 "Counterpart",
                 "Counterpart role",
-                "Overall rating",
-                "Goals achieved",
-                "Would recommend",
-                "Reason for ending",
-                "Highlights",
-                "Improvements",
-                "Additional comments",
+                ...answerColumns.map(([, prompt]) => prompt),
                 "Submitted",
               ]}
               rows={feedback.map((item) => [
@@ -86,70 +62,16 @@ export function ExitFeedbackSection() {
                 formatAdminLabel(item.respondentRole),
                 item.counterpartName,
                 formatAdminLabel(item.counterpartRole),
-                item.overallRating,
-                item.goalsAchieved === null ? null : item.goalsAchieved ? "Yes" : "No",
-                item.wouldRecommend === null ? null : item.wouldRecommend ? "Yes" : "No",
-                item.reason,
-                item.highlights,
-                item.improvements,
-                item.additionalComments,
+                ...answerColumns.map(([key]) => {
+                  const answer = item.answers.find((candidate) => candidate.questionKey === key);
+                  return answer ? formatStoredAnswer(answer.value) : null;
+                }),
                 formatAdminDate(item.submittedAt),
               ])}
             />
           </div>
         }
       />
-
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card className="py-5">
-          <CardContent className="flex items-center justify-between px-5">
-            <div>
-              <p className="text-xs font-bold tracking-wide text-muted-foreground uppercase">
-                Average rating
-              </p>
-              <p className="mt-2 text-3xl font-bold text-primary">
-                {averageRating}
-                {averageRating !== "—" && (
-                  <span className="text-base text-[#987721]"> / 5</span>
-                )}
-              </p>
-            </div>
-            <span className="flex size-11 items-center justify-center rounded-xl bg-secondary text-[#80651f]">
-              <Star className="size-5" />
-            </span>
-          </CardContent>
-        </Card>
-        <Card className="py-5">
-          <CardContent className="flex items-center justify-between px-5">
-            <div>
-              <p className="text-xs font-bold tracking-wide text-muted-foreground uppercase">
-                Would recommend
-              </p>
-              <p className="mt-2 text-3xl font-bold text-primary">
-                {percentage(recommendCount, feedback.length)}%
-              </p>
-            </div>
-            <span className="flex size-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800">
-              <ThumbsUp className="size-5" />
-            </span>
-          </CardContent>
-        </Card>
-        <Card className="py-5">
-          <CardContent className="flex items-center justify-between px-5">
-            <div>
-              <p className="text-xs font-bold tracking-wide text-muted-foreground uppercase">
-                Goals achieved
-              </p>
-              <p className="mt-2 text-3xl font-bold text-primary">
-                {percentage(goalsCount, feedback.length)}%
-              </p>
-            </div>
-            <span className="flex size-11 items-center justify-center rounded-xl bg-blue-50 text-blue-800">
-              <CheckCircle2 className="size-5" />
-            </span>
-          </CardContent>
-        </Card>
-      </div>
 
       {feedback.length === 0 ? (
         <Card>
@@ -163,76 +85,17 @@ export function ExitFeedbackSection() {
         <div className="grid gap-5 xl:grid-cols-2">
           {feedback.map((item) => (
             <Card key={String(item._id)} className="overflow-hidden">
-              <CardHeader className="border-b border-primary/10 pb-5">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <CardTitle className="text-lg text-primary">
-                      {item.respondentName}
-                    </CardTitle>
-                    <CardDescription className="mt-1">
-                      {formatAdminLabel(item.respondentRole)} · With{" "}
-                      {item.counterpartName} (
-                      {formatAdminLabel(item.counterpartRole)}) · Submitted{" "}
-                      {formatAdminDate(item.submittedAt)}
-                    </CardDescription>
-                  </div>
-                  <AdminRating value={item.overallRating} />
-                </div>
+              <CardHeader className="border-b border-primary/10">
+                <CardTitle className="text-lg text-primary">
+                  {item.respondentName}
+                </CardTitle>
+                <CardDescription>
+                  {formatAdminLabel(item.respondentRole)} · With {item.counterpartName} (
+                  {formatAdminLabel(item.counterpartRole)}) · Submitted {formatAdminDate(item.submittedAt)}
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-5">
-                <div className="flex flex-wrap gap-2">
-                  <AdminStatusBadge
-                    tone={item.goalsAchieved ? "success" : "neutral"}
-                  >
-                    {item.goalsAchieved
-                      ? "Goals achieved"
-                      : "Goals not fully achieved"}
-                  </AdminStatusBadge>
-                  <AdminStatusBadge
-                    tone={item.wouldRecommend ? "success" : "warning"}
-                  >
-                    {item.wouldRecommend
-                      ? "Would recommend"
-                      : "Would not recommend"}
-                  </AdminStatusBadge>
-                </div>
-
-                <div>
-                  <p className="text-xs font-bold tracking-wide text-muted-foreground uppercase">
-                    Reason for ending
-                  </p>
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-6">
-                    {item.reason || "No reason provided"}
-                  </p>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="rounded-lg bg-[#f7f6f2] p-4">
-                    <p className="text-xs font-bold text-primary">Highlights</p>
-                    <p className="mt-2 whitespace-pre-wrap text-sm leading-5 text-muted-foreground">
-                      {item.highlights || "No highlights provided"}
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-[#f7f6f2] p-4">
-                    <p className="text-xs font-bold text-primary">
-                      Improvements
-                    </p>
-                    <p className="mt-2 whitespace-pre-wrap text-sm leading-5 text-muted-foreground">
-                      {item.improvements || "No improvements provided"}
-                    </p>
-                  </div>
-                </div>
-
-                {item.additionalComments && (
-                  <div className="border-t pt-4">
-                    <p className="text-xs font-bold tracking-wide text-muted-foreground uppercase">
-                      Additional comments
-                    </p>
-                    <p className="mt-2 whitespace-pre-wrap text-sm leading-6">
-                      {item.additionalComments}
-                    </p>
-                  </div>
-                )}
+              <CardContent>
+                <FormAnswerList answers={item.answers} />
               </CardContent>
             </Card>
           ))}

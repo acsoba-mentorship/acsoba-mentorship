@@ -8,6 +8,10 @@ import {
 import { getEffectiveProgramSettings } from "./programSettings";
 import { createNotification } from "./notifications";
 import { fetchUsersById } from "./helper";
+import {
+  type FormAnswerInput,
+  validateAndSnapshotAnswers,
+} from "./formQuestions";
 
 type RespondentRole = "mentor" | "mentee";
 
@@ -18,31 +22,6 @@ function getRole(
   if (mentorship.mentorId === userId) return "mentor";
   if (mentorship.menteeId === userId) return "mentee";
   return null;
-}
-
-function normalizeRating(rating: number) {
-  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-    throw new Error("Overall rating must be a whole number from 1 to 5");
-  }
-  return rating;
-}
-
-function normalizeRequiredText(value: string, label: string, maximum: number) {
-  const clean = value.trim();
-  if (!clean) throw new Error(`${label} is required`);
-  if (clean.length > maximum) {
-    throw new Error(`${label} must be ${maximum} characters or fewer`);
-  }
-  return clean;
-}
-
-function normalizeOptionalText(value: string | undefined, maximum: number) {
-  const clean = value?.trim();
-  if (!clean) return undefined;
-  if (clean.length > maximum) {
-    throw new Error(`Feedback must be ${maximum} characters or fewer`);
-  }
-  return clean;
 }
 
 async function getAuthorizedMentorship(
@@ -211,22 +190,10 @@ export async function submit(
   ctx: MutationCtx,
   {
     feedbackId,
-    reason,
-    overallRating,
-    goalsAchieved,
-    wouldRecommend,
-    highlights,
-    improvements,
-    additionalComments,
+    answers,
   }: {
     feedbackId: Id<"exitFeedback">;
-    reason: string;
-    overallRating: number;
-    goalsAchieved: boolean;
-    wouldRecommend: boolean;
-    highlights?: string;
-    improvements?: string;
-    additionalComments?: string;
+    answers: FormAnswerInput[];
   }
 ) {
   const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
@@ -239,15 +206,14 @@ export async function submit(
   }
 
   const now = Date.now();
+  const validatedAnswers = await validateAndSnapshotAnswers(
+    ctx,
+    "exit_feedback",
+    answers
+  );
   await ctx.db.patch("exitFeedback", feedback._id, {
     status: "submitted",
-    reason: normalizeRequiredText(reason, "Reason for ending", 1000),
-    overallRating: normalizeRating(overallRating),
-    goalsAchieved,
-    wouldRecommend,
-    highlights: normalizeOptionalText(highlights, 2000),
-    improvements: normalizeOptionalText(improvements, 2000),
-    additionalComments: normalizeOptionalText(additionalComments, 2000),
+    answers: validatedAnswers,
     submittedAt: now,
     updatedAt: now,
   });
@@ -341,6 +307,66 @@ export async function listForAdmin(ctx: QueryCtx) {
       highlights: item.highlights ?? null,
       improvements: item.improvements ?? null,
       additionalComments: item.additionalComments ?? null,
+      answers:
+        item.answers ??
+        [
+          item.reason
+            ? {
+                questionKey: "exit_reason",
+                prompt: "Reason for ending the mentorship",
+                responseType: "long_text" as const,
+                value: item.reason,
+              }
+            : null,
+          item.overallRating !== undefined
+            ? {
+                questionKey: "exit_overall_rating",
+                prompt: "Overall rating",
+                responseType: "single_choice" as const,
+                value: String(item.overallRating),
+              }
+            : null,
+          item.goalsAchieved !== undefined
+            ? {
+                questionKey: "exit_goals_achieved",
+                prompt: "Were your goals achieved?",
+                responseType: "single_choice" as const,
+                value: item.goalsAchieved ? "Yes" : "No",
+              }
+            : null,
+          item.wouldRecommend !== undefined
+            ? {
+                questionKey: "exit_would_recommend",
+                prompt: "Would you recommend the programme?",
+                responseType: "single_choice" as const,
+                value: item.wouldRecommend ? "Yes" : "No",
+              }
+            : null,
+          item.highlights
+            ? {
+                questionKey: "exit_highlights",
+                prompt: "Highlights",
+                responseType: "long_text" as const,
+                value: item.highlights,
+              }
+            : null,
+          item.improvements
+            ? {
+                questionKey: "exit_improvements",
+                prompt: "What could have improved the experience?",
+                responseType: "long_text" as const,
+                value: item.improvements,
+              }
+            : null,
+          item.additionalComments
+            ? {
+                questionKey: "exit_additional_comments",
+                prompt: "Additional comments",
+                responseType: "long_text" as const,
+                value: item.additionalComments,
+              }
+            : null,
+        ].filter((answer) => answer !== null),
       submittedAt: item.submittedAt ?? null,
     };
   });

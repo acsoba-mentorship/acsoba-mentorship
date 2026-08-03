@@ -15,13 +15,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { cn, formatDate } from "@/lib/utils";
-
-type Rating = 1 | 2 | 3 | 4 | 5;
-
-const ratingOptions = [1, 2, 3, 4, 5] as const;
+import {
+  DynamicQuestionFields,
+  getAnswerValidationError,
+  toAnswerInputs,
+  type DynamicAnswers,
+  type DynamicQuestion,
+} from "@/components/forms/dynamic-question-fields";
+import { formatDate } from "@/lib/utils";
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error
@@ -29,119 +30,24 @@ function getErrorMessage(error: unknown) {
     : "Something went wrong. Please try again.";
 }
 
-function optionalText(value: string) {
-  return value.trim() || undefined;
-}
-
-function RatingField({
-  value,
-  onChange,
-}: {
-  value: Rating | null;
-  onChange: (value: Rating) => void;
-}) {
-  return (
-    <fieldset className="space-y-3">
-      <legend className="text-sm font-medium">Overall rating</legend>
-      <p className="-mt-2 text-xs text-muted-foreground">
-        Rate the mentorship from 1 (poor) to 5 (excellent).
-      </p>
-      <div className="grid grid-cols-5 gap-2">
-        {ratingOptions.map((option) => (
-          <button
-            key={option}
-            type="button"
-            aria-pressed={value === option}
-            onClick={() => onChange(option)}
-            className={cn(
-              "h-11 rounded-md text-sm font-semibold transition",
-              value === option
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "bg-muted text-foreground hover:bg-secondary"
-            )}
-          >
-            {option}
-          </button>
-        ))}
-      </div>
-    </fieldset>
-  );
-}
-
-function BooleanChoice({
-  label,
-  description,
-  value,
-  onChange,
-}: {
-  label: string;
-  description: string;
-  value: boolean | null;
-  onChange: (value: boolean) => void;
-}) {
-  return (
-    <fieldset className="space-y-3">
-      <legend className="text-sm font-medium">{label}</legend>
-      <p className="-mt-2 text-xs text-muted-foreground">{description}</p>
-      <div className="grid grid-cols-2 gap-2">
-        {[
-          { label: "Yes", value: true },
-          { label: "No", value: false },
-        ].map((option) => (
-          <button
-            key={option.label}
-            type="button"
-            aria-pressed={value === option.value}
-            onClick={() => onChange(option.value)}
-            className={cn(
-              "rounded-md px-3 py-2 text-sm font-medium transition",
-              value === option.value
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-foreground hover:bg-secondary"
-            )}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-    </fieldset>
-  );
-}
-
 function FeedbackForm({
   feedback,
+  questions,
 }: {
   feedback: Doc<"exitFeedback">;
+  questions: DynamicQuestion[];
 }) {
   const router = useRouter();
   const submitExitFeedback = useMutation(api.exitFeedback.submit);
-  const [reason, setReason] = useState("");
-  const [overallRating, setOverallRating] = useState<Rating | null>(null);
-  const [goalsAchieved, setGoalsAchieved] = useState<boolean | null>(null);
-  const [wouldRecommend, setWouldRecommend] = useState<boolean | null>(null);
-  const [highlights, setHighlights] = useState("");
-  const [improvements, setImprovements] = useState("");
-  const [additionalComments, setAdditionalComments] = useState("");
+  const [answers, setAnswers] = useState<DynamicAnswers>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
-    if (!reason.trim()) {
-      setError("Please share your reason for ending the mentorship.");
-      return;
-    }
-    if (overallRating === null) {
-      setError("Please select an overall rating from 1 to 5.");
-      return;
-    }
-    if (goalsAchieved === null) {
-      setError("Please indicate whether your goals were achieved.");
-      return;
-    }
-    if (wouldRecommend === null) {
-      setError("Please indicate whether you would recommend the programme.");
+    const validationError = getAnswerValidationError(questions, answers);
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
@@ -150,13 +56,7 @@ function FeedbackForm({
     try {
       const result = await submitExitFeedback({
         feedbackId: feedback._id,
-        reason: reason.trim(),
-        overallRating,
-        goalsAchieved,
-        wouldRecommend,
-        highlights: optionalText(highlights),
-        improvements: optionalText(improvements),
-        additionalComments: optionalText(additionalComments),
+        answers: toAnswerInputs(questions, answers),
       });
 
       if (result.remainingPendingCount === 0) {
@@ -173,77 +73,12 @@ function FeedbackForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-2">
-        <Label htmlFor="exit-reason">Reason for ending the mentorship</Label>
-        <Textarea
-          id="exit-reason"
-          value={reason}
-          onChange={(event) => setReason(event.target.value)}
-          placeholder="Tell us why the mentorship is ending..."
-          rows={4}
-          maxLength={1000}
-          required
-        />
-        <p className="text-right text-xs text-muted-foreground">
-          {reason.length}/1000
-        </p>
-      </div>
-
-      <RatingField value={overallRating} onChange={setOverallRating} />
-
-      <div className="grid gap-6 sm:grid-cols-2">
-        <BooleanChoice
-          label="Were your goals achieved?"
-          description="Consider the goals agreed during this mentorship."
-          value={goalsAchieved}
-          onChange={setGoalsAchieved}
-        />
-        <BooleanChoice
-          label="Would you recommend the programme?"
-          description="Tell us whether you would recommend this experience."
-          value={wouldRecommend}
-          onChange={setWouldRecommend}
-        />
-      </div>
-
-      {[
-        {
-          id: "exit-highlights",
-          label: "Highlights",
-          value: highlights,
-          setter: setHighlights,
-          placeholder: "What worked especially well?",
-        },
-        {
-          id: "exit-improvements",
-          label: "Improvements",
-          value: improvements,
-          setter: setImprovements,
-          placeholder: "What could have made the experience better?",
-        },
-        {
-          id: "exit-comments",
-          label: "Additional comments",
-          value: additionalComments,
-          setter: setAdditionalComments,
-          placeholder: "Anything else the programme team should know?",
-        },
-      ].map((field) => (
-        <div key={field.id} className="space-y-2">
-          <Label htmlFor={field.id}>
-            {field.label}{" "}
-            <span className="text-muted-foreground">(optional)</span>
-          </Label>
-          <Textarea
-            id={field.id}
-            value={field.value}
-            onChange={(event) => field.setter(event.target.value)}
-            placeholder={field.placeholder}
-            rows={3}
-            maxLength={2000}
-          />
-        </div>
-      ))}
+      <DynamicQuestionFields
+        questions={questions}
+        answers={answers}
+        onChange={setAnswers}
+        disabled={isSubmitting}
+      />
 
       {error ? (
         <Alert variant="destructive">
@@ -261,8 +96,15 @@ function FeedbackForm({
 
 export function CompulsoryExitFeedback() {
   const pendingFeedback = useQuery(api.exitFeedback.listPendingMine);
+  const questions = useQuery(api.formQuestions.listForForm, {
+    formType: "exit_feedback",
+  });
 
-  if (pendingFeedback === undefined || pendingFeedback.length === 0) {
+  if (
+    pendingFeedback === undefined ||
+    pendingFeedback.length === 0 ||
+    questions === undefined
+  ) {
     return (
       <div className="flex min-h-screen items-center justify-center p-6">
         <Loader2 className="size-6 animate-spin text-primary" />
@@ -283,6 +125,7 @@ export function CompulsoryExitFeedback() {
           <CardDescription>
             This mentorship has ended. Complete this private survey before
             continuing to another page. It is due {formatDate(feedback.dueAt)}.
+            Fields marked with an asterisk are compulsory.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -291,7 +134,11 @@ export function CompulsoryExitFeedback() {
             Your answers are visible only to authorised programme admins, not
             the other participant.
           </div>
-          <FeedbackForm key={String(feedback._id)} feedback={feedback} />
+          <FeedbackForm
+            key={String(feedback._id)}
+            feedback={feedback}
+            questions={questions}
+          />
         </CardContent>
       </Card>
     </main>

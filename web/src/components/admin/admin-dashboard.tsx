@@ -9,6 +9,7 @@ import {
   Ban,
   ClipboardList,
   HeartPulse,
+  ListChecks,
   LayoutDashboard,
   Menu,
   MessageSquareQuote,
@@ -32,6 +33,7 @@ import { OverviewSection } from "@/components/admin/overview-section";
 import { ProgrammeSettingsSection } from "@/components/admin/programme-settings-section";
 import { PulseSurveysSection } from "@/components/admin/pulse-surveys-section";
 import { UsersSection } from "@/components/admin/users-section";
+import { FormQuestionsSection } from "@/components/admin/form-questions-section";
 import { VolunteeringSection } from "@/components/admin/volunteering-section";
 import { AdminStatusBadge } from "@/components/admin/admin-shared";
 import { NotificationMenu } from "@/components/navigation/notification-menu";
@@ -56,6 +58,7 @@ type AdminSection =
   | "pulse"
   | "exit"
   | "incidents"
+  | "questions"
   | "settings"
   | "volunteering"
   | "users"
@@ -93,6 +96,12 @@ const operationalSections = [
     label: "Incident review",
     description: "Safety and support",
     icon: Siren,
+  },
+  {
+    value: "questions",
+    label: "Form questions",
+    description: "Edit surveys and reports",
+    icon: ListChecks,
   },
   {
     value: "settings",
@@ -281,6 +290,8 @@ function SectionContent({
       return <ExitFeedbackSection />;
     case "incidents":
       return <IncidentReviewSection />;
+    case "questions":
+      return <FormQuestionsSection />;
     case "settings":
       return <ProgrammeSettingsSection />;
     case "volunteering":

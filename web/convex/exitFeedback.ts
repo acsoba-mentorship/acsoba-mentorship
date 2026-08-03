@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import * as ExitFeedbackModel from "./model/exitFeedback";
+import { formAnswerInputValidator } from "./model/formQuestions/fields";
 
 export const getMineForMentorship = query({
   args: { mentorshipId: v.id("mentorships") },
@@ -20,13 +21,7 @@ export const initiate = mutation({
 export const submit = mutation({
   args: {
     feedbackId: v.id("exitFeedback"),
-    reason: v.string(),
-    overallRating: v.number(),
-    goalsAchieved: v.boolean(),
-    wouldRecommend: v.boolean(),
-    highlights: v.optional(v.string()),
-    improvements: v.optional(v.string()),
-    additionalComments: v.optional(v.string()),
+    answers: v.array(formAnswerInputValidator),
   },
   handler: (ctx, args) => ExitFeedbackModel.submit(ctx, args),
 });

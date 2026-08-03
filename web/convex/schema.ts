@@ -15,6 +15,7 @@ import {
 import { notificationsTableFields } from "./model/notifications/fields";
 import { incidentReportsTableFields } from "./model/incidentReports/fields";
 import { exitFeedbackTableFields } from "./model/exitFeedback/fields";
+import { formQuestionsTableFields } from "./model/formQuestions/fields";
 import {
   internshipsTableFields,
   internshipInterestsTableFields,
@@ -113,6 +114,11 @@ const exitFeedback = defineTable(exitFeedbackTableFields)
   .index("by_mentorshipId_respondentId", ["mentorshipId", "respondentId"])
   .index("by_status_dueAt", ["status", "dueAt"]);
 
+const formQuestions = defineTable(formQuestionsTableFields)
+  .index("by_questionKey", ["questionKey"])
+  .index("by_formType", ["formType"])
+  .index("by_formType_active", ["formType", "active"]);
+
 const internships = defineTable(internshipsTableFields)
   .index("by_offerorId", ["offerorId"])
   .index("by_status", ["status"])
@@ -149,6 +155,7 @@ export default defineSchema({
   notifications,
   incidentReports,
   exitFeedback,
+  formQuestions,
   internships,
   internshipInterests,
   volunteerActivities,
