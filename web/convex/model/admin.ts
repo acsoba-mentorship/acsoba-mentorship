@@ -485,7 +485,10 @@ function matchesUserSearch(user: Doc<"users">, search: string) {
   return haystack.includes(search);
 }
 
-function toAdminUserSummary(user: Doc<"users">) {
+function toAdminUserSummary(
+  user: Doc<"users">,
+  headAdminUserIds: Set<string>
+) {
   return {
     _id: user._id,
     name: user.name,
@@ -498,6 +501,7 @@ function toAdminUserSummary(user: Doc<"users">) {
     onboardingStatus: user.onboardingStatus,
     isMentor: Boolean(user.mentorProfile),
     isMentee: Boolean(user.menteeProfile),
+    isHeadAdmin: headAdminUserIds.has(String(user._id)),
     createdAt: user.createdAt,
   };
 }
@@ -516,11 +520,23 @@ export async function listUsers(
 
   const users = await ctx.db.query("users").collect();
 
+  const headAdminMemberships = await ctx.db
+    .query("adminMemberships")
+    .withIndex("by_status_role", (q) =>
+      q.eq("status", "active").eq("role", "head_admin")
+    )
+    .collect();
+  const headAdminUserIds = new Set(
+    headAdminMemberships
+      .filter((membership) => membership.userId)
+      .map((membership) => String(membership.userId))
+  );
+
   return users
     .filter((user) => matchesUserSearch(user, normalizedSearch))
     .sort((a, b) => b.createdAt - a.createdAt)
     .slice(0, 200)
-    .map(toAdminUserSummary);
+    .map((user) => toAdminUserSummary(user, headAdminUserIds));
 }
 
 export async function suspendUser(
@@ -542,6 +558,9 @@ export async function suspendUser(
     .withIndex("by_user", (q) => q.eq("userId", userId))
     .unique();
   if (targetMembership && targetMembership.status === "active") {
+    if (targetMembership.role === "head_admin") {
+      throw new ConvexError("You cannot suspend the head administrator account");
+    }
     throw new ConvexError(
       "This user is an administrator. Revoke their administrator access first."
     );
@@ -644,6 +663,9 @@ export async function sendUserMessage(
   }: { userId: Id<"users">; subject: string; message: string }
 ) {
   const { user: admin } = await requireAdmin(ctx);
+  if (userId === admin._id) {
+    throw new ConvexError("You cannot message your own account");
+  }
   const target = await ctx.db.get("users", userId);
   if (!target) {
     throw new ConvexError("User not found");

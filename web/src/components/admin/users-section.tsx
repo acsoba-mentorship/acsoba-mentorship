@@ -30,6 +30,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useCurrentUser } from "@/app/CurrentUserProvider";
 
 type AdminUser = FunctionReturnType<typeof api.admin.listUsers>[number];
 
@@ -190,12 +191,19 @@ function MessageDialog({
 }
 
 function UserRow({ user }: { user: AdminUser }) {
+  const { currentUser } = useCurrentUser();
   const reactivateUser = useMutation(api.admin.reactivateUser);
   const [suspendOpen, setSuspendOpen] = useState(false);
   const [messageOpen, setMessageOpen] = useState(false);
   const [isReactivating, setIsReactivating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isSuspended = user.accountStatus === "suspended";
+  const isSelf = Boolean(currentUser && currentUser._id === user._id);
+  // Head admins can never be suspended, and nobody can suspend or message
+  // themselves - so those actions are hidden entirely rather than shown
+  // and left to fail.
+  const canSuspend = !isSelf && !user.isHeadAdmin;
+  const canMessage = !isSelf;
 
   const handleReactivate = async () => {
     setIsReactivating(true);
@@ -238,28 +246,36 @@ function UserRow({ user }: { user: AdminUser }) {
         )}
       </div>
       <div className="flex shrink-0 gap-2">
-        <Button variant="outline" size="sm" onClick={() => setMessageOpen(true)}>
-          <MessageSquare />
-          Message
-        </Button>
+        {canMessage && (
+          <Button variant="outline" size="sm" onClick={() => setMessageOpen(true)}>
+            <MessageSquare />
+            Message
+          </Button>
+        )}
         {isSuspended ? (
           <Button size="sm" onClick={handleReactivate} disabled={isReactivating}>
             {isReactivating ? <Loader2 className="animate-spin" /> : <ShieldCheck />}
             Reactivate
           </Button>
         ) : (
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => setSuspendOpen(true)}
-          >
-            <ShieldAlert />
-            Suspend
-          </Button>
+          canSuspend && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setSuspendOpen(true)}
+            >
+              <ShieldAlert />
+              Suspend
+            </Button>
+          )
         )}
       </div>
-      <SuspendDialog user={user} open={suspendOpen} onOpenChange={setSuspendOpen} />
-      <MessageDialog user={user} open={messageOpen} onOpenChange={setMessageOpen} />
+      {canSuspend && (
+        <SuspendDialog user={user} open={suspendOpen} onOpenChange={setSuspendOpen} />
+      )}
+      {canMessage && (
+        <MessageDialog user={user} open={messageOpen} onOpenChange={setMessageOpen} />
+      )}
     </div>
   );
 }
