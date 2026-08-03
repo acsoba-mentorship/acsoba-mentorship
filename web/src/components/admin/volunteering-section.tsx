@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
-import { Loader2, Plus, Save, Search, Users2 } from "lucide-react";
+import { Loader2, Plus, Save, Search, Trash2, Users2 } from "lucide-react";
 
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -19,6 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -164,11 +165,13 @@ function ManageActivityDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const updateActivity = useMutation(api.volunteering.updateActivity);
+  const deleteActivity = useMutation(api.volunteering.deleteActivity);
   const [name, setName] = useState(activity.name);
   const [description, setDescription] = useState(activity.description ?? "");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const handleSave = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -261,6 +264,18 @@ function ManageActivityDialog({
             >
               {activity.isActive ? "Retire" : "Reactivate"}
             </Button>
+            {!activity.isActive && (
+              <Button
+                type="button"
+                variant="outline"
+                className="text-destructive hover:text-destructive"
+                onClick={() => setShowDeleteDialog(true)}
+                disabled={isSaving}
+              >
+                <Trash2 />
+                Delete
+              </Button>
+            )}
           </div>
         </form>
 
@@ -275,6 +290,17 @@ function ManageActivityDialog({
           <ActivitySignupsPanel activityId={activity._id} />
         </div>
       </DialogContent>
+
+      <DeleteConfirmDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title="Delete volunteering activity?"
+        description={`This will permanently delete "${activity.name}" and remove it from any member's history. This can't be undone.`}
+        onConfirm={async () => {
+          await deleteActivity({ activityId: activity._id });
+          onOpenChange(false);
+        }}
+      />
     </Dialog>
   );
 }

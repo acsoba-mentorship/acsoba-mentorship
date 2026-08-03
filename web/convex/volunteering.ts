@@ -40,6 +40,11 @@ export const updateActivity = mutation({
   handler: (ctx, args) => VolunteeringModel.updateActivity(ctx, args),
 });
 
+export const deleteActivity = mutation({
+  args: { activityId: v.id("volunteerActivities") },
+  handler: (ctx, args) => VolunteeringModel.deleteActivity(ctx, args),
+});
+
 export const listSignupsForActivity = query({
   args: { activityId: v.id("volunteerActivities") },
   handler: (ctx, args) => VolunteeringModel.listSignupsForActivity(ctx, args),

@@ -262,6 +262,48 @@ export async function updateActivity(
   return activityId;
 }
 
+/**
+ * Admins can permanently delete a retired (taken down) activity, e.g. once
+ * it is no longer relevant and doesn't need to stay in the list. Active
+ * activities must be retired first so members aren't surprised by an
+ * activity disappearing without the "taken down" notification.
+ */
+export async function deleteActivity(
+  ctx: MutationCtx,
+  { activityId }: { activityId: Id<"volunteerActivities"> }
+) {
+  const { user: admin } = await requireAdmin(ctx);
+  const activity = await ctx.db.get("volunteerActivities", activityId);
+  if (!activity) {
+    throw new ConvexError("Volunteering activity not found");
+  }
+  if (activity.isActive) {
+    throw new ConvexError(
+      "Retire the activity before deleting it so members are notified."
+    );
+  }
+
+  const signups = await ctx.db
+    .query("volunteerSignups")
+    .withIndex("by_activityId", (q) => q.eq("activityId", activityId))
+    .collect();
+  await Promise.all(
+    signups.map((signup) => ctx.db.delete("volunteerSignups", signup._id))
+  );
+
+  await ctx.db.delete("volunteerActivities", activityId);
+
+  await writeAdminAuditLog(ctx, {
+    actorId: admin._id,
+    action: "volunteer_activity.deleted",
+    targetType: "volunteer_activity",
+    targetId: String(activityId),
+    metadata: { name: activity.name },
+  });
+
+  return { deleted: true };
+}
+
 export async function listSignupsForActivity(
   ctx: QueryCtx,
   { activityId }: { activityId: Id<"volunteerActivities"> }
