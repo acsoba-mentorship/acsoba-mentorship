@@ -43,9 +43,17 @@ export const recordMembershipVerification = internalMutation({
   },
 });
 
+// Default endpoint for the ACSOBA Member Email Validation API.
+// GET {url}?e={email} -> 200 { "exists": 1 | 0 }, 401 if the API key is
+// missing/invalid. Override with the ACSOBA_MEMBERS_API_URL env var if the
+// service is ever hosted elsewhere (e.g. a staging environment).
+const DEFAULT_ACSOBA_MEMBERS_API_URL = "https://members.acsoba.org/api/check";
+
 /**
  * Verifies that the given email is an ACSOBA member by calling the external
- * ACSOBA API. Set Convex env vars ACSOBA_VERIFY_URL and ACSOBA_API_KEY.
+ * ACSOBA Member Email Validation API. Set Convex env vars ACSOBA_API_KEY
+ * (sent as the X-API-KEY header) and optionally ACSOBA_MEMBERS_API_URL to
+ * override the default endpoint.
  * Set ACSOBA_VERIFICATION_REQUIRED=true to block onboarding when that service
  * is unavailable; otherwise Auth0 authentication is sufficient.
  * Verification should be right after authentication before onboarding
@@ -78,10 +86,12 @@ export const verifyAcsobaMember = action({
       };
     }
 
-    const url = process.env.ACSOBA_VERIFY_URL;
+    const baseUrl =
+      process.env.ACSOBA_MEMBERS_API_URL?.trim() ||
+      DEFAULT_ACSOBA_MEMBERS_API_URL;
     const apiKey = process.env.ACSOBA_API_KEY;
 
-    if (!url || !apiKey) {
+    if (!apiKey) {
       if (!isVerificationRequired()) {
         await ctx.runMutation(
           internal.verification.recordMembershipVerification,
@@ -106,15 +116,33 @@ export const verifyAcsobaMember = action({
       };
     }
 
+    let url: URL;
     try {
-      const res = await fetch(url, {
-        method: "POST",
+      url = new URL(baseUrl);
+    } catch {
+      return {
+        success: false,
+        message:
+          "Membership verification is misconfigured (invalid service URL). Contact an administrator.",
+      };
+    }
+    url.searchParams.set("e", authenticatedEmail);
+
+    try {
+      const res = await fetch(url.toString(), {
+        method: "GET",
         headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
+          "X-API-KEY": apiKey,
         },
-        body: JSON.stringify({ email: authenticatedEmail }),
       });
+
+      if (res.status === 401) {
+        return {
+          success: false,
+          message:
+            "Membership verification is misconfigured (the service rejected our API key). Contact an administrator.",
+        };
+      }
 
       if (!res.ok) {
         return {
@@ -124,8 +152,8 @@ export const verifyAcsobaMember = action({
         };
       }
 
-      const data = (await res.json()) as { verified?: boolean };
-      if (data.verified === true) {
+      const data = (await res.json()) as { exists?: 0 | 1 };
+      if (data.exists === 1) {
         await ctx.runMutation(
           internal.verification.recordMembershipVerification,
           {
