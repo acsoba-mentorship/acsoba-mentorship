@@ -1,67 +1,68 @@
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
-import type { Infer } from "convex/values";
+import { ConvexError, type Infer } from "convex/values";
 import {
   ANONYMOUS_MENTOR_NAME,
   buildUsernameStatus,
-  DEFAULT_MENTOR_PRIVACY_SETTINGS,
   GOALS_MAX_CHARACTERS,
   isValidUsername,
   makeTemporaryCandidate,
-  MENTOR_LIST_MAX,
   normalizeUsername,
-  resolveMentorIdentityVisibility,
   toPublicMentorDTO,
   USERNAME_CHANGE_COOLDOWN_MS,
 } from "../helper";
 import {
+  enrollAsMenteeArgsValidator,
+  enrollAsMentorArgsValidator,
   setUserOnboardingCompleteArgsValidator,
-  updateMentorPrivacySettingsArgsValidator,
   updateUserProfileArgsValidator,
 } from "./users/validators";
 import {
   CAREER_STAGE,
-  COMMITMENT_LEVEL,
   educationEntryValidator,
   experienceEntryValidator,
   menteeProfileValidator,
   mentorProfileValidator,
   ONBOARDING_STATUS,
-  mentorPrivacySettingsValidator,
   usersTableFields,
 } from "./users/fields";
 import { getAuthenticatedUser, requireOnboardingComplete } from "./auth";
+import {
+  claimAdminAccessForUser,
+  getVerifiedNormalizedAuthEmail,
+  syncAuthenticatedEmailAndAdminAccess,
+} from "./admin/bootstrap";
+import { getEffectiveProgramSettings } from "./programSettings";
 
 const CONVEX_ID_PATTERN = /^[a-z0-9]{16,64}$/i;
 
-async function hasAcceptedMentorship(
+async function hasActiveRelationship(
   ctx: QueryCtx,
   viewerId: Id<"users">,
-  mentorId: Id<"users">
+  profileUserId: Id<"users">
 ) {
-  if (viewerId === mentorId) {
+  if (viewerId === profileUserId) {
     return true;
   }
 
-  const requests = await ctx.db
-    .query("mentorshipRequests")
-    .withIndex("by_mentorId_menteeId", (q) =>
-      q.eq("mentorId", mentorId).eq("menteeId", viewerId)
-    )
-    .collect();
+  const [profileAsMentor, viewerAsMentor] = await Promise.all([
+    ctx.db
+      .query("mentorships")
+      .withIndex("by_mentorId_menteeId", (q) =>
+        q.eq("mentorId", profileUserId).eq("menteeId", viewerId)
+      )
+      .collect(),
+    ctx.db
+      .query("mentorships")
+      .withIndex("by_mentorId_menteeId", (q) =>
+        q.eq("mentorId", viewerId).eq("menteeId", profileUserId)
+      )
+      .collect(),
+  ]);
 
-  return requests.some((request) => request.status === "accepted");
-}
-
-async function getAcceptedMentorIdsForMentee(ctx: QueryCtx, menteeId: Id<"users">) {
-  const requests = await ctx.db
-    .query("mentorshipRequests")
-    .withIndex("by_menteeId_status", (q) =>
-      q.eq("menteeId", menteeId).eq("status", "accepted")
-    )
-    .collect();
-
-  return new Set(requests.map((request) => request.mentorId));
+  return [...profileAsMentor, ...viewerAsMentor].some(
+    (mentorship) => mentorship.status === "active"
+  );
 }
 
 async function toPublicUserProfile(
@@ -69,32 +70,46 @@ async function toPublicUserProfile(
   currentUser: Doc<"users">,
   user: Doc<"users">
 ) {
-  const forceRevealIdentity =
-    !!user.mentorProfile && (await hasAcceptedMentorship(ctx, currentUser._id, user._id));
-  const mentorVisibility = resolveMentorIdentityVisibility(
-    user.mentorSettings?.privacy,
-    forceRevealIdentity
+  const hasMentorshipAccess = await hasActiveRelationship(
+    ctx,
+    currentUser._id,
+    user._id
   );
-  const shouldApplyMentorPrivacy = !!user.mentorProfile;
+  if (
+    user.mentorProfile?.isVisible === false &&
+    !hasMentorshipAccess
+  ) {
+    return null;
+  }
+
+  const isMentor = !!user.mentorProfile;
+  const revealMentorIdentity = isMentor && hasMentorshipAccess;
 
   return {
     userId: user._id,
-    username: shouldApplyMentorPrivacy && !mentorVisibility.username ? null : user.username,
+    username: isMentor && !revealMentorIdentity ? null : user.username,
     name:
-      shouldApplyMentorPrivacy && !mentorVisibility.name
+      isMentor && !revealMentorIdentity
         ? ANONYMOUS_MENTOR_NAME
         : user.name,
     title: user.title,
     bio: user.bio,
     location: user.location,
-    profilePictureUrl: user.profilePictureUrl,
-    email: shouldApplyMentorPrivacy && mentorVisibility.email ? user.email : null,
-    phoneNumber:
-      shouldApplyMentorPrivacy && mentorVisibility.phoneNumber ? user.phoneNumber : null,
+    profilePictureUrl:
+      isMentor && !revealMentorIdentity
+        ? ""
+        : user.profilePictureUrl,
+    email: revealMentorIdentity ? user.email : null,
+    phoneNumber: revealMentorIdentity ? user.phoneNumber : null,
     education: user.education,
     experience: user.experience,
     interests: user.interests ?? [],
-    industries: user.industries ?? [],
+    industries:
+      (user.mentorProfile
+        ? user.mentorProfile.industries
+        : user.menteeProfile?.industries) ??
+      user.industries ??
+      [],
     menteeProfile: user.menteeProfile,
     mentorProfile: user.mentorProfile,
   };
@@ -117,7 +132,7 @@ async function ensureUniqueTemporaryUsername(
       return candidate;
     }
   }
-  throw new Error("Failed to generate a unique temporary username");
+  throw new ConvexError("Failed to generate a unique temporary username");
 }
 
 /**
@@ -126,7 +141,7 @@ async function ensureUniqueTemporaryUsername(
 export async function storeUser(ctx: MutationCtx) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) {
-    throw new Error("Not authenticated");
+    throw new ConvexError("Not authenticated");
   }
 
   const user = await ctx.db
@@ -134,23 +149,30 @@ export async function storeUser(ctx: MutationCtx) {
     .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
     .unique();
 
+  const identityEmail = identity.email?.trim();
+  const identityEmailVerified = identity.emailVerified === true;
+
   if (user !== null) {
+    await syncAuthenticatedEmailAndAdminAccess(ctx, user, {
+      authEmail: identityEmail,
+      authEmailVerified: identityEmailVerified,
+    });
     return user._id;
   }
 
   const now = Date.now();
   const identityName = identity.name?.trim();
-  const identityEmail = identity.email?.trim() ?? "";
+  const contactEmail = identityEmail ?? "";
   const displayName =
     identityName && !identityName.includes("@")
       ? identityName
-      : identityEmail.split("@")[0] || "";
+      : contactEmail.split("@")[0] || "";
   const temporaryUsername = await ensureUniqueTemporaryUsername(
     ctx,
     displayName || "user"
   );
 
-  return await ctx.db.insert("users", {
+  const userId = await ctx.db.insert("users", {
     name: displayName,
     username: temporaryUsername,
     usernameUpdatedAt: now,
@@ -159,11 +181,16 @@ export async function storeUser(ctx: MutationCtx) {
     gender: "",
     nationality: "",
     tokenIdentifier: identity.tokenIdentifier,
+    authEmailNormalized: getVerifiedNormalizedAuthEmail(
+      identityEmail,
+      identityEmailVerified
+    ),
+    authEmailVerified: identityEmailVerified,
     profilePictureUrl: "",
     title: "",
     bio: "",
     location: "",
-    email: identityEmail,
+    email: contactEmail,
     phoneNumber: "",
     interests: [],
     industries: [],
@@ -172,6 +199,14 @@ export async function storeUser(ctx: MutationCtx) {
     onboardingStatus: ONBOARDING_STATUS.INCOMPLETE,
     createdAt: now,
   });
+
+  await claimAdminAccessForUser(ctx, {
+    userId,
+    authEmail: identityEmail,
+    authEmailVerified: identityEmailVerified,
+  });
+
+  return userId;
 }
 
 /**
@@ -265,83 +300,65 @@ export async function checkUsernameAvailable(
 /**
  * Lists mentors prioritized by availability.
  */
-export async function listMentors(
-  ctx: QueryCtx,
-  { limit }: { limit?: number }
-) {
+export async function listMentors(ctx: QueryCtx) {
   const currentUser = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
-  const effectiveLimit = Math.min(Math.max(limit ?? MENTOR_LIST_MAX, 1), MENTOR_LIST_MAX);
-
-  const available = await ctx.db
-    .query("users")
-    .withIndex("by_mentor_availability", (q) => q.eq("mentorProfile.isAvailable", true))
-    .take(effectiveLimit);
-
-  const remaining = effectiveLimit - available.length;
-  const unavailable =
-    remaining > 0
-      ? await ctx.db
-          .query("users")
-          .withIndex("by_mentor_availability", (q) => q.eq("mentorProfile.isAvailable", false))
-          .take(remaining)
-      : [];
-
-  const acceptedMentorIds = await getAcceptedMentorIdsForMentee(ctx, currentUser._id);
-
-  return [...available, ...unavailable].map((mentor) =>
-    toPublicMentorDTO(mentor, {
-      forceRevealIdentity:
-        mentor._id === currentUser._id || acceptedMentorIds.has(mentor._id),
-    })
+  const [available, unavailable, activeMentorships, completedMentorships] =
+    await Promise.all([
+      ctx.db
+        .query("users")
+        .withIndex("by_mentor_availability", (q) =>
+          q.eq("mentorProfile.isAvailable", true)
+        )
+        .collect(),
+      ctx.db
+        .query("users")
+        .withIndex("by_mentor_availability", (q) =>
+          q.eq("mentorProfile.isAvailable", false)
+        )
+        .collect(),
+      ctx.db
+        .query("mentorships")
+        .withIndex("by_status", (q) => q.eq("status", "active"))
+        .collect(),
+      ctx.db
+        .query("mentorships")
+        .withIndex("by_status", (q) => q.eq("status", "completed"))
+        .collect(),
+    ]);
+  const activeMentorIds = new Set(
+    activeMentorships
+      .filter((mentorship) => mentorship.menteeId === currentUser._id)
+      .map((mentorship) => mentorship.mentorId)
   );
-}
 
-/**
- * Returns the caller's mentor privacy settings with defaults filled in.
- */
-export async function getMyMentorPrivacySettings(ctx: QueryCtx) {
-  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
-  return user.mentorSettings?.privacy ?? DEFAULT_MENTOR_PRIVACY_SETTINGS;
-}
+  const mentors = [...available, ...unavailable]
+    .filter(
+      (mentor) =>
+        mentor._id === currentUser._id ||
+        mentor.mentorProfile?.isVisible !== false
+    );
+  const activeCounts = new Map<string, number>();
+  const completedCounts = new Map<string, number>();
 
-/**
- * Updates the caller's mentor privacy settings while preserving omitted fields.
- */
-export async function updateMyMentorPrivacySettings(
-  ctx: MutationCtx,
-  args: Infer<typeof updateMentorPrivacySettingsArgsValidator>
-) {
-  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
-  const previous = user.mentorSettings?.privacy ?? DEFAULT_MENTOR_PRIVACY_SETTINGS;
-
-  const privacy: Infer<typeof mentorPrivacySettingsValidator> = {
-    masterIdentityDisclosure:
-      args.masterIdentityDisclosure ?? previous.masterIdentityDisclosure,
-    overrides: {
-      name:
-        args.overrides?.name ??
-        previous.overrides?.name ??
-        DEFAULT_MENTOR_PRIVACY_SETTINGS.overrides.name,
-      email:
-        args.overrides?.email ??
-        previous.overrides?.email ??
-        DEFAULT_MENTOR_PRIVACY_SETTINGS.overrides.email,
-      phoneNumber:
-        args.overrides?.phoneNumber ??
-        previous.overrides?.phoneNumber ??
-        DEFAULT_MENTOR_PRIVACY_SETTINGS.overrides.phoneNumber,
-    },
-  };
-
-  await ctx.db.patch("users", user._id, {
-    mentorSettings: {
-      ...(user.mentorSettings ?? {}),
-      privacy,
-    },
+  activeMentorships.forEach((mentorship) => {
+    const key = String(mentorship.mentorId);
+    activeCounts.set(key, (activeCounts.get(key) ?? 0) + 1);
+  });
+  completedMentorships.forEach((mentorship) => {
+    const key = String(mentorship.mentorId);
+    completedCounts.set(key, (completedCounts.get(key) ?? 0) + 1);
   });
 
-  return privacy;
+  return mentors.map((mentor) =>
+    toPublicMentorDTO(mentor, {
+      forceRevealIdentity:
+        mentor._id === currentUser._id || activeMentorIds.has(mentor._id),
+      viewerInterests: currentUser.interests ?? [],
+      activeMentorshipCount: activeCounts.get(String(mentor._id)) ?? 0,
+      completedMentorshipCount: completedCounts.get(String(mentor._id)) ?? 0,
+    })
+  );
 }
 
 /**
@@ -366,7 +383,7 @@ export async function updateUsername(
 
   const normalized = normalizeUsername(username);
   if (!isValidUsername(normalized)) {
-    throw new Error(
+    throw new ConvexError(
       "Invalid username. Use 3-20 lowercase letters, numbers, or underscores."
     );
   }
@@ -384,14 +401,14 @@ export async function updateUsername(
     .withIndex("by_username", (q) => q.eq("username", normalized))
     .unique();
   if (existing) {
-    throw new Error("Username already taken");
+    throw new ConvexError("Username already taken");
   }
 
   const now = Date.now();
   const nextAllowedAt = user.usernameUpdatedAt + USERNAME_CHANGE_COOLDOWN_MS;
   const canBypassCooldown = user.isTemporaryUsername;
   if (!canBypassCooldown && now < nextAllowedAt) {
-    throw new Error(
+    throw new ConvexError(
       `Username can be changed again on ${new Date(nextAllowedAt).toISOString()}`
     );
   }
@@ -440,46 +457,234 @@ export async function updateMenteeProfile(
   args: Infer<typeof menteeProfileValidator>
 ) {
   const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
+  if (!user.menteeProfile) {
+    throw new ConvexError("Add a mentee profile before editing mentee preferences");
+  }
 
   await ctx.db.patch("users", user._id, {
-    menteeProfile: args,
+    menteeProfile: {
+      ...args,
+      industries: args.industries ?? user.menteeProfile.industries,
+    },
   });
   return user._id;
 }
 
-/**
- * Writes the complete mentee onboarding payload and marks onboarding complete.
- */
-export async function setUserOnboardingComplete(
-  ctx: MutationCtx,
-  args: Infer<typeof setUserOnboardingCompleteArgsValidator>
-) {
-  const user = await getAuthenticatedUser(ctx);
-
+function validateCareerBackground(args: {
+  careerStage: Infer<typeof usersTableFields.careerStage>;
+  education: Infer<typeof usersTableFields.education>;
+  experience: Infer<typeof usersTableFields.experience>;
+}) {
   if (args.careerStage === CAREER_STAGE.STUDENT && args.education.length === 0) {
-    throw new Error("At least one education entry is required for students");
+    throw new ConvexError("At least one education entry is required for students");
   }
 
   if (
     args.careerStage === CAREER_STAGE.PROFESSIONAL &&
     args.experience.length === 0
   ) {
-    throw new Error("At least one experience entry is required");
+    throw new ConvexError("At least one experience entry is required");
+  }
+}
+
+function validateMenteeProfile(
+  profile: Infer<typeof menteeProfileValidator>
+) {
+  const goals = profile.goals.trim();
+  if (!goals) {
+    throw new ConvexError("Tell us a little about your goals");
+  }
+  if (goals.length > GOALS_MAX_CHARACTERS) {
+    throw new ConvexError(`Goals must be at most ${GOALS_MAX_CHARACTERS} characters`);
+  }
+  if (profile.preferredCommunicationModes.length === 0) {
+    throw new ConvexError("Select at least one communication mode");
+  }
+  if (
+    new Set(profile.preferredCommunicationModes).size !==
+    profile.preferredCommunicationModes.length
+  ) {
+    throw new ConvexError("Select each communication mode only once");
   }
 
-  if (args.menteeProfile.goals.trim().length > GOALS_MAX_CHARACTERS) {
-    throw new Error(`Goals must be at most ${GOALS_MAX_CHARACTERS} characters`);
-  }
-  if (args.interests.length < 1 || args.interests.length > 3) {
-    throw new Error("Select between 1 and 3 interests");
-  }
-  if (args.industries.length < 1 || args.industries.length > 3) {
-    throw new Error("Select between 1 and 3 industries");
+  return {
+    ...profile,
+    goals,
+    ...(profile.industries
+      ? {
+          industries: normalizeProfileTags(
+            profile.industries,
+            "mentee industries"
+          ),
+        }
+      : {}),
+  };
+}
+
+function normalizeProfileTags(values: string[], label: string) {
+  const trimmed = values.map((item) => item.trim()).filter(Boolean);
+  if (trimmed.some((item) => item.length > 80)) {
+    throw new ConvexError(`Each ${label} entry must be at most 80 characters`);
   }
 
-  await ctx.db.patch("users", user._id, {
+  const unique = new Map<string, string>();
+  trimmed.forEach((item) => {
+    const key = item.toLocaleLowerCase("en-SG");
+    if (!unique.has(key)) {
+      unique.set(key, item);
+    }
+  });
+
+  const normalized = Array.from(unique.values());
+  if (normalized.length > 50) {
+    throw new ConvexError(`Add at most 50 ${label} entries`);
+  }
+  return normalized;
+}
+
+function normalizeMentorProfile(
+  profile: Infer<typeof mentorProfileValidator>,
+  { requireExpertise = false }: { requireExpertise?: boolean } = {}
+) {
+  if (
+    !Number.isInteger(profile.yearsOfExperience) ||
+    profile.yearsOfExperience < 0 ||
+    profile.yearsOfExperience > 80
+  ) {
+    throw new ConvexError("Years of experience must be a whole number from 0 to 80");
+  }
+  if (
+    !Number.isInteger(profile.maxMentees) ||
+    profile.maxMentees < 1 ||
+    profile.maxMentees > 100
+  ) {
+    throw new ConvexError("Maximum mentees must be a whole number from 1 to 100");
+  }
+
+  const expertise = normalizeProfileTags(profile.expertise, "expertise");
+  if (requireExpertise && expertise.length === 0) {
+    throw new ConvexError("Add at least one area of expertise");
+  }
+  if (requireExpertise && expertise.length > 20) {
+    throw new ConvexError("Add at most 20 areas of expertise");
+  }
+  if (expertise.length > 50) {
+    throw new ConvexError("Add at most 50 areas of expertise");
+  }
+
+  return {
+    yearsOfExperience: profile.yearsOfExperience,
+    expertise,
+    ...(profile.industries
+      ? {
+          industries: normalizeProfileTags(
+            profile.industries,
+            "mentor industries"
+          ),
+        }
+      : {}),
+    maxMentees: profile.maxMentees,
+    isAvailable: profile.isAvailable,
+    isVisible: profile.isVisible ?? true,
+  };
+}
+
+async function validateOnboardingSelections(
+  ctx: MutationCtx,
+  {
+    industries,
+    interests,
+  }: {
+    industries?: string[];
+    interests?: string[];
+  }
+) {
+  if (interests && (interests.length < 1 || interests.length > 3)) {
+    throw new ConvexError("Select between 1 and 3 interests");
+  }
+  if (industries && (industries.length < 1 || industries.length > 3)) {
+    throw new ConvexError("Select between 1 and 3 industries");
+  }
+  if (
+    interests &&
+    new Set(
+      interests.map((interest) => interest.toLocaleLowerCase("en-SG"))
+    ).size !== interests.length
+  ) {
+    throw new ConvexError("Select each interest only once");
+  }
+  if (
+    industries &&
+    new Set(
+      industries.map((industry) => industry.toLocaleLowerCase("en-SG"))
+    ).size !== industries.length
+  ) {
+    throw new ConvexError("Select each industry only once");
+  }
+
+  const options = await getEffectiveProgramSettings(ctx);
+  const availableInterests: readonly string[] =
+    options.onboardingInterests;
+  const availableIndustries: readonly string[] =
+    options.onboardingIndustries;
+  if (
+    interests &&
+    !interests.every((interest) =>
+      availableInterests.includes(interest)
+    )
+  ) {
+    throw new ConvexError("Select interests from the available onboarding options");
+  }
+  if (
+    industries &&
+    !industries.every((industry) =>
+      availableIndustries.includes(industry)
+    )
+  ) {
+    throw new ConvexError("Select industries from the available onboarding options");
+  }
+}
+
+/**
+ * Writes the selected role's initial onboarding profile and marks onboarding complete.
+ */
+export async function setUserOnboardingComplete(
+  ctx: MutationCtx,
+  args: Infer<typeof setUserOnboardingCompleteArgsValidator>
+) {
+  const user = await getAuthenticatedUser(ctx);
+  if (user.onboardingStatus === ONBOARDING_STATUS.COMPLETE) {
+    throw new ConvexError("Onboarding is already complete");
+  }
+  const identity = await ctx.auth.getUserIdentity();
+  const authenticatedEmail = identity?.email?.trim();
+  const verifiedEmail =
+    identity?.emailVerified === true && authenticatedEmail
+      ? authenticatedEmail.toLowerCase()
+      : undefined;
+  const verificationRequired =
+    process.env.ACSOBA_VERIFICATION_REQUIRED?.trim().toLowerCase() === "true";
+
+  if (
+    !verifiedEmail ||
+    user.membershipVerifiedEmail !== verifiedEmail ||
+    !user.membershipVerificationStatus ||
+    (verificationRequired &&
+      user.membershipVerificationStatus !== "acsoba_verified")
+  ) {
+    throw new ConvexError(
+      "Complete membership verification with your signed-in email before finishing onboarding"
+    );
+  }
+  if (args.personalDetails.email.trim().toLowerCase() !== verifiedEmail) {
+    throw new ConvexError("Use the verified email from your signed-in account");
+  }
+
+  validateCareerBackground(args);
+
+  const profileBasics = {
     name: args.personalDetails.name,
-    email: args.personalDetails.email,
+    email: verifiedEmail,
     gender: args.personalDetails.gender,
     nationality: args.personalDetails.nationality,
     phoneNumber: args.personalDetails.phoneNumber,
@@ -487,16 +692,83 @@ export async function setUserOnboardingComplete(
     careerStage: args.careerStage,
     education: args.education,
     experience: args.experience,
+    onboardingStatus: ONBOARDING_STATUS.COMPLETE,
+  } as const;
+
+  if (args.profile.role === "mentee") {
+    await validateOnboardingSelections(ctx, {
+      interests: args.profile.interests,
+      industries: args.profile.industries,
+    });
+    await ctx.db.patch("users", user._id, {
+      ...profileBasics,
+      interests: args.profile.interests,
+      industries: args.profile.industries,
+      menteeProfile: {
+        ...validateMenteeProfile(args.profile.menteeProfile),
+        industries: args.profile.industries,
+      },
+    });
+  } else {
+    await validateOnboardingSelections(ctx, {
+      industries: args.profile.industries,
+    });
+    await ctx.db.patch("users", user._id, {
+      ...profileBasics,
+      industries: args.profile.industries,
+      mentorProfile: {
+        ...normalizeMentorProfile(args.profile.mentorProfile, {
+          requireExpertise: true,
+        }),
+        industries: args.profile.industries,
+      },
+    });
+  }
+
+  return user._id;
+}
+
+export async function enrollAsMentee(
+  ctx: MutationCtx,
+  args: Infer<typeof enrollAsMenteeArgsValidator>
+) {
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
+  if (user.menteeProfile) {
+    throw new ConvexError("Your account already has a mentee profile");
+  }
+
+  await validateOnboardingSelections(ctx, {
     interests: args.interests,
     industries: args.industries,
-    menteeProfile: {
-      goals: args.menteeProfile.goals,
-      commitmentLevel: args.menteeProfile.commitmentLevel,
-      preferredCommunicationModes: args.menteeProfile.preferredCommunicationModes,
-    },
-    onboardingStatus: ONBOARDING_STATUS.COMPLETE,
   });
+  await ctx.db.patch("users", user._id, {
+    interests: args.interests,
+    menteeProfile: {
+      ...validateMenteeProfile(args.menteeProfile),
+      industries: args.industries,
+    },
+  });
+  return user._id;
+}
 
+export async function enrollAsMentor(
+  ctx: MutationCtx,
+  args: Infer<typeof enrollAsMentorArgsValidator>
+) {
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
+  if (user.mentorProfile) {
+    throw new ConvexError("Your account already has a mentor profile");
+  }
+
+  await validateOnboardingSelections(ctx, { industries: args.industries });
+  await ctx.db.patch("users", user._id, {
+    mentorProfile: {
+      ...normalizeMentorProfile(args.mentorProfile, {
+        requireExpertise: true,
+      }),
+      industries: args.industries,
+    },
+  });
   return user._id;
 }
 
@@ -509,11 +781,14 @@ export async function updateUserProfileBasics(
     bio?: Infer<typeof usersTableFields.bio>;
     location?: Infer<typeof usersTableFields.location>;
     title?: Infer<typeof usersTableFields.title>;
+    phoneNumber?: Infer<typeof usersTableFields.phoneNumber>;
   }
 ) {
   const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
-  const patch: Partial<Pick<Doc<"users">, "bio" | "location" | "title">> = {};
+  const patch: Partial<
+    Pick<Doc<"users">, "bio" | "location" | "title" | "phoneNumber">
+  > = {};
   if (args.bio !== undefined) {
     patch.bio = args.bio;
   }
@@ -522,6 +797,16 @@ export async function updateUserProfileBasics(
   }
   if (args.title !== undefined) {
     patch.title = args.title;
+  }
+  if (args.phoneNumber !== undefined) {
+    const trimmedPhoneNumber = args.phoneNumber.trim();
+    if (trimmedPhoneNumber.length === 0) {
+      throw new ConvexError("Phone number is required");
+    }
+    if (trimmedPhoneNumber.length > 32) {
+      throw new ConvexError("Phone number must be 32 characters or fewer");
+    }
+    patch.phoneNumber = trimmedPhoneNumber;
   }
 
   if (Object.keys(patch).length === 0) {
@@ -546,21 +831,16 @@ export async function updateMenteeProfileDetails(
   }
 ) {
   const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
-  const previous =
-    user.menteeProfile ??
-    {
-      goals: "",
-      commitmentLevel: COMMITMENT_LEVEL.MONTHLY,
-      preferredCommunicationModes: [] as Infer<
-        typeof menteeProfileValidator.fields.preferredCommunicationModes
-      >,
-    };
+  if (!user.menteeProfile) {
+    throw new ConvexError("Add a mentee profile before editing mentee preferences");
+  }
+  const previous = user.menteeProfile;
 
   if (
     args.goals !== undefined &&
     args.goals.trim().length > GOALS_MAX_CHARACTERS
   ) {
-    throw new Error(`Goals must be at most ${GOALS_MAX_CHARACTERS} characters`);
+    throw new ConvexError(`Goals must be at most ${GOALS_MAX_CHARACTERS} characters`);
   }
 
   const menteeProfile = {
@@ -568,6 +848,7 @@ export async function updateMenteeProfileDetails(
     commitmentLevel: args.commitmentLevel ?? previous.commitmentLevel,
     preferredCommunicationModes:
       args.preferredCommunicationModes ?? previous.preferredCommunicationModes,
+    industries: previous.industries,
   };
 
   await ctx.db.patch("users", user._id, { menteeProfile });
@@ -591,10 +872,36 @@ export async function updateUserInterests(
  */
 export async function updateUserIndustries(
   ctx: MutationCtx,
-  args: { industries: Infer<typeof usersTableFields.industries> }
+  args: { industries: string[] }
 ) {
   const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
-  await ctx.db.patch("users", user._id, { industries: args.industries });
+  const industries = normalizeProfileTags(args.industries, "industries");
+
+  if (user.mentorProfile && user.menteeProfile) {
+    throw new ConvexError(
+      "Update industries from the relevant mentor or mentee profile"
+    );
+  }
+
+  await ctx.db.patch("users", user._id, {
+    industries,
+    ...(user.mentorProfile
+      ? {
+          mentorProfile: {
+            ...user.mentorProfile,
+            industries,
+          },
+        }
+      : {}),
+    ...(user.menteeProfile
+      ? {
+          menteeProfile: {
+            ...user.menteeProfile,
+            industries,
+          },
+        }
+      : {}),
+  });
   return user._id;
 }
 
@@ -606,13 +913,27 @@ export async function updateMentorProfile(
   args: Infer<typeof mentorProfileValidator>
 ) {
   const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
+  if (!user.mentorProfile) {
+    throw new ConvexError("Add a mentor profile before editing mentor details");
+  }
+
+  const activeMentorships = await ctx.db
+    .query("mentorships")
+    .withIndex("by_mentorId_status", (q) =>
+      q.eq("mentorId", user._id).eq("status", "active")
+    )
+    .collect();
+  if (args.maxMentees < activeMentorships.length) {
+    throw new ConvexError(
+      `Maximum mentees cannot be lower than your ${activeMentorships.length} active mentorships`
+    );
+  }
 
   await ctx.db.patch("users", user._id, {
     mentorProfile: {
-      yearsOfExperience: args.yearsOfExperience,
-      expertise: args.expertise,
-      maxMentees: args.maxMentees,
-      isAvailable: args.isAvailable,
+      ...normalizeMentorProfile(args),
+      industries: args.industries ?? user.mentorProfile.industries,
+      isVisible: args.isVisible ?? user.mentorProfile?.isVisible ?? true,
     },
   });
   return user._id;
@@ -646,7 +967,7 @@ export async function updateEducation(
   const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   if (index < 0 || index >= user.education.length) {
-    throw new Error("Invalid education index");
+    throw new ConvexError("Invalid education index");
   }
 
   await ctx.db.patch("users", user._id, {
@@ -665,7 +986,7 @@ export async function deleteEducation(
   const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   if (index < 0 || index >= user.education.length) {
-    throw new Error("Invalid education index");
+    throw new ConvexError("Invalid education index");
   }
 
   await ctx.db.patch("users", user._id, {
@@ -702,7 +1023,7 @@ export async function updateExperience(
   const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   if (index < 0 || index >= user.experience.length) {
-    throw new Error("Invalid experience index");
+    throw new ConvexError("Invalid experience index");
   }
 
   await ctx.db.patch("users", user._id, {
@@ -721,7 +1042,7 @@ export async function deleteExperience(
   const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
 
   if (index < 0 || index >= user.experience.length) {
-    throw new Error("Invalid experience index");
+    throw new ConvexError("Invalid experience index");
   }
 
   await ctx.db.patch("users", user._id, {

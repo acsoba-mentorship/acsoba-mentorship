@@ -15,6 +15,7 @@ import {
   Calendar,
   ArrowRight,
   BookOpen,
+  HandHeart,
 } from "lucide-react";
 import { SuggestedMentors } from "@/components/dashboard/suggested-mentors";
 import { PulseSurveyReminder } from "@/components/dashboard/pulse-survey-reminder";
@@ -57,7 +58,7 @@ export default function DashboardPage() {
       </div>
       
       <PulseSurveyReminder />
-      
+
       {/* Quick Actions */}
       <Card>
         <CardHeader>
@@ -84,6 +85,12 @@ export default function DashboardPage() {
               <Link href="/mentorships">
                 <Users className="mr-2 size-4" />
                 View Mentorships
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/volunteering">
+                <HandHeart className="mr-2 size-4" />
+                Volunteering
               </Link>
             </Button>
           </div>

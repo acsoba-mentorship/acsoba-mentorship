@@ -1,9 +1,14 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useCurrentUser } from "@/app/CurrentUserProvider";
-import { ONBOARDING_STATUS, POST_ONBOARDING_PATH } from "@/lib/onboarding";
+import {
+  getCompletedOnboardingPath,
+  ONBOARDING_PATHS,
+  ONBOARDING_ROLE,
+  ONBOARDING_STATUS,
+} from "@/lib/onboarding";
 
 export default function CompletedOnboardingGuard({
   children,
@@ -11,16 +16,23 @@ export default function CompletedOnboardingGuard({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { currentUser, isLoading } = useCurrentUser();
 
   const isComplete = currentUser?.onboardingStatus === ONBOARDING_STATUS.COMPLETE;
   const needsRedirect = !isLoading && currentUser && isComplete;
+  const intendedRole = pathname.startsWith(ONBOARDING_PATHS.mentor)
+    ? ONBOARDING_ROLE.MENTOR
+    : ONBOARDING_ROLE.MENTEE;
+  const completedDestination = currentUser
+    ? getCompletedOnboardingPath(currentUser, intendedRole)
+    : null;
 
   useEffect(() => {
-    if (needsRedirect) {
-      router.replace(POST_ONBOARDING_PATH);
+    if (needsRedirect && completedDestination) {
+      router.replace(completedDestination);
     }
-  }, [needsRedirect, router]);
+  }, [completedDestination, needsRedirect, router]);
 
   if (isLoading || currentUser === undefined || currentUser === null) {
     return null;

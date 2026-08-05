@@ -5,13 +5,14 @@ import {
   requireOnboardingComplete,
 } from "./auth";
 import { fetchUsersById } from "./helper";
+import { getEffectiveProgramSettings } from "./programSettings";
+import { createNotification } from "./notifications";
+import {
+  type FormAnswerInput,
+  validateAndSnapshotAnswers,
+} from "./formQuestions";
 
 type Ctx = QueryCtx | MutationCtx;
-
-export const PULSE_SURVEY_INTERVAL_DAYS = 30;
-
-const PULSE_SURVEY_INTERVAL_MS =
-  PULSE_SURVEY_INTERVAL_DAYS * 24 * 60 * 60 * 1000;
 
 type RespondentRole = "mentor" | "mentee";
 
@@ -64,28 +65,6 @@ async function getAuthorizedMentorship(
   }
 
   return { currentUser, mentorship, role };
-}
-
-function normalizeRating(value: number, fieldName: string) {
-  if (!Number.isInteger(value) || value < 1 || value > 5) {
-    throw new Error(`${fieldName} must be a whole number from 1 to 5`);
-  }
-
-  return value;
-}
-
-function normalizeOptionalComments(comments?: string) {
-  const trimmed = comments?.trim();
-
-  if (!trimmed) {
-    return undefined;
-  }
-
-  if (trimmed.length > 1000) {
-    throw new Error("Comments must be 1000 characters or fewer");
-  }
-
-  return trimmed;
 }
 
 function buildPulseSurveyView({
@@ -202,18 +181,10 @@ export async function submitPulseSurvey(
   ctx: MutationCtx,
   {
     surveyId,
-    relationshipRating,
-    communicationRating,
-    progressRating,
-    needsSupport,
-    comments,
+    answers,
   }: {
     surveyId: Id<"mentorshipPulseSurveys">;
-    relationshipRating: number;
-    communicationRating: number;
-    progressRating: number;
-    needsSupport: boolean;
-    comments?: string;
+    answers: FormAnswerInput[];
   }
 ) {
   const currentUser = requireOnboardingComplete(await getAuthenticatedUser(ctx));
@@ -239,20 +210,15 @@ export async function submitPulseSurvey(
   }
 
   const now = Date.now();
+  const validatedAnswers = await validateAndSnapshotAnswers(
+    ctx,
+    "pulse_survey",
+    answers
+  );
 
   await ctx.db.patch("mentorshipPulseSurveys", survey._id, {
     status: "submitted",
-    relationshipRating: normalizeRating(
-      relationshipRating,
-      "Relationship rating"
-    ),
-    communicationRating: normalizeRating(
-      communicationRating,
-      "Communication rating"
-    ),
-    progressRating: normalizeRating(progressRating, "Progress rating"),
-    needsSupport,
-    comments: normalizeOptionalComments(comments),
+    answers: validatedAnswers,
     submittedAt: now,
     updatedAt: now,
   });
@@ -306,17 +272,34 @@ async function createPulseSurveyIfMissing(
     updatedAt: now,
   });
 
+  await createNotification(ctx, {
+    userId: respondentId,
+    type: "pulse_survey_due",
+    title: "Pulse survey due",
+    message:
+      "A periodic mentorship health check is ready. Your answers are visible to programme administrators, not your counterpart.",
+    href:
+      respondentRole === "mentor"
+        ? `/mentor/mentorships/${mentorship._id}`
+        : `/mentorships/${mentorship._id}`,
+  });
+
   return true;
 }
 
 /**
  * Generates due pulse surveys for active mentorships.
  *
- * This creates one survey for the mentor and one survey for the mentee
- * every 30 days from the mentorship start date.
+ * This creates one survey for the mentor and one survey for the mentee at the
+ * configured interval. After the first cycle, cadence advances from the latest
+ * assigned survey so changing the interval cannot collide with an old cycle
+ * number.
  */
 export async function generateDuePulseSurveys(ctx: MutationCtx) {
   const now = Date.now();
+  const settings = await getEffectiveProgramSettings(ctx);
+  const pulseSurveyIntervalMs =
+    settings.pulseSurveyIntervalDays * 24 * 60 * 60 * 1000;
 
   const activeMentorships = await ctx.db
     .query("mentorships")
@@ -326,14 +309,52 @@ export async function generateDuePulseSurveys(ctx: MutationCtx) {
   let createdCount = 0;
 
   for (const mentorship of activeMentorships) {
-    const elapsedMs = now - mentorship.startDate;
+    const existingSurveys = await ctx.db
+      .query("mentorshipPulseSurveys")
+      .withIndex("by_mentorshipId", (q) =>
+        q.eq("mentorshipId", mentorship._id)
+      )
+      .collect();
 
-    if (elapsedMs < PULSE_SURVEY_INTERVAL_MS) {
-      continue;
+    let cycleNumber: number;
+    let dueAt: number;
+
+    if (existingSurveys.length === 0) {
+      const elapsedMs = now - mentorship.startDate;
+      if (elapsedMs < pulseSurveyIntervalMs) {
+        continue;
+      }
+
+      cycleNumber = Math.max(1, Math.floor(elapsedMs / pulseSurveyIntervalMs));
+      dueAt = mentorship.startDate + cycleNumber * pulseSurveyIntervalMs;
+    } else {
+      const latestCycleNumber = Math.max(
+        ...existingSurveys.map((survey) => survey.cycleNumber)
+      );
+      const latestCycleSurveys = existingSurveys.filter(
+        (survey) => survey.cycleNumber === latestCycleNumber
+      );
+      const latestDueAt = Math.max(
+        ...latestCycleSurveys.map((survey) => survey.dueAt)
+      );
+      const hasMentorSurvey = latestCycleSurveys.some(
+        (survey) => survey.respondentRole === "mentor"
+      );
+      const hasMenteeSurvey = latestCycleSurveys.some(
+        (survey) => survey.respondentRole === "mentee"
+      );
+
+      if (!hasMentorSurvey || !hasMenteeSurvey) {
+        cycleNumber = latestCycleNumber;
+        dueAt = latestDueAt;
+      } else {
+        cycleNumber = latestCycleNumber + 1;
+        dueAt = latestDueAt + pulseSurveyIntervalMs;
+        if (now < dueAt) {
+          continue;
+        }
+      }
     }
-
-    const cycleNumber = Math.floor(elapsedMs / PULSE_SURVEY_INTERVAL_MS);
-    const dueAt = mentorship.startDate + cycleNumber * PULSE_SURVEY_INTERVAL_MS;
 
     const createdMentorSurvey = await createPulseSurveyIfMissing(ctx, {
       mentorship,

@@ -1,110 +1,64 @@
-# acsoba-mentorship
+# ACS OBA Shepherds Programme
 
-## Database Schema (ERD)
+A responsive alumni mentorship platform built with Next.js, Auth0, and Convex.
+It supports mentor discovery, privacy-aware matching, mentorship requests,
+shared workspaces, meetings, goals, pulse surveys, exit feedback, incident
+reporting, notifications, and an administrator operations dashboard.
 
-The database uses a normalized structure where `Users` holds the core identity, while `Mentors` and `Mentees` tables hold role-specific data. This allows a single user to function as both a mentor and a mentee.
+## Application
 
-```mermaid
-erDiagram
-    %% Core Identity
-    Users ||--o| Mentors : "registered_as"
-    Users ||--o| Mentees : "registered_as"
-    Users ||--o{ UserInterests : "has"
-    Users ||--o{ IncidentReports : "reports"
-    Users ||--o{ IncidentReports : "is_reported_in"
+The deployable project is in [`web/`](web/).
 
-    %% Role-Specific Relationships
-    Mentees ||--o{ MentorshipRequests : "sends"
-    Mentors ||--o{ MentorshipRequests : "receives"
-    
-    Mentors ||--o{ Mentorships : "leads"
-    Mentees ||--o{ Mentorships : "participates_in"
+```bash
+cd web
+cp .env.example .env.local
+# Replace every placeholder in .env.local with real development values.
+npm ci
+# Terminal 1 (keeps running)
+npx convex dev
+# Terminal 2
+npm run dev
+```
 
-    %% Survey logic linked to the specific Mentorship instance
-    Mentorships ||--o{ PulseSurveys : "generates"
-    Mentorships ||--o{ ExitSurveys : "completes"
+`npx convex dev` is a watch process, so run it and `npm run dev` in separate
+terminals.
 
-    Users {
-        uuid id PK
-        string acsoba_id "For FR1/FR2 verification"
-        string email
-        string full_name
-        string profile_pic_url
-        string bio
-        string company
-        string location
-        string industry_primary
-        boolean is_admin
-        timestamp created_at
-    }
+See [`DEBUGGING_AND_INTEGRATION.md`](DEBUGGING_AND_INTEGRATION.md) before
+configuring Auth0, Convex, the ACSOBA verification service, or the head
+administrator.
 
-    Mentors {
-        uuid id PK
-        uuid user_id FK
-        int max_mentees "FR4: Mentor specific limit"
-        boolean is_available "FR4: Toggle availability"
-        int years_of_experience
-        timestamp created_at
-    }
+## Administrator access
 
-    Mentees {
-        uuid id PK
-        uuid user_id FK
-        text learning_goals
-        timestamp created_at
-    }
+Administrator identities authenticate through Auth0. ACSOBA membership
+verification is a separate participant-onboarding control and does not grant
+administrator access. The server-only Convex variable `HEAD_ADMIN_EMAIL`
+identifies the verified Auth0 email allowed to claim the one-time head-admin
+membership on first sign-in. The head admin can then invite or revoke ordinary
+administrators by verified email.
 
-    UserInterests {
-        uuid id PK
-        uuid user_id FK
-        string keyword "Industry/Expertise tags"
-        string type "ENUM: INTEREST (Mentee) or EXPERTISE (Mentor)"
-    }
+The application does not create an Auth0 identity or a password. The identity
+must already exist in the configured identity provider.
 
-    MentorshipRequests {
-        uuid id PK
-        uuid mentee_id FK "Refs Mentees.id"
-        uuid mentor_id FK "Refs Mentors.id"
-        text message
-        string status "ENUM: PENDING, ACCEPTED, REJECTED, EXPIRED"
-        timestamp created_at "Used for FR8 Auto Expire"
-        timestamp updated_at
-    }
+## Key documentation
 
-    Mentorships {
-        uuid id PK
-        uuid request_id FK "Link to original request"
-        uuid mentor_id FK "Refs Mentors.id"
-        uuid mentee_id FK "Refs Mentees.id"
-        date start_date
-        date end_date
-        string status "ENUM: ACTIVE, COMPLETED, TERMINATED"
-    }
+- [`DEBUGGING_AND_INTEGRATION.md`](DEBUGGING_AND_INTEGRATION.md) - setup,
+  environment variables, deployment, troubleshooting, and extension guide
+- [`CODE_CHANGE_REPORT.md`](CODE_CHANGE_REPORT.md) - implementation details,
+  requirement traceability, assumptions, and validation
+- [`ERD.md`](ERD.md) - current data model and authorization boundaries
+- [`DESIGN.md`](DESIGN.md) - visual design system
+- [`web/docs/onboarding-routing.md`](web/docs/onboarding-routing.md) -
+  onboarding flow
+- [`web/docs/privacy-settings.md`](web/docs/privacy-settings.md) - mentor
+  identity disclosure
 
-    PulseSurveys {
-        uuid id PK
-        uuid mentorship_id FK
-        uuid respondent_user_id FK "Refs Users.id (Author)"
-        int health_score "1-10 scale"
-        text feedback
-        timestamp created_at
-    }
+## Quality commands
 
-    ExitSurveys {
-        uuid id PK
-        uuid mentorship_id FK
-        uuid respondent_user_id FK "Refs Users.id (Author)"
-        text reason_for_leaving
-        int final_rating
-        timestamp created_at
-    }
+```bash
+cd web
+npm run check
+npm run build
+```
 
-    IncidentReports {
-        uuid id PK
-        uuid reporter_user_id FK "Refs Users.id"
-        uuid reported_user_id FK "Refs Users.id"
-        string category "e.g., Misconduct"
-        text description
-        boolean is_resolved
-        timestamp created_at
-    }
+`npm run build:webpack` is available as a diagnostic fallback in constrained
+containers where Turbopack cannot read host process metrics.

@@ -1,13 +1,30 @@
 "use client";
 
 import { ReactNode } from "react";
-import { Auth0Provider } from "@auth0/auth0-react";
+import { Auth0Provider, type AppState } from "@auth0/auth0-react";
 import { ConvexReactClient } from "convex/react";
 import { ConvexProviderWithAuth0 } from "convex/react-auth0";
 
 const convex = new ConvexReactClient(
   process.env.NEXT_PUBLIC_CONVEX_URL!
 );
+
+function getSafeReturnTo(appState?: AppState) {
+  const returnTo = appState?.returnTo;
+  if (typeof returnTo !== "string") {
+    return "/";
+  }
+
+  try {
+    const resolved = new URL(returnTo, window.location.origin);
+    if (resolved.origin !== window.location.origin) {
+      return "/";
+    }
+    return `${resolved.pathname}${resolved.search}${resolved.hash}`;
+  } catch {
+    return "/";
+  }
+}
 
 export function ConvexClientProvider({
   children,
@@ -23,6 +40,9 @@ export function ConvexClientProvider({
           typeof window === "undefined"
             ? undefined
             : window.location.origin,
+      }}
+      onRedirectCallback={(appState) => {
+        window.location.replace(getSafeReturnTo(appState));
       }}
       useRefreshTokens
       cacheLocation="localstorage"

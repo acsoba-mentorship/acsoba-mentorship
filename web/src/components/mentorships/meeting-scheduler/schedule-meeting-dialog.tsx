@@ -119,6 +119,7 @@ export function ScheduleMeetingDialog({
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validationNow, setValidationNow] = useState(() => Date.now());
 
   const draftStartAt = useMemo(() => {
     return new Date(startValue).getTime();
@@ -152,9 +153,11 @@ export function ScheduleMeetingDialog({
     });
   }, [draftEndAt, draftStartAt, existingMeetings]);
 
-  const isPastMeeting = Number.isFinite(draftStartAt) && draftStartAt < Date.now();
+  const isPastMeeting =
+    Number.isFinite(draftStartAt) && draftStartAt < validationNow;
 
   function resetForm() {
+    setValidationNow(Date.now());
     setTitle(defaultTitle);
     setDescription("");
     setLocation("");
@@ -191,6 +194,18 @@ export function ScheduleMeetingDialog({
 
     if (!Number.isFinite(duration) || duration <= 0) {
       setErrorMessage("Please choose a valid meeting duration.");
+      return;
+    }
+
+    if (startAt <= Date.now()) {
+      setErrorMessage("Please choose a meeting time in the future.");
+      return;
+    }
+
+    if (conflictingMeetings.length > 0) {
+      setErrorMessage(
+        "Choose another time that does not overlap an existing meeting."
+      );
       return;
     }
 
@@ -356,7 +371,12 @@ export function ScheduleMeetingDialog({
             <Button
               type="button"
               onClick={handleSubmit}
-              disabled={isSubmitting || !title.trim()}
+              disabled={
+                isSubmitting ||
+                !title.trim() ||
+                isPastMeeting ||
+                conflictingMeetings.length > 0
+              }
             >
               {isSubmitting ? "Saving..." : "Save Meeting"}
             </Button>

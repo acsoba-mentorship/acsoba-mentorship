@@ -102,76 +102,106 @@ export function ProfileMainContent({
         )}
       </ProfileSectionCard>
 
-      {/* Goals */}
-      <ProfileSectionCard
-        title="Goals"
-        icon={<Target className="size-3.5 text-muted-foreground" />}
-        showEdit={isOwnProfile}
-        editTrigger={
-          <ProfileEditDialog
-            open={goalsOpen}
-            onOpenChange={setGoalsOpen}
-            trigger={
-              <Button variant="ghost" size="icon" className="size-8" aria-label="Edit Goals">
-                <Pencil className="size-3.5" />
-              </Button>
+      {mentee ? (
+        <>
+          {/* Mentee preferences: goals, commitment level, preferred contact */}
+          <ProfileSectionCard
+            title="Mentee Preferences"
+            icon={<Target className="size-3.5 text-muted-foreground" />}
+            showEdit={isOwnProfile}
+            editTrigger={
+              <ProfileEditDialog
+                open={goalsOpen}
+                onOpenChange={setGoalsOpen}
+                trigger={
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8"
+                    aria-label="Edit mentee preferences"
+                  >
+                    <Pencil className="size-3.5" />
+                  </Button>
+                }
+                title="Edit mentee preferences"
+                description="Your goals, commitment level, and preferred way to be contacted."
+              >
+                <GoalsSectionForm
+                  user={user}
+                  onSuccess={() => setGoalsOpen(false)}
+                />
+              </ProfileEditDialog>
             }
-            title="Edit Goals"
-            description="Describe your mentee goals."
           >
-            <GoalsSectionForm
-              user={user}
-              onSuccess={() => setGoalsOpen(false)}
-            />
-          </ProfileEditDialog>
-        }
-      >
-        {mentee?.goals ? (
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            {mentee.goals}
-          </p>
-        ) : (
-          <p className="text-sm text-muted-foreground italic">No goals added yet.</p>
-        )}
-      </ProfileSectionCard>
+            <div className="space-y-3">
+              {mentee.goals ? (
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {mentee.goals}
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">
+                  No goals added yet.
+                </p>
+              )}
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                {mentee.commitmentLevel ? (
+                  <Badge variant="outline">{mentee.commitmentLevel}</Badge>
+                ) : null}
+                {(mentee.preferredCommunicationModes ?? []).map((mode) => (
+                  <Badge key={mode} variant="outline">
+                    {mode}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </ProfileSectionCard>
 
-      {/* Interests */}
-      <ProfileSectionCard
-        title="Interests"
-        description="Areas looking to develop."
-        icon={<Sparkles className="size-3.5 text-muted-foreground" />}
-        showEdit={isOwnProfile}
-        editTrigger={
-          <ProfileEditDialog
-            open={interestsOpen}
-            onOpenChange={setInterestsOpen}
-            trigger={
-              <Button variant="ghost" size="icon" className="size-8" aria-label="Edit Interests">
-                <Pencil className="size-3.5" />
-              </Button>
+          {/* Interests */}
+          <ProfileSectionCard
+            title="Interests"
+            description="Areas looking to develop."
+            icon={<Sparkles className="size-3.5 text-muted-foreground" />}
+            showEdit={isOwnProfile}
+            editTrigger={
+              <ProfileEditDialog
+                open={interestsOpen}
+                onOpenChange={setInterestsOpen}
+                trigger={
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8"
+                    aria-label="Edit Interests"
+                  >
+                    <Pencil className="size-3.5" />
+                  </Button>
+                }
+                title="Edit Interests"
+                description="Add areas you want to develop."
+              >
+                <InterestsSectionForm
+                  user={user}
+                  onSuccess={() => setInterestsOpen(false)}
+                />
+              </ProfileEditDialog>
             }
-            title="Edit Interests"
-            description="Add areas you want to develop."
           >
-            <InterestsSectionForm
-              user={user}
-              onSuccess={() => setInterestsOpen(false)}
-            />
-          </ProfileEditDialog>
-        }
-      >
-        {user.interests.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5">
-            {user.interests.map((interest) => (
-              <Badge key={interest} variant="secondary" className="text-xs">
-                {interest}
-              </Badge>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground italic">No interests added yet.</p>
-        )}
-      </ProfileSectionCard>
+            {user.interests.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {user.interests.map((interest) => (
+                  <Badge key={interest} variant="secondary" className="text-xs">
+                    {interest}
+                  </Badge>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground italic">
+                No interests added yet.
+              </p>
+            )}
+          </ProfileSectionCard>
+        </>
+      ) : null}
 
       {/* Education */}
       <ProfileSectionCard

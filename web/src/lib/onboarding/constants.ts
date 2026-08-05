@@ -7,6 +7,9 @@ export const COMMITMENT_LEVEL_OPTIONS = [
   "Monthly",
 ] as const;
 
+export type CommitmentLevelValue =
+  (typeof COMMITMENT_LEVEL_OPTIONS)[number];
+
 export const PREFERRED_COMMUNICATION_MODE_OPTIONS = [
   "Video call",
   "Voice call",
@@ -15,10 +18,12 @@ export const PREFERRED_COMMUNICATION_MODE_OPTIONS = [
   "Chat",
 ] as const;
 
+export type PreferredCommunicationModeValue =
+  (typeof PREFERRED_COMMUNICATION_MODE_OPTIONS)[number];
+
 export const GENDER_OPTIONS = [
   { value: "male", label: "Male" },
   { value: "female", label: "Female" },
-  { value: "non_binary", label: "Non-binary" },
 ] as const;
 
 export type GenderValue = (typeof GENDER_OPTIONS)[number]["value"];
@@ -26,6 +31,7 @@ export type GenderValue = (typeof GENDER_OPTIONS)[number]["value"];
 export const CAREER_STAGE_UI = {
   STUDENT: "student",
   WORKING: "professional",
+  BETWEEN_STUDY_AND_WORK: "between_study_and_work",
 } as const;
 
 export const PRESET_INDUSTRIES = [

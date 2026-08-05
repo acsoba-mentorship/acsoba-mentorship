@@ -48,6 +48,7 @@ export function AboutSectionForm({ user, onSuccess }: AboutSectionFormProps) {
       bio: user.bio ?? "",
       location: user.location ?? "",
       title: user.title ?? "",
+      phoneNumber: user.phoneNumber ?? "",
       username: user.username ?? "",
     },
   });
@@ -107,6 +108,7 @@ export function AboutSectionForm({ user, onSuccess }: AboutSectionFormProps) {
       bio: values.bio,
       location: values.location,
       title: values.title,
+      phoneNumber: values.phoneNumber,
     });
 
     if (values.username !== user.username) {
@@ -206,6 +208,23 @@ export function AboutSectionForm({ user, onSuccess }: AboutSectionFormProps) {
               <FormLabel>Professional headline</FormLabel>
               <FormControl>
                 <Input placeholder="e.g. Software Engineer" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="phoneNumber"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Phone number</FormLabel>
+              <FormControl>
+                <Input
+                  type="tel"
+                  placeholder="e.g. +65 9123 4567"
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

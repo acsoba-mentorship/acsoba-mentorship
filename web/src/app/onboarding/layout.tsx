@@ -2,7 +2,6 @@
 
 import { Authenticated, Unauthenticated } from "convex/react";
 import { RedirectToLanding } from "@/components/auth/redirects";
-import { OnboardingProvider } from "@/components/onboarding/onboarding-provider";
 import CompletedOnboardingGuard from "@/components/navigation/completed-onboarding-guard";
 
 export default function OnboardingLayout({
@@ -18,7 +17,7 @@ export default function OnboardingLayout({
 
       <Authenticated>
         <CompletedOnboardingGuard>
-          <OnboardingProvider>{children}</OnboardingProvider>
+          {children}
         </CompletedOnboardingGuard>
       </Authenticated>
     </>

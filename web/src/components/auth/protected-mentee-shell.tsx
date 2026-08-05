@@ -17,7 +17,7 @@ export function ProtectedMenteeShell({
 
   useEffect(() => {
     if (needsRedirect) {
-      router.replace("/dashboard");
+      router.replace("/profile/add-mentee");
     }
   }, [needsRedirect, router]);
 

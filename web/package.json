@@ -3,16 +3,19 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "auth:configure": "node scripts/configure-auth0.mjs",
     "dev": "next dev",
     "build": "next build",
+    "build:webpack": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run lint && npm run typecheck",
     "seed:sample-users": "npx convex dev --run init"
   },
   "dependencies": {
     "@auth0/auth0-react": "^2.13.0",
-    "@auth0/nextjs-auth0": "^4.15.0",
-    "@hookform/resolvers": "^5.2.2",
+    "@hookform/resolvers": "5.2.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "convex": "^1.31.7",
@@ -22,6 +25,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-hook-form": "^7.71.2",
+    "sharp": "^0.35.3",
     "tailwind-merge": "^3.4.0",
     "zod": "^4.3.6"
   },

@@ -45,10 +45,66 @@ function assertValidMeetingTime(startAt: number, endAt: number) {
     throw new Error("Meeting end time must be after the start time");
   }
 
+  if (startAt <= Date.now()) {
+    throw new Error("Meeting start time must be in the future");
+  }
+
   const durationInHours = (endAt - startAt) / (1000 * 60 * 60);
 
   if (durationInHours > 8) {
     throw new Error("Meeting duration must be 8 hours or fewer");
+  }
+}
+
+async function assertNoParticipantConflict(
+  ctx: MutationCtx,
+  mentorship: Doc<"mentorships">,
+  startAt: number,
+  endAt: number
+) {
+  const participantIds = [mentorship.mentorId, mentorship.menteeId];
+  const relationshipGroups = await Promise.all(
+    participantIds.flatMap((participantId) => [
+      ctx.db
+        .query("mentorships")
+        .withIndex("by_mentorId_status", (q) =>
+          q.eq("mentorId", participantId).eq("status", "active")
+        )
+        .collect(),
+      ctx.db
+        .query("mentorships")
+        .withIndex("by_menteeId_status", (q) =>
+          q.eq("menteeId", participantId).eq("status", "active")
+        )
+        .collect(),
+    ])
+  );
+  const mentorshipIds = new Set(
+    relationshipGroups
+      .flat()
+      .map((relationship) => relationship._id)
+  );
+  const meetingGroups = await Promise.all(
+    [...mentorshipIds].map((mentorshipId) =>
+      ctx.db
+        .query("mentorshipMeetings")
+        .withIndex("by_mentorshipId_startAt", (q) =>
+          q.eq("mentorshipId", mentorshipId)
+        )
+        .collect()
+    )
+  );
+  const hasConflict = meetingGroups.flat().some(
+    (meeting) =>
+      meeting.status === "scheduled" &&
+      startAt < meeting.endAt &&
+      meeting.startAt < endAt
+  );
+
+  if (hasConflict) {
+    throw new Error(
+      "This time overlaps another scheduled meeting for a participant"
+    );
   }
 }
 
@@ -205,13 +261,14 @@ export async function createMeeting(
     endAt: number;
   }
 ) {
-  const { currentUser, role } = await getAuthorizedMentorship(
+  const { currentUser, mentorship, role } = await getAuthorizedMentorship(
     ctx,
     mentorshipId
   );
 
   assertCanManageMeetings(role);
   assertValidMeetingTime(startAt, endAt);
+  await assertNoParticipantConflict(ctx, mentorship, startAt, endAt);
 
   const now = Date.now();
 

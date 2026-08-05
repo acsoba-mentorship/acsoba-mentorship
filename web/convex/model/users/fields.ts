@@ -5,9 +5,25 @@ export const ONBOARDING_STATUS = {
   COMPLETE: "complete",
 } as const;
 
+export const ACCOUNT_STATUS = {
+  ACTIVE: "active",
+  SUSPENDED: "suspended",
+} as const;
+
+export const accountStatusValidator = v.union(
+  v.literal(ACCOUNT_STATUS.ACTIVE),
+  v.literal(ACCOUNT_STATUS.SUSPENDED)
+);
+
+export const membershipVerificationStatusValidator = v.union(
+  v.literal("acsoba_verified"),
+  v.literal("auth0_fallback")
+);
+
 export const CAREER_STAGE = {
   STUDENT: "student",
   PROFESSIONAL: "professional",
+  BETWEEN_STUDY_AND_WORK: "between_study_and_work",
 } as const;
 
 export const COMMITMENT_LEVEL = {
@@ -47,7 +63,8 @@ export const onboardingStatusValidator = v.union(
 
 export const careerStageValidator = v.union(
   v.literal(CAREER_STAGE.STUDENT),
-  v.literal(CAREER_STAGE.PROFESSIONAL)
+  v.literal(CAREER_STAGE.PROFESSIONAL),
+  v.literal(CAREER_STAGE.BETWEEN_STUDY_AND_WORK)
 );
 
 export const commitmentLevelValidator = v.union(
@@ -85,14 +102,17 @@ export const experienceEntryValidator = v.object({
 export const menteeProfileValidator = v.object({
   goals: v.string(),
   commitmentLevel: commitmentLevelValidator,
-  preferredCommunicationModes: v.array(preferredCommunicationModeValidator)
+  preferredCommunicationModes: v.array(preferredCommunicationModeValidator),
+  industries: v.optional(v.array(v.string())),
 });
 
 export const mentorProfileValidator = v.object({
   yearsOfExperience: v.number(),
   expertise: v.array(v.string()),
+  industries: v.optional(v.array(v.string())),
   maxMentees: v.number(),
   isAvailable: v.boolean(),
+  isVisible: v.optional(v.boolean()),
 });
 
 export const mentorPrivacyOverridesValidator = v.object({
@@ -119,6 +139,13 @@ export const usersTableFields = {
   gender: v.string(),
   nationality: v.string(),
   tokenIdentifier: v.string(),
+  authEmailNormalized: v.optional(v.string()),
+  authEmailVerified: v.optional(v.boolean()),
+  membershipVerificationStatus: v.optional(
+    membershipVerificationStatusValidator
+  ),
+  membershipVerifiedAt: v.optional(v.number()),
+  membershipVerifiedEmail: v.optional(v.string()),
   profilePictureUrl: v.string(),
   title: v.string(),
   bio: v.string(),
@@ -132,7 +159,14 @@ export const usersTableFields = {
   experience: v.array(experienceEntryValidator),
   menteeProfile: v.optional(menteeProfileValidator),
   mentorProfile: v.optional(mentorProfileValidator),
+  // Legacy field retained so existing deployed documents continue to validate.
+  // Identity disclosure is now fixed programme policy and ignores this value.
   mentorSettings: v.optional(mentorSettingsValidator),
   onboardingStatus: onboardingStatusValidator,
   createdAt: v.number(),
+  // Optional: absent/undefined is treated as "active". Set by admins via
+  // convex/model/admin.ts suspendUser/reactivateUser.
+  accountStatus: v.optional(accountStatusValidator),
+  suspendedAt: v.optional(v.number()),
+  suspendedReason: v.optional(v.string()),
 };

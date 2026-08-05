@@ -30,6 +30,7 @@ const defaultMentor = {
   yearsOfExperience: 0,
   maxMentees: 1,
   isAvailable: false,
+  isVisible: true,
   expertise: [] as string[],
 };
 
@@ -46,6 +47,7 @@ export function MentorDetailsForm({
       yearsOfExperience: profile.yearsOfExperience,
       maxMentees: profile.maxMentees,
       isAvailable: profile.isAvailable,
+      isVisible: profile.isVisible ?? true,
     }
   });
 
@@ -54,6 +56,7 @@ export function MentorDetailsForm({
       yearsOfExperience: values.yearsOfExperience,
       maxMentees: values.maxMentees,
       isAvailable: values.isAvailable,
+      isVisible: values.isVisible,
       expertise: profile.expertise,
     });
     onSuccess?.();
@@ -120,6 +123,29 @@ export function MentorDetailsForm({
               <FormLabel className="font-normal cursor-pointer">
                 I am available for new mentees
               </FormLabel>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="isVisible"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-start space-x-2 space-y-0 rounded-lg bg-muted/40 p-3">
+              <FormControl>
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+              <div className="space-y-1">
+                <FormLabel className="cursor-pointer font-normal">
+                  Show my profile in mentor discovery
+                </FormLabel>
+                <p className="text-xs text-muted-foreground">
+                  Turn this off to hide from search and recommendations without
+                  affecting active mentorships.
+                </p>
+              </div>
             </FormItem>
           )}
         />

@@ -16,7 +16,7 @@ export function ProtectedMentorShell({
 
   useEffect(() => {
     if (needsRedirect) {
-      router.replace("/dashboard");
+      router.replace("/profile/add-mentor");
     }
   }, [needsRedirect, router]);
 

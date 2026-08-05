@@ -2,9 +2,10 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import * as UsersModel from "./model/users";
 import {
+  enrollAsMenteeArgsValidator,
+  enrollAsMentorArgsValidator,
   setUserOnboardingCompleteArgsValidator,
   updateMentorProfileArgsValidator,
-  updateMentorPrivacySettingsArgsValidator,
   updateUserIndustriesArgsValidator,
   updateUserInterestsArgsValidator,
   updateUserProfileArgsValidator,
@@ -61,24 +62,8 @@ export const checkUsernameAvailable = query({
  * Lists mentors, prioritizing mentors currently marked available.
  */
 export const listMentors = query({
-  args: { limit: v.optional(v.number()) },
-  handler: (ctx, args) => UsersModel.listMentors(ctx, args),
-});
-
-/**
- * Returns the caller's mentor privacy settings with defaults applied.
- */
-export const getMyMentorPrivacySettings = query({
   args: {},
-  handler: (ctx) => UsersModel.getMyMentorPrivacySettings(ctx),
-});
-
-/**
- * Updates mentor identity disclosure settings for the caller.
- */
-export const updateMyMentorPrivacySettings = mutation({
-  args: updateMentorPrivacySettingsArgsValidator,
-  handler: (ctx, args) => UsersModel.updateMyMentorPrivacySettings(ctx, args),
+  handler: (ctx) => UsersModel.listMentors(ctx),
 });
 
 /**
@@ -98,12 +83,30 @@ export const updateUsername = mutation({
 });
 
 /**
- * Writes the complete mentee onboarding payload and marks the user complete.
+ * Writes the selected role's initial onboarding payload and marks the user complete.
  */
 export const setUserOnboardingComplete = mutation({
   args: setUserOnboardingCompleteArgsValidator,
   returns: v.id("users"),
   handler: (ctx, args) => UsersModel.setUserOnboardingComplete(ctx, args),
+});
+
+/**
+ * Adds a mentee profile to an already-onboarded mentor.
+ */
+export const enrollAsMentee = mutation({
+  args: enrollAsMenteeArgsValidator,
+  returns: v.id("users"),
+  handler: (ctx, args) => UsersModel.enrollAsMentee(ctx, args),
+});
+
+/**
+ * Adds a mentor profile to an already-onboarded mentee.
+ */
+export const enrollAsMentor = mutation({
+  args: enrollAsMentorArgsValidator,
+  returns: v.id("users"),
+  handler: (ctx, args) => UsersModel.enrollAsMentor(ctx, args),
 });
 
 /**
@@ -130,6 +133,7 @@ export const updateUserProfileBasics = mutation({
     bio: v.optional(usersTableFields.bio),
     location: v.optional(usersTableFields.location),
     title: v.optional(usersTableFields.title),
+    phoneNumber: v.optional(usersTableFields.phoneNumber),
   },
   handler: (ctx, args) => UsersModel.updateUserProfileBasics(ctx, args),
 });

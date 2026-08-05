@@ -1,0 +1,373 @@
+import type { Doc, Id } from "../_generated/dataModel";
+import type { MutationCtx, QueryCtx } from "../_generated/server";
+import {
+  getAuthenticatedUser,
+  requireAdmin,
+  requireOnboardingComplete,
+} from "./auth";
+import { getEffectiveProgramSettings } from "./programSettings";
+import { createNotification } from "./notifications";
+import { fetchUsersById } from "./helper";
+import {
+  type FormAnswerInput,
+  validateAndSnapshotAnswers,
+} from "./formQuestions";
+
+type RespondentRole = "mentor" | "mentee";
+
+function getRole(
+  mentorship: Doc<"mentorships">,
+  userId: Id<"users">
+): RespondentRole | null {
+  if (mentorship.mentorId === userId) return "mentor";
+  if (mentorship.menteeId === userId) return "mentee";
+  return null;
+}
+
+async function getAuthorizedMentorship(
+  ctx: QueryCtx | MutationCtx,
+  mentorshipId: Id<"mentorships">
+) {
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
+  const mentorship = await ctx.db.get("mentorships", mentorshipId);
+  if (!mentorship) throw new Error("Mentorship not found");
+  const role = getRole(mentorship, user._id);
+  if (!role) throw new Error("Unauthorized to access this mentorship");
+  return { user, mentorship, role };
+}
+
+async function createFeedbackIfMissing(
+  ctx: MutationCtx,
+  {
+    mentorship,
+    respondentRole,
+    dueAt,
+    now,
+  }: {
+    mentorship: Doc<"mentorships">;
+    respondentRole: RespondentRole;
+    dueAt: number;
+    now: number;
+  }
+) {
+  const respondentId =
+    respondentRole === "mentor" ? mentorship.mentorId : mentorship.menteeId;
+  const existing = await ctx.db
+    .query("exitFeedback")
+    .withIndex("by_mentorshipId_respondentId", (q) =>
+      q.eq("mentorshipId", mentorship._id).eq("respondentId", respondentId)
+    )
+    .unique();
+  if (existing) return existing._id;
+
+  const feedbackId = await ctx.db.insert("exitFeedback", {
+    mentorshipId: mentorship._id,
+    mentorId: mentorship.mentorId,
+    menteeId: mentorship.menteeId,
+    respondentId,
+    respondentRole,
+    status: "pending",
+    dueAt,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  if (respondentRole === "mentor") {
+    await createNotification(ctx, {
+      userId: respondentId,
+      type: "exit_feedback_due",
+      title: "Exit feedback requested",
+      message:
+        "Please complete your independent exit survey so the programme team can learn from this mentorship.",
+      href: `/mentor/mentorships/${mentorship._id}`,
+    });
+  }
+
+  return feedbackId;
+}
+
+export async function getMineForMentorship(
+  ctx: QueryCtx,
+  { mentorshipId }: { mentorshipId: Id<"mentorships"> }
+) {
+  const { user, mentorship } = await getAuthorizedMentorship(ctx, mentorshipId);
+  const feedback = await ctx.db
+    .query("exitFeedback")
+    .withIndex("by_mentorshipId_respondentId", (q) =>
+      q.eq("mentorshipId", mentorshipId).eq("respondentId", user._id)
+    )
+    .unique();
+
+  return {
+    exitInitiatedAt: mentorship.exitInitiatedAt ?? null,
+    mentorshipStatus: mentorship.status,
+    feedback: feedback
+      ? {
+          _id: feedback._id,
+          respondentRole: feedback.respondentRole,
+          status: feedback.status,
+          dueAt: feedback.dueAt,
+          submittedAt: feedback.submittedAt ?? null,
+        }
+      : null,
+  };
+}
+
+export async function listPendingMine(ctx: QueryCtx) {
+  const user = await getAuthenticatedUser(ctx);
+  return ctx.db
+    .query("exitFeedback")
+    .withIndex("by_respondentId_status", (q) =>
+      q.eq("respondentId", user._id).eq("status", "pending")
+    )
+    .order("desc")
+    .collect();
+}
+
+/**
+ * FR: "only mentors should be allowed to end the mentorship" - this
+ * avoids the mentor and mentee racing to independently start the exit
+ * process. Ending immediately queues an independent exit survey for
+ * both participants; the mentee is notified their mentor ended the
+ * mentorship and asked to complete their survey right away.
+ */
+export async function initiate(
+  ctx: MutationCtx,
+  { mentorshipId }: { mentorshipId: Id<"mentorships"> }
+) {
+  const { user, mentorship, role } = await getAuthorizedMentorship(
+    ctx,
+    mentorshipId
+  );
+  if (role !== "mentor") {
+    throw new Error("Only the mentor can end a mentorship");
+  }
+  if (mentorship.status !== "active") {
+    throw new Error("Only an active mentorship can enter the exit process");
+  }
+
+  const now = Date.now();
+  const settings = await getEffectiveProgramSettings(ctx);
+  const dueAt =
+    now + settings.exitSurveyDueDays * 24 * 60 * 60 * 1000;
+
+  if (!mentorship.exitInitiatedAt) {
+    await ctx.db.patch("mentorships", mentorship._id, {
+      status: "completed",
+      endDate: now,
+      exitInitiatedAt: now,
+      exitInitiatedBy: user._id,
+      updatedAt: now,
+    });
+  }
+
+  await createFeedbackIfMissing(ctx, {
+    mentorship,
+    respondentRole: "mentor",
+    dueAt,
+    now,
+  });
+  await createFeedbackIfMissing(ctx, {
+    mentorship,
+    respondentRole: "mentee",
+    dueAt,
+    now,
+  });
+
+  await createNotification(ctx, {
+    userId: mentorship.menteeId,
+    type: "exit_feedback_due",
+    title: "Your mentor has ended the mentorship",
+    message:
+      "Your mentor has ended this mentorship. Please complete your independent exit survey now.",
+    href: `/mentorships/${mentorship._id}`,
+  });
+
+  return mentorship._id;
+}
+
+export async function submit(
+  ctx: MutationCtx,
+  {
+    feedbackId,
+    answers,
+  }: {
+    feedbackId: Id<"exitFeedback">;
+    answers: FormAnswerInput[];
+  }
+) {
+  const user = requireOnboardingComplete(await getAuthenticatedUser(ctx));
+  const feedback = await ctx.db.get("exitFeedback", feedbackId);
+  if (!feedback || feedback.respondentId !== user._id) {
+    throw new Error("Exit feedback form not found");
+  }
+  if (feedback.status !== "pending") {
+    throw new Error("This exit feedback form has already been submitted");
+  }
+
+  const now = Date.now();
+  const validatedAnswers = await validateAndSnapshotAnswers(
+    ctx,
+    "exit_feedback",
+    answers
+  );
+  await ctx.db.patch("exitFeedback", feedback._id, {
+    status: "submitted",
+    answers: validatedAnswers,
+    submittedAt: now,
+    updatedAt: now,
+  });
+
+  const allFeedback = await ctx.db
+    .query("exitFeedback")
+    .withIndex("by_mentorshipId", (q) =>
+      q.eq("mentorshipId", feedback.mentorshipId)
+    )
+    .collect();
+  const mentorshipCompleted =
+    allFeedback.length >= 2 &&
+    allFeedback.every(
+      (item) => item._id === feedback._id || item.status === "submitted"
+    );
+
+  const remainingPending = await ctx.db
+    .query("exitFeedback")
+    .withIndex("by_respondentId_status", (q) =>
+      q.eq("respondentId", user._id).eq("status", "pending")
+    )
+    .collect();
+
+  return {
+    feedbackId: feedback._id,
+    mentorshipCompleted,
+    remainingPendingCount: remainingPending.length,
+  };
+}
+
+export async function listForAdmin(ctx: QueryCtx) {
+  await requireAdmin(ctx);
+  const feedback = await ctx.db
+    .query("exitFeedback")
+    .withIndex("by_status_dueAt", (q) => q.eq("status", "submitted"))
+    .order("desc")
+    .collect();
+  const mentorshipIds = [
+    ...new Set(feedback.map((item) => item.mentorshipId)),
+  ];
+  const mentorships = await Promise.all(
+    mentorshipIds.map((mentorshipId) =>
+      ctx.db.get("mentorships", mentorshipId)
+    )
+  );
+  const mentorshipById = new Map(
+    mentorshipIds.map((mentorshipId, index) => [
+      mentorshipId,
+      mentorships[index] ?? null,
+    ])
+  );
+  const counterpartIds = feedback.flatMap((item) => {
+    const mentorship = mentorshipById.get(item.mentorshipId);
+    if (!mentorship) return [];
+    return [
+      item.respondentRole === "mentor"
+        ? mentorship.menteeId
+        : mentorship.mentorId,
+    ];
+  });
+  const userById = await fetchUsersById(ctx, [
+    ...feedback.map((item) => item.respondentId),
+    ...counterpartIds,
+  ]);
+
+  return feedback.map((item) => {
+    const mentorship = mentorshipById.get(item.mentorshipId);
+    const counterpartId = mentorship
+      ? item.respondentRole === "mentor"
+        ? mentorship.menteeId
+        : mentorship.mentorId
+      : null;
+
+    return {
+      _id: item._id,
+      mentorshipId: item.mentorshipId,
+      respondentName:
+        userById.get(item.respondentId)?.name ?? "Unknown user",
+      respondentRole: item.respondentRole,
+      counterpartName:
+        (counterpartId ? userById.get(counterpartId)?.name : null) ??
+        "Unknown user",
+      counterpartRole:
+        item.respondentRole === "mentor"
+          ? ("mentee" as const)
+          : ("mentor" as const),
+      reason: item.reason ?? null,
+      overallRating: item.overallRating ?? null,
+      goalsAchieved: item.goalsAchieved ?? null,
+      wouldRecommend: item.wouldRecommend ?? null,
+      highlights: item.highlights ?? null,
+      improvements: item.improvements ?? null,
+      additionalComments: item.additionalComments ?? null,
+      answers:
+        item.answers ??
+        [
+          item.reason
+            ? {
+                questionKey: "exit_reason",
+                prompt: "Reason for ending the mentorship",
+                responseType: "long_text" as const,
+                value: item.reason,
+              }
+            : null,
+          item.overallRating !== undefined
+            ? {
+                questionKey: "exit_overall_rating",
+                prompt: "Overall rating",
+                responseType: "single_choice" as const,
+                value: String(item.overallRating),
+              }
+            : null,
+          item.goalsAchieved !== undefined
+            ? {
+                questionKey: "exit_goals_achieved",
+                prompt: "Were your goals achieved?",
+                responseType: "single_choice" as const,
+                value: item.goalsAchieved ? "Yes" : "No",
+              }
+            : null,
+          item.wouldRecommend !== undefined
+            ? {
+                questionKey: "exit_would_recommend",
+                prompt: "Would you recommend the programme?",
+                responseType: "single_choice" as const,
+                value: item.wouldRecommend ? "Yes" : "No",
+              }
+            : null,
+          item.highlights
+            ? {
+                questionKey: "exit_highlights",
+                prompt: "Highlights",
+                responseType: "long_text" as const,
+                value: item.highlights,
+              }
+            : null,
+          item.improvements
+            ? {
+                questionKey: "exit_improvements",
+                prompt: "What could have improved the experience?",
+                responseType: "long_text" as const,
+                value: item.improvements,
+              }
+            : null,
+          item.additionalComments
+            ? {
+                questionKey: "exit_additional_comments",
+                prompt: "Additional comments",
+                responseType: "long_text" as const,
+                value: item.additionalComments,
+              }
+            : null,
+        ].filter((answer) => answer !== null),
+      submittedAt: item.submittedAt ?? null,
+    };
+  });
+}

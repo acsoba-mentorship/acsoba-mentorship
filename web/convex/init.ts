@@ -130,16 +130,6 @@ export default internalMutation({
         maxMentees: number;
         isAvailable: boolean;
       };
-      mentorSettings?: {
-        privacy: {
-          masterIdentityDisclosure: boolean;
-          overrides?: {
-            name?: boolean;
-            email?: boolean;
-            phoneNumber?: boolean;
-          };
-        };
-      };
     }> = [];
 
     for (let i = 0; i < 15; i++) {
@@ -172,48 +162,6 @@ export default internalMutation({
           maxMentees: 2 + (i % 3),
           isAvailable: i % 2 === 0,
         },
-        ...(i < 3
-          ? {
-              mentorSettings: {
-                privacy: {
-                  masterIdentityDisclosure: false,
-                  overrides: {
-                    name: false,
-                    email: false,
-                    phoneNumber: false,
-                  },
-                },
-              },
-            }
-          : {}),
-        ...(i === 3
-          ? {
-              mentorSettings: {
-                privacy: {
-                  masterIdentityDisclosure: true,
-                  overrides: {
-                    name: false,
-                    email: false,
-                    phoneNumber: false,
-                  },
-                },
-              },
-            }
-          : {}),
-        ...(i === 4
-          ? {
-              mentorSettings: {
-                privacy: {
-                  masterIdentityDisclosure: true,
-                  overrides: {
-                    name: true,
-                    email: true,
-                    phoneNumber: false,
-                  },
-                },
-              },
-            }
-          : {}),
       });
     }
 
@@ -250,8 +198,8 @@ export default internalMutation({
       });
     }
 
-    // Insert missing seeded users and patch deterministic mentor privacy settings
-    // so existing local databases can be refreshed without deleting data.
+    // Insert missing seeded users and refresh their deterministic profile data
+    // so existing local databases can be updated without deleting data.
     let inserted = 0;
     let skipped = 0;
     let updated = 0;
@@ -270,7 +218,6 @@ export default internalMutation({
           ...(u.interests ? { interests: u.interests } : {}),
           ...(u.industries ? { industries: u.industries } : {}),
           ...(u.menteeProfile ? { menteeProfile: u.menteeProfile } : {}),
-          ...(u.mentorSettings ? { mentorSettings: u.mentorSettings } : {}),
           onboardingStatus: ONBOARDING_STATUS.COMPLETE,
         });
         updated += 1;
@@ -299,7 +246,6 @@ export default internalMutation({
         experience: [],
         ...(u.menteeProfile ? { menteeProfile: u.menteeProfile } : {}),
         ...(u.mentorProfile ? { mentorProfile: u.mentorProfile } : {}),
-        ...(u.mentorSettings ? { mentorSettings: u.mentorSettings } : {}),
         onboardingStatus: ONBOARDING_STATUS.COMPLETE,
         createdAt: now,
       });
@@ -310,4 +256,3 @@ export default internalMutation({
     return { inserted, skipped, updated };
   },
 });
-

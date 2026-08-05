@@ -1,9 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo, useState } from "react";
 import type { FunctionReturnType } from "convex/server";
 import { useQuery } from "convex/react";
-import { Calendar, CalendarPlus, Mail, Phone, Users } from "lucide-react";
+import {
+  Calendar,
+  CalendarPlus,
+  History,
+  Mail,
+  Phone,
+  Search,
+  Users,
+} from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import { useCurrentUser } from "@/app/CurrentUserProvider";
 import {
@@ -20,6 +29,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScheduleMeetingDialog } from "@/components/mentorships/meeting-scheduler";
 import { formatDate } from "@/lib/utils";
@@ -75,6 +85,30 @@ function MentorshipEmptyState({
       </CardContent>
     </Card>
   );
+}
+
+function MentorshipStatusBadge({
+  status,
+}: {
+  status: MentorMentorship["status"] | MenteeMentorship["status"];
+}) {
+  const styles: Record<typeof status, { label: string; className: string }> = {
+    active: {
+      label: "Active",
+      className: "border-0 bg-emerald-50 text-emerald-700",
+    },
+    completed: {
+      label: "Completed",
+      className: "border-0 bg-slate-100 text-slate-700",
+    },
+    cancelled: {
+      label: "Cancelled",
+      className: "border-0 bg-red-50 text-red-700",
+    },
+  };
+  const style = styles[status];
+
+  return <Badge className={style.className}>{style.label}</Badge>;
 }
 
 function ActiveMentorshipCard({
@@ -196,6 +230,106 @@ function ActiveMentorshipCard({
   );
 }
 
+function MentorshipHistoryCard({
+  name,
+  initials,
+  title,
+  profilePictureUrl,
+  profileHref,
+  startedAt,
+  endedAt,
+  status,
+  tags,
+  tagsLabel,
+}: {
+  name: string;
+  initials: string;
+  title: string;
+  profilePictureUrl?: string | null;
+  profileHref: string;
+  startedAt: number;
+  endedAt?: number | null;
+  status: MentorMentorship["status"] | MenteeMentorship["status"];
+  tags: string[];
+  tagsLabel: string;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-center gap-4">
+            <Avatar className="size-12">
+              {profilePictureUrl && (
+                <AvatarImage src={profilePictureUrl} alt={name} />
+              )}
+              <AvatarFallback className="bg-primary/10 text-primary">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+
+            <div>
+              <CardTitle className="text-lg">{name}</CardTitle>
+              <CardDescription>{title}</CardDescription>
+            </div>
+          </div>
+
+          <MentorshipStatusBadge status={status} />
+        </div>
+      </CardHeader>
+
+      <CardContent className="space-y-4">
+        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <Calendar className="size-4" />
+            Started {formatDate(startedAt)}
+          </div>
+
+          {endedAt && (
+            <div className="flex items-center gap-2">
+              <History className="size-4" />
+              Ended {formatDate(endedAt)}
+            </div>
+          )}
+        </div>
+
+        {tags.length > 0 && (
+          <div>
+            <p className="mb-2 text-sm font-medium text-muted-foreground">
+              {tagsLabel}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {tags.map((tag) => (
+                <Badge key={tag} variant="secondary">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="border-t border-border/50 pt-4">
+          <Button asChild variant="outline" size="sm">
+            <Link href={profileHref}>View Profile</Link>
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function MentorshipHistorySearchEmptyState({ hasQuery }: { hasQuery: boolean }) {
+  return (
+    <MentorshipEmptyState
+      title={hasQuery ? "No matching mentorships" : "No mentorship history yet"}
+      description={
+        hasQuery
+          ? "Try a different search term."
+          : "Mentorships that have ended will appear here."
+      }
+    />
+  );
+}
+
 export function ActiveMentorshipsForMentor() {
   const { currentUser } = useCurrentUser();
 
@@ -293,6 +427,148 @@ export function ActiveMentorshipsForMentee() {
           phoneNumber={mentorship.mentorPhoneNumber}
         />
       ))}
+    </div>
+  );
+}
+
+export function MentorshipHistoryForMentor() {
+  const { currentUser } = useCurrentUser();
+  const [query, setQuery] = useState("");
+
+  const history = useQuery(
+    api.mentorships.historyByMentor,
+    currentUser?._id && currentUser.mentorProfile
+      ? { mentorId: currentUser._id }
+      : "skip"
+  );
+
+  const filtered = useMemo(() => {
+    if (!history) return [];
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return history;
+
+    return history.filter((mentorship: MentorMentorship) => {
+      const searchable = [
+        mentorship.menteeName,
+        mentorship.menteeTitle,
+        ...mentorship.interests,
+      ]
+        .join(" ")
+        .toLowerCase();
+      return searchable.includes(normalizedQuery);
+    });
+  }, [history, query]);
+
+  return (
+    <div className="space-y-4">
+      <div className="relative max-w-md">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search by mentee name, title, or interest..."
+          className="pl-9"
+        />
+      </div>
+
+      {history === undefined || currentUser === undefined ? (
+        <MentorshipLoadingState />
+      ) : filtered.length === 0 ? (
+        <MentorshipHistorySearchEmptyState hasQuery={query.trim().length > 0} />
+      ) : (
+        <div className="space-y-4">
+          {filtered.map((mentorship: MentorMentorship) => (
+            <MentorshipHistoryCard
+              key={mentorship._id}
+              name={mentorship.menteeName}
+              initials={mentorship.menteeInitials}
+              title={mentorship.menteeTitle}
+              profilePictureUrl={mentorship.menteeProfilePictureUrl}
+              profileHref={
+                mentorship.menteeUsername
+                  ? `/profile/${mentorship.menteeUsername}`
+                  : `/profile/id/${mentorship.menteeId}`
+              }
+              startedAt={mentorship.startDate}
+              endedAt={mentorship.endDate}
+              status={mentorship.status}
+              tags={mentorship.interests}
+              tagsLabel="Mentee interests"
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function MentorshipHistoryForMentee() {
+  const { currentUser } = useCurrentUser();
+  const [query, setQuery] = useState("");
+
+  const history = useQuery(
+    api.mentorships.historyByMentee,
+    currentUser?._id && currentUser.menteeProfile
+      ? { menteeId: currentUser._id }
+      : "skip"
+  );
+
+  const filtered = useMemo(() => {
+    if (!history) return [];
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return history;
+
+    return history.filter((mentorship: MenteeMentorship) => {
+      const searchable = [
+        mentorship.mentorName,
+        mentorship.mentorTitle,
+        ...mentorship.expertise,
+      ]
+        .join(" ")
+        .toLowerCase();
+      return searchable.includes(normalizedQuery);
+    });
+  }, [history, query]);
+
+  return (
+    <div className="space-y-4">
+      <div className="relative max-w-md">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search by mentor name, title, or expertise..."
+          className="pl-9"
+        />
+      </div>
+
+      {history === undefined || currentUser === undefined ? (
+        <MentorshipLoadingState />
+      ) : filtered.length === 0 ? (
+        <MentorshipHistorySearchEmptyState hasQuery={query.trim().length > 0} />
+      ) : (
+        <div className="space-y-4">
+          {filtered.map((mentorship: MenteeMentorship) => (
+            <MentorshipHistoryCard
+              key={mentorship._id}
+              name={mentorship.mentorName}
+              initials={mentorship.mentorInitials}
+              title={mentorship.mentorTitle}
+              profilePictureUrl={mentorship.mentorProfilePictureUrl}
+              profileHref={
+                mentorship.mentorUsername
+                  ? `/profile/${mentorship.mentorUsername}`
+                  : `/profile/id/${mentorship.mentorId}`
+              }
+              startedAt={mentorship.startDate}
+              endedAt={mentorship.endDate}
+              status={mentorship.status}
+              tags={mentorship.expertise}
+              tagsLabel="Mentor expertise"
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

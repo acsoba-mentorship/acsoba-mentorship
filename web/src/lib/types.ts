@@ -14,7 +14,7 @@ export type UserId = Id<"users">;
 /** Privacy-safe public profile returned by getUserByUsername/getUserById.
  *  Excludes internal fields (_id, tokenIdentifier, dateOfBirth, onboardingStatus,
  *  createdAt, etc.). Sensitive contact fields are present but nullable, and are
- *  null when redacted by mentor privacy settings. */
+ *  null while a mentor's identity is hidden by programme policy. */
 export type PublicUserProfile = {
   userId: Id<"users">;
   username: string | null;
@@ -42,12 +42,26 @@ export type PublicMentorProfile = {
   title: string;
   bio: string;
   location: string;
+  ageGroup: string;
+  company: string;
   profilePictureUrl: string;
   email: string | null;
   phoneNumber: string | null;
-  industries: Doc<"users">["industries"];
+  industries: string[];
   mentorProfile: Doc<"users">["mentorProfile"];
+  matchScore: number;
+  matchedInterests: string[];
+  badges: string[];
 };
+
+/** Converts a backend match score into a display-safe percentage. */
+export function getMentorMatchPercentage(matchScore: number): number {
+  if (!Number.isFinite(matchScore)) {
+    return 0;
+  }
+
+  return Math.round(Math.min(100, Math.max(0, matchScore)));
+}
 
 /** Maps a public user profile to the mentor list/card DTO when they have a mentor profile. */
 export function publicUserToMentorProfileDto(
@@ -64,10 +78,15 @@ export function publicUserToMentorProfileDto(
     title: user.title,
     bio: user.bio,
     location: user.location,
+    ageGroup: "",
+    company: "",
     profilePictureUrl: user.profilePictureUrl,
     email: user.email,
     phoneNumber: user.phoneNumber,
     industries: user.industries,
     mentorProfile: user.mentorProfile,
+    matchScore: 0,
+    matchedInterests: [],
+    badges: [],
   };
 }

@@ -14,8 +14,10 @@ import {
   getPreviousStep,
   type OnboardingStepId,
 } from "@/lib/onboarding/steps";
+import type { OnboardingRole } from "@/lib/onboarding";
 
 type OnboardingContextValue = {
+  role: OnboardingRole;
   draft: OnboardingDraft;
   step: OnboardingStepId;
   updateDraft: (patch: Partial<OnboardingDraft>) => void;
@@ -28,7 +30,13 @@ const OnboardingContext = createContext<OnboardingContextValue | undefined>(
   undefined
 );
 
-export function OnboardingProvider({ children }: { children: ReactNode }) {
+export function OnboardingProvider({
+  children,
+  role,
+}: {
+  children: ReactNode;
+  role: OnboardingRole;
+}) {
   const [draft, setDraft] = useState<OnboardingDraft>({});
   const [step, setStep] = useState<OnboardingStepId>("profile");
 
@@ -38,20 +46,20 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
 
   const goNext = useCallback(
     (draftForBranch?: OnboardingDraft) => {
-      const next = getNextStep(step, draftForBranch ?? draft);
+      const next = getNextStep(step, draftForBranch ?? draft, role);
       if (next) {
         setStep(next);
       }
     },
-    [draft, step]
+    [draft, role, step]
   );
 
   const goBack = useCallback(() => {
-    const previous = getPreviousStep(step, draft);
+    const previous = getPreviousStep(step, draft, role);
     if (previous) {
       setStep(previous);
     }
-  }, [draft, step]);
+  }, [draft, role, step]);
 
   const resetDraft = useCallback(() => {
     setDraft({});
@@ -59,8 +67,8 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ draft, step, updateDraft, goNext, goBack, resetDraft }),
-    [draft, step, updateDraft, goNext, goBack, resetDraft]
+    () => ({ role, draft, step, updateDraft, goNext, goBack, resetDraft }),
+    [role, draft, step, updateDraft, goNext, goBack, resetDraft]
   );
 
   return (

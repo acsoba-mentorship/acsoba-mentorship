@@ -45,7 +45,6 @@ export function MentorExpertiseForm({
   onSuccess,
 }: MentorExpertiseFormProps) {
   const updateMentorProfile = useMutation(api.users.updateMentorProfile);
-  const updateUserIndustries = useMutation(api.users.updateUserIndustries);
   const profile = user.mentorProfile ?? defaultMentor;
 
   const form = useForm<MentorExpertiseFormInput>({
@@ -57,15 +56,13 @@ export function MentorExpertiseForm({
   });
 
   const onSubmit = async (values: MentorExpertiseFormInput) => {
-    await Promise.all([
-      updateUserIndustries({ industries: values.industries }),
-      updateMentorProfile({
-        yearsOfExperience: profile.yearsOfExperience,
-        maxMentees: profile.maxMentees,
-        isAvailable: profile.isAvailable,
-        expertise: values.expertise,
-      }),
-    ]);
+    await updateMentorProfile({
+      yearsOfExperience: profile.yearsOfExperience,
+      maxMentees: profile.maxMentees,
+      isAvailable: profile.isAvailable,
+      expertise: values.expertise,
+      industries: values.industries,
+    });
     onSuccess?.();
   };
 

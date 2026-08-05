@@ -17,7 +17,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export function FeaturedMentorsSection() {
   const { isAuthenticated } = useConvexAuth();
-  const mentors = useQuery(api.users.listMentors, isAuthenticated ? { limit: 50 } : "skip");
+  const mentors = useQuery(
+    api.users.listMentors,
+    isAuthenticated ? {} : "skip"
+  );
 
   const featured = (mentors ?? []).filter((m) => m.mentorProfile?.isAvailable).slice(0, 3);
   const loading = isAuthenticated && mentors === undefined;

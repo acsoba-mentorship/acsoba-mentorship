@@ -5,26 +5,7 @@ export const USERNAME_MAX_LENGTH = 20;
 export const GOALS_MAX_CHARACTERS = 250;
 export const USERNAME_PATTERN = /^[a-z0-9](?:[a-z0-9_]*[a-z0-9])?$/;
 export const USERNAME_CHANGE_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
-export const MENTOR_LIST_MAX = 100;
 export const ANONYMOUS_MENTOR_NAME = "Anonymous Mentor";
-
-export const DEFAULT_MENTOR_PRIVACY_SETTINGS = {
-  masterIdentityDisclosure: true,
-  overrides: {
-    name: true,
-    email: false,
-    phoneNumber: false,
-  },
-} as const;
-
-type MentorPrivacySettings = NonNullable<Doc<"users">["mentorSettings"]>["privacy"];
-
-type MentorIdentityVisibility = {
-  name: boolean;
-  username: boolean;
-  email: boolean;
-  phoneNumber: boolean;
-};
 
 /**
  * Normalizes a username into canonical lowercase format.
@@ -117,65 +98,123 @@ export function getInitials(name: string): string {
 }
 
 /**
- * Resolves persisted mentor privacy settings into effective field visibility.
+ * Maps a user document into the public mentor list payload.
+ *
+ * Identity disclosure is programme policy, not a mentor preference. Callers
+ * may reveal identity only after separately establishing that the viewer is
+ * the mentor or is in an active mentorship with them.
  */
-export function resolveMentorIdentityVisibility(
-  settings?: MentorPrivacySettings,
-  forceReveal = false
-): MentorIdentityVisibility {
-  if (forceReveal) {
-    return {
-      name: true,
-      username: true,
-      email: true,
-      phoneNumber: true,
-    };
-  }
+export function toPublicMentorDTO(
+  user: Doc<"users">,
+  options: {
+    forceRevealIdentity?: boolean;
+    viewerInterests?: string[];
+    activeMentorshipCount?: number;
+    completedMentorshipCount?: number;
+  } = {}
+) {
+  const revealIdentity = options.forceRevealIdentity === true;
 
-  const masterIdentityDisclosure =
-    settings?.masterIdentityDisclosure ??
-    DEFAULT_MENTOR_PRIVACY_SETTINGS.masterIdentityDisclosure;
-
-  const name =
-    masterIdentityDisclosure &&
-    (settings?.overrides?.name ?? DEFAULT_MENTOR_PRIVACY_SETTINGS.overrides.name);
+  const activeMentorshipCount = options.activeMentorshipCount ?? 0;
+  const completedMentorshipCount = options.completedMentorshipCount ?? 0;
+  const mentorProfile = user.mentorProfile
+    ? {
+        ...user.mentorProfile,
+        isAvailable:
+          user.mentorProfile.isAvailable &&
+          activeMentorshipCount < user.mentorProfile.maxMentees,
+      }
+    : undefined;
+  const currentExperience = [...user.experience]
+    .sort((a, b) => {
+      if (a.endDate === undefined && b.endDate !== undefined) return -1;
+      if (a.endDate !== undefined && b.endDate === undefined) return 1;
+      return b.startDate - a.startDate;
+    })
+    .at(0);
+  const company = currentExperience?.company?.trim() ?? "";
+  const ageGroup = getAgeGroup(user.dateOfBirth);
+  const viewerInterests = (options.viewerInterests ?? [])
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const mentorKeywords = [
+    ...(mentorProfile?.expertise ?? []),
+    ...(mentorProfile?.industries ?? user.industries ?? []),
+    company,
+    user.title,
+  ]
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+  const matchedInterests = viewerInterests.filter((interest) => {
+    const normalized = interest.toLowerCase();
+    return mentorKeywords.some(
+      (keyword) => keyword.includes(normalized) || normalized.includes(keyword)
+    );
+  });
+  const matchScore =
+    viewerInterests.length > 0
+      ? Math.min(
+          100,
+          Math.round(
+            (matchedInterests.length / viewerInterests.length) * 80 +
+              (mentorProfile?.isAvailable ? 20 : 0)
+          )
+        )
+      : mentorProfile?.isAvailable
+        ? 20
+        : 0;
+  const badges = [
+    ...(completedMentorshipCount >= 10
+      ? ["Mentored 10"]
+      : completedMentorshipCount >= 5
+        ? ["Mentorship Builder"]
+        : completedMentorshipCount >= 1
+          ? ["First Mentorship"]
+          : []),
+    ...(activeMentorshipCount >= 3 ? ["Community Guide"] : []),
+  ];
 
   return {
-    name,
-    username: name,
-    email:
-      masterIdentityDisclosure &&
-      (settings?.overrides?.email ?? DEFAULT_MENTOR_PRIVACY_SETTINGS.overrides.email),
-    phoneNumber:
-      masterIdentityDisclosure &&
-      (settings?.overrides?.phoneNumber ??
-        DEFAULT_MENTOR_PRIVACY_SETTINGS.overrides.phoneNumber),
+    mentorId: user._id,
+    username: revealIdentity ? user.username : null,
+    name: revealIdentity ? user.name : ANONYMOUS_MENTOR_NAME,
+    title: user.title,
+    bio: user.bio,
+    location: user.location,
+    profilePictureUrl: revealIdentity ? user.profilePictureUrl : "",
+    email: revealIdentity ? user.email : null,
+    phoneNumber: revealIdentity ? user.phoneNumber : null,
+    industries: mentorProfile?.industries ?? user.industries ?? [],
+    mentorProfile,
+    ageGroup,
+    company,
+    matchScore,
+    matchedInterests,
+    badges,
   };
 }
 
 /**
- * Maps a user document into the public mentor list payload.
+ * Returns a coarse age band so discovery can support age-group filtering
+ * without disclosing a mentor's date of birth.
  */
-export function toPublicMentorDTO(
-  user: Doc<"users">,
-  options: { forceRevealIdentity?: boolean } = {}
-) {
-  const visibility = resolveMentorIdentityVisibility(
-    user.mentorSettings?.privacy,
-    options.forceRevealIdentity
-  );
+export function getAgeGroup(dateOfBirth: number) {
+  if (!dateOfBirth || dateOfBirth <= 0) {
+    return "Not specified";
+  }
 
-  return {
-    mentorId: user._id,
-    username: visibility.username ? user.username : null,
-    name: visibility.name ? user.name : ANONYMOUS_MENTOR_NAME,
-    title: user.title,
-    bio: user.bio,
-    location: user.location,
-    profilePictureUrl: user.profilePictureUrl,
-    email: visibility.email ? user.email : null,
-    phoneNumber: visibility.phoneNumber ? user.phoneNumber : null,
-    industries: user.industries ?? [],
-    mentorProfile: user.mentorProfile,
-  };
+  const now = new Date();
+  const birthDate = new Date(dateOfBirth);
+  let age = now.getUTCFullYear() - birthDate.getUTCFullYear();
+  const beforeBirthday =
+    now.getUTCMonth() < birthDate.getUTCMonth() ||
+    (now.getUTCMonth() === birthDate.getUTCMonth() &&
+      now.getUTCDate() < birthDate.getUTCDate());
+  if (beforeBirthday) age -= 1;
+
+  if (age < 25) return "Under 25";
+  if (age < 35) return "25-34";
+  if (age < 45) return "35-44";
+  if (age < 55) return "45-54";
+  return "55+";
 }

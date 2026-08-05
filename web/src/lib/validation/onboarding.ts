@@ -7,19 +7,28 @@ import {
   ONBOARDING_TAG_MAX,
   ONBOARDING_TAG_MIN,
   PREFERRED_COMMUNICATION_MODE_OPTIONS,
-  PRESET_INDUSTRIES,
-  PRESET_INTERESTS,
+  type CommitmentLevelValue,
+  type GenderValue,
+  type PreferredCommunicationModeValue,
 } from "@/lib/onboarding/constants";
 import { experienceEntryFieldsSchema } from "@/lib/validation/profile";
 
-const genderValues = GENDER_OPTIONS.map((o) => o.value) as [string, ...string[]];
+const genderValues = GENDER_OPTIONS.map((o) => o.value) as [
+  GenderValue,
+  ...GenderValue[],
+];
 const nationalityValues = [...NATIONALITY_OPTIONS] as [string, ...string[]];
-const industryValues = [...PRESET_INDUSTRIES] as [string, ...string[]];
-const interestValues = [...PRESET_INTERESTS] as [string, ...string[]];
 
-const tagSelectionSchema = (allowed: [string, ...string[]]) => z.array(z.enum(allowed))
+const tagSelectionSchema = z
+  .array(z.string().trim().min(1).max(80))
   .min(ONBOARDING_TAG_MIN, `Select at least ${ONBOARDING_TAG_MIN}`)
-  .max(ONBOARDING_TAG_MAX, `Select at most ${ONBOARDING_TAG_MAX}`);
+  .max(ONBOARDING_TAG_MAX, `Select at most ${ONBOARDING_TAG_MAX}`)
+  .refine(
+    (values) =>
+      new Set(values.map((value) => value.toLocaleLowerCase("en-SG"))).size ===
+      values.length,
+    "Select each option only once"
+  );
 
 export const personalDetailsSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required").max(80),
@@ -36,7 +45,11 @@ export type PersonalDetailsFormValues = z.infer<typeof personalDetailsSchema>;
 export type PersonalDetailsFormInput = z.input<typeof personalDetailsSchema>;
 
 export const careerStageSchema = z.object({
-  careerStage: z.enum(["student", "professional"]),
+  careerStage: z.enum([
+    "student",
+    "professional",
+    "between_study_and_work",
+  ]),
 });
 
 export type CareerStageFormValues = z.infer<typeof careerStageSchema>;
@@ -62,16 +75,19 @@ export const workingBackgroundSchema = experienceEntryFieldsSchema.pick({
 export type WorkingBackgroundFormValues = z.infer<typeof workingBackgroundSchema>;
 
 export const interestsChapterSchema = z.object({
-  industries: tagSelectionSchema(industryValues),
-  interests: tagSelectionSchema(interestValues),
+  industries: tagSelectionSchema,
+  interests: tagSelectionSchema,
 });
 
 export type InterestsChapterFormValues = z.infer<typeof interestsChapterSchema>;
 
-const commitmentValues = [...COMMITMENT_LEVEL_OPTIONS] as [string, ...string[]];
+const commitmentValues = [...COMMITMENT_LEVEL_OPTIONS] as [
+  CommitmentLevelValue,
+  ...CommitmentLevelValue[],
+];
 const communicationValues = [...PREFERRED_COMMUNICATION_MODE_OPTIONS] as [
-  string,
-  ...string[],
+  PreferredCommunicationModeValue,
+  ...PreferredCommunicationModeValue[],
 ];
 
 export const mentoringChapterSchema = z.object({
@@ -87,3 +103,37 @@ export const mentoringChapterSchema = z.object({
 });
 
 export type MentoringChapterFormValues = z.infer<typeof mentoringChapterSchema>;
+
+export const mentorChapterSchema = z.object({
+  yearsOfExperience: z
+    .number()
+    .int("Years of experience must be a whole number")
+    .min(0)
+    .max(80),
+  maxMentees: z
+    .number()
+    .int("Maximum mentees must be a whole number")
+    .min(1)
+    .max(100),
+  isAvailable: z.boolean(),
+  expertise: z
+    .array(z.string().trim().min(1).max(80))
+    .min(1, "Add at least one area of expertise")
+    .max(20, "Add at most 20 areas of expertise"),
+  industries: tagSelectionSchema,
+});
+
+export type MentorChapterFormValues = z.infer<typeof mentorChapterSchema>;
+
+export const menteeEnrollmentSchema = z.object({
+  interests: tagSelectionSchema,
+  industries: tagSelectionSchema,
+  commitmentLevel: mentoringChapterSchema.shape.commitmentLevel,
+  preferredCommunicationModes:
+    mentoringChapterSchema.shape.preferredCommunicationModes,
+  goals: mentoringChapterSchema.shape.goals,
+});
+
+export type MenteeEnrollmentFormValues = z.infer<
+  typeof menteeEnrollmentSchema
+>;

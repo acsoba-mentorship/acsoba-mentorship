@@ -12,6 +12,7 @@ export const mentorshipRequestsTableFields = {
   menteeId: v.id("users"),
   status: mentorshipRequestStatusValidator,
   message: v.string(),
+  proposedDurationMonths: v.optional(v.number()),
   expiresAt: v.optional(v.number()),
   createdAt: v.number(),
   updatedAt: v.number(),
